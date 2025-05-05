@@ -6,7 +6,6 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Apple, Chrome } from "lucide-react"
 
 export default function CreateAccount() {
   const router = useRouter()
@@ -15,7 +14,7 @@ export default function CreateAccount() {
   const handleContinue = (e: React.FormEvent) => {
     e.preventDefault()
     if (email) {
-      router.push("/auth/complete-account")
+      router.push("/auth/verify-otp")
     }
   }
 
@@ -26,7 +25,7 @@ export default function CreateAccount() {
         <p className="text-white/90 text-center mb-6">Quickly sign up to get started!</p>
       </div>
 
-      <div className="bg-[#121212] rounded-t-3xl flex-1 px-6 pt-8 pb-4  flex flex-col">
+      <div className="bg-[#181826] rounded-t-3xl flex-1 px-6 pt-8 pb-4  flex flex-col">
         <form onSubmit={handleContinue} className="space-y-6">
           <div className="space-y-6">
             <label htmlFor="email" className="text-gray-400 text-sm mb-2">
@@ -36,7 +35,7 @@ export default function CreateAccount() {
               id="email"
               type="email"
               placeholder="Enter your email address"
-              className="bg-[#1e1e1e] border-none h-12 rounded-xl"
+              className="bg-[#292938] border-none h-12 rounded-xl"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -47,30 +46,6 @@ export default function CreateAccount() {
             Continue with Email
           </Button>
         </form>
-
-        <div className="flex items-center my-6">
-          <div className="flex-1 h-px bg-gray-700"></div>
-          <span className="px-4 text-sm text-gray-400">Or continue with</span>
-          <div className="flex-1 h-px bg-gray-700"></div>
-        </div>
-
-        <div className="space-y-3">
-          <Button
-            variant="outline"
-            className="w-full border-gray-700 bg-transparent text-white h-12 rounded-full flex items-center justify-center space-x-2"
-          >
-            <Chrome className="h-5 w-5 text-red-500" />
-            <span>Continue with Google</span>
-          </Button>
-
-          <Button
-            variant="outline"
-            className="w-full border-gray-700 bg-transparent text-white h-12 rounded-full flex items-center justify-center space-x-2"
-          >
-            <Apple className="h-5 w-5 text-white" />
-            <span>Continue with Apple</span>
-          </Button>
-        </div>
 
         <div className="mt-auto pt-6 text-center">
           <p className="text-gray-400 text-sm">

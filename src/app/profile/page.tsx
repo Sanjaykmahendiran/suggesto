@@ -1,117 +1,117 @@
-import { BottomNavigation } from "@/components/bottom-navigation"
-import { Button } from "@/components/ui/button"
-import { Switch } from "@/components/ui/switch"
-import { ChevronRight } from "lucide-react"
-import Link from "next/link"
+"use client"
 
-export default function ProfilePage() {
+import type React from "react"
+
+import { Bell, ChevronRight, CreditCard, Gift, LogOut, MapPin, Star, Truck, User, ChevronLeft, ArrowLeft, BarChart, Download, Heart, Users } from "lucide-react"
+import Image from "next/image"
+import Link from "next/link"
+import { useState } from "react"
+import home1 from "@/assets/home-1.jpg"
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button"
+
+
+export default function AccountPage() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const router = useRouter();
+
   return (
-    <div className="flex flex-col min-h-screen bg-slate-900 pb-22">
-      <header className="p-4">
-        <h1 className="text-xl font-bold">Setting</h1>
+    <div className="flex flex-col min-h-screen text-white">
+      {/* Header */}
+      <header className="flex items-center justify-between p-4">
+        <div className="flex items-center gap-2">
+          <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={() => window.history.back()}>
+            <ArrowLeft size={20} />
+          </button>
+          <h1 className="text-xl font-bold text-primary">My Account</h1>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <button className="relative">
+            <Bell className="h-6 w-6 text-gray-500" />
+            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-white">
+              1
+            </span>
+          </button>
+          <button className="flex flex-col gap-1.5" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+            <div className="h-0.5 w-6 bg-gray-700"></div>
+            <div className="h-0.5 w-6 bg-gray-700"></div>
+            <div className="h-0.5 w-6 bg-gray-700"></div>
+          </button>
+          <div className="h-10 w-10 overflow-hidden rounded-full border-2 border-gray-500">
+            <Image
+              src={home1}
+              alt="Profile"
+              width={40}
+              height={40}
+              className="h-full w-full object-cover"
+            />
+          </div>
+        </div>
       </header>
 
-      <main className="flex-1 px-4">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-16 h-16 rounded-full bg-slate-700 overflow-hidden">
-            <img src="/placeholder.svg?height=64&width=64" alt="Profile" className="w-full h-full object-cover" />
+
+      {/* Main Content */}
+      <main className="px-6 pb-8">
+
+        <div className="mb-6">
+          <div className="flex items-center gap-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-2xl font-bold text-white">
+              SK
+            </div>
+            <div>
+              <h2 className="font-semibold text-xl">Sanjaykumar</h2>
+              <p className="text-sm text-slate-400">@sk222</p>
+            </div>
           </div>
-          <div>
-            <h2 className="font-semibold">Andy Lexsian</h2>
-            <p className="text-sm text-slate-400">@Andy1999</p>
+
+          {/* Move this section outside the profile info row */}
+          <div className="w-full flex justify-between mt-6 px-4">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-primary">143</p>
+              <p className="text-gray-400 text-sm">Watched</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-primary">37</p>
+              <p className="text-gray-400 text-sm">Favorites</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-primary">28</p>
+              <p className="text-gray-400 text-sm">Friends</p>
+            </div>
           </div>
         </div>
 
-        <div className="space-y-6">
-          <section>
-            <h3 className="text-lg font-medium mb-2">Personal Info</h3>
-            <div className="space-y-1">
-              <Link href="/profile/edit" className="flex items-center justify-between p-3 ">
-                <span>Profile</span>
-                <ChevronRight />
-              </Link>
-              <Link href="/profile/wishlist" className="flex items-center justify-between p-3 ">
-                <span>Wishlist</span>
-                <ChevronRight />
-              </Link>
-              <Link href="/profile/payment" className="flex items-center justify-between p-3 ">
-                <span>Payment Method</span>
-                <ChevronRight />
-              </Link>
-            </div>
-          </section>
-
-          <section>
-            <h3 className="text-lg font-medium mb-2">Security</h3>
-            <div className="space-y-1">
-              <Link
-                href="/profile/change-password"
-                className="flex items-center justify-between p-3 "
-              >
-                <span>Change Password</span>
-                <ChevronRight />
-              </Link>
-              <Link
-                href="/profile/forgot-password"
-                className="flex items-center justify-between p-3 "
-              >
-                <span>Forgot Password</span>
-                <ChevronRight />
-              </Link>
-              <Link href="/profile/security" className="flex items-center justify-between p-3 ">
-                <span>Security</span>
-                <ChevronRight />
-              </Link>
-            </div>
-          </section>
-
-          <section>
-            <h3 className="text-lg font-medium mb-2">General</h3>
-            <div className="space-y-1">
-              <Link href="/profile/language" className="flex items-center justify-between p-3 ">
-                <span>Language</span>
-                <ChevronRight />
-              </Link>
-              <Link href="pricing" className="flex items-center justify-between p-3 ">
-                <span>Pricing</span>
-                <ChevronRight />
-              </Link>
-            </div>
-          </section>
-
-          <section>
-            <h3 className="text-lg font-medium mb-2">About</h3>
-            <div className="space-y-1">
-              <Link
-                href="/profile/clear-cache"
-                className="flex items-center justify-between p-3 "
-              >
-                <span>Clear Cache</span>
-                <ChevronRight />
-              </Link>
-              <Link href="/profile/legal" className="flex items-center justify-between p-3 ">
-                <span>Legal and Policies</span>
-                <ChevronRight />
-              </Link>
-              <Link href="/profile/help" className="flex items-center justify-between p-3 ">
-                <span>Help & Support</span>
-                <ChevronRight />
-              </Link>
-            </div>
-          </section>
-
-          <div className="flex items-center justify-between p-3 ">
-            <span>Dark Mode</span>
-            <Switch defaultChecked />
-          </div>
-
-          <Button variant="destructive" className="w-full">
-            Log Out
-          </Button>
+        {/* Menu Items */}
+        <div className="flex flex-col">
+          <MenuItem icon={<User className="h-6 w-6 text-gray-500" />} label="Edit Profile" link={"/profile/edit"} />
+          <MenuItem icon={<Download className="h-6 w-6 text-gray-500" />} label="Downloads" link={"/download"} />
+          <MenuItem icon={<BarChart className="h-6 w-6 text-gray-500" />} label="Watch Stats" link={"/watch-stats"} />
+          <MenuItem icon={<Users className="h-6 w-6 text-gray-500" />} label="Friends" link={"/friends"} />
+          <MenuItem icon={<Heart className="h-6 w-6 text-gray-500" />} label="Friend Recommendations" link={"/friend-recommendations"} />
+          <MenuItem icon={<CreditCard className="h-6 w-6 text-gray-500" />} label="Payment methods" link={""} />
+          <MenuItem icon={<Bell className="h-6 w-6 text-gray-500" />} label="Notification" link={""} />
+          <MenuItem icon={<Gift className="h-6 w-6 text-gray-500" />} label="Refer & Earn" link={""} />
+          <MenuItem icon={<LogOut className="h-6 w-6 text-gray-500" />} label="Log out" link={"/"} />
         </div>
+
+        {/* Share App Button */}
+        <Button className="mt-8 w-full rounded-full py-6 text-xl font-semibold text-white">
+          Share App
+        </Button>
       </main>
-
-      <BottomNavigation currentPath="/profile" />
     </div>
+  )
+}
+
+function MenuItem({ icon, label, link }: { icon: React.ReactNode; label: string, link: string }) {
+  return (
+    <Link href={link} className="flex items-center justify-between border-b border-gray-200 py-5">
+      <div className="flex items-center gap-4">
+        {icon}
+        <span className="text-xl text-white">{label}</span>
+      </div>
+      <ChevronRight className="h-6 w-6 text-gray-400" />
+    </Link>
   )
 }

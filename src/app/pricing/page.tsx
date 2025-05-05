@@ -1,15 +1,17 @@
-import Link from "next/link"
+"use client"
+
+
 import { ArrowLeft, MoreVertical, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 export default function Pricing() {
   return (
-    <div className="min-h-screen bg-[#121212] text-white flex flex-col items-center">
+    <div className="min-h-screen text-white flex flex-col items-center">
       {/* Header */}
       <div className="flex items-center justify-between p-4 w-full max-w-4xl">
-        <Link href="/profile" className="p-2 rounded-full bg-[#1e1e1e]">
+        <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={() => window.history.back()}>
           <ArrowLeft size={20} />
-        </Link>
+        </button>
         <h1 className="text-xl font-semibold">Select Your Plan</h1>
         <div className="p-2">
           <MoreVertical size={20} />
@@ -19,7 +21,7 @@ export default function Pricing() {
       <p className="text-center text-sm text-gray-400 mb-6">Switch plan or cancel any time</p>
 
       {/* Standard Plan */}
-      <div className="mx-4 mb-8 bg-[#1e1e1e] rounded-xl overflow-hidden w-full max-w-[350px] space-y-8 py-8">
+      <div className="mx-4 mb-8 bg-[#292938] rounded-xl overflow-hidden w-full max-w-[350px] space-y-8 py-8">
         <div className="relative">
           <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
             <div className="bg-[#2e2e2e] text-sm px-4 py-1 rounded-full">Most Popular</div>
@@ -82,7 +84,7 @@ export default function Pricing() {
       </div>
 
       {/* Premium Plan */}
-      <div className="mx-4 mb-8 bg-[#1e1e1e] rounded-xl overflow-hidden w-full max-w-[350px] space-y-8 py-8">
+      <div className="mx-4 mb-8 bg-[#292938] rounded-xl overflow-hidden w-full max-w-[350px] space-y-8 py-8">
         <div className="relative">
           <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
             <div className="bg-[#2e2e2e] text-sm px-4 py-1 rounded-full">Premium</div>

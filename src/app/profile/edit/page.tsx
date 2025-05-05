@@ -1,118 +1,199 @@
+"use client"
+
+import type React from "react"
+import { useEffect, useRef, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Label } from "@/components/ui/label"
-import Link from "next/link"
+import { ArrowLeft } from "lucide-react"
 
-export default function EditProfilePage() {
+type CompleteAccountProps = {
+  initialData?: {
+    name: string
+    mobile: string
+    location: string
+    preferredGenre: string
+    profilePicUrl?: string // for existing image
+  }
+}
+
+export default function CompleteAccount({ initialData }: CompleteAccountProps) {
+  const router = useRouter()
+
+  const [formData, setFormData] = useState({
+    name: "",
+    mobile: "",
+    location: "",
+    preferredGenre: "",
+  })
+  const [profilePic, setProfilePic] = useState<File | null>(null)
+  const [existingProfilePicUrl, setExistingProfilePicUrl] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        name: initialData.name,
+        mobile: initialData.mobile,
+        location: initialData.location,
+        preferredGenre: initialData.preferredGenre,
+      })
+      if (initialData.profilePicUrl) {
+        setExistingProfilePicUrl(initialData.profilePicUrl)
+      }
+    }
+  }, [initialData])
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setProfilePic(file)
+      setExistingProfilePicUrl(null) // clear old preview if uploading new one
+    }
+  }
+
+  const handleDivClick = () => {
+    inputRef.current?.click()
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    console.log("Submitted:", { ...formData, profilePic })
+    // Update or create logic here...
+    router.push("/auth/success")
+  }
+
   return (
-    <div className="flex flex-col min-h-screen bg-slate-900">
-      <header className="p-4 flex items-center">
-        <Link href="/profile" className="mr-2">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="lucide lucide-arrow-left"
-          >
-            <path d="m12 19-7-7 7-7" />
-            <path d="M19 12H5" />
-          </svg>
-        </Link>
-        <h1 className="text-xl font-bold">Profile</h1>
-      </header>
+    <div className="flex flex-col min-h-screen bg-[#181826] px-6 py-8">
+      <div className="flex items-center mb-8">
+        <button
+          onClick={() => router.back()}
+          className="w-10 h-10 rounded-full bg-[#292938] flex items-center justify-center"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <h2 className="text-xl font-semibold mx-auto pr-10">
+          Edit Profile
+        </h2>
+      </div>
 
-      <main className="flex-1 p-4">
-        <div className="flex justify-center mb-6">
-          <div className="relative">
-            <div className="w-24 h-24 rounded-full bg-slate-700 overflow-hidden">
-              <img src="/placeholder.svg?height=96&width=96" alt="Profile" className="w-full h-full object-cover" />
-            </div>
-            <button className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-[#6c5ce7] flex items-center justify-center">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="lucide lucide-pencil"
-              >
-                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                <path d="m15 5 4 4" />
-              </svg>
-            </button>
+      {/* Profile Picture Upload */}
+      <div className="flex flex-col items-center mb-6">
+        {profilePic ? (
+          <img
+            src={URL.createObjectURL(profilePic)}
+            alt="Profile Preview"
+            className="w-24 h-24 rounded-full object-cover mb-2 cursor-pointer"
+            onClick={handleDivClick}
+          />
+        ) : existingProfilePicUrl ? (
+          <img
+            src={existingProfilePicUrl}
+            alt="Existing Profile"
+            className="w-24 h-24 rounded-full object-cover mb-2 cursor-pointer"
+            onClick={handleDivClick}
+          />
+        ) : (
+          <div
+            onClick={handleDivClick}
+            className="w-24 h-24 rounded-full bg-[#292938] flex items-center justify-center text-gray-400 mb-2 cursor-pointer"
+          >
+            Upload
           </div>
+        )}
+
+        <p className="text-sm text-gray-400 mb-2">Upload Profile Image</p>
+
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleImageChange}
+          ref={inputRef}
+          className="hidden"
+        />
+      </div>
+
+      <h1 className="text-2xl font-bold mb-1">
+        Update your profile
+      </h1>
+      <p className="text-gray-400 text-sm mb-6"> "Make changes to your profile below.
+
+      </p>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-3">
+          <label htmlFor="name" className="text-gray-400 text-sm">
+            Name
+          </label>
+          <Input
+            id="name"
+            name="name"
+            placeholder="Enter your full name"
+            className="bg-[#292938] border-none h-12 rounded-xl"
+            value={formData.name}
+            onChange={handleChange}
+            required
+          />
         </div>
 
-        <form className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="first-name">First Name</Label>
-            <Input id="first-name" defaultValue="Andy" className="bg-slate-800 border-slate-700 text-white" />
-          </div>
+        <div className="space-y-3">
+          <label htmlFor="mobile" className="text-gray-400 text-sm">
+            Mobile
+          </label>
+          <Input
+            id="mobile"
+            name="mobile"
+            placeholder="Enter your mobile number"
+            className="bg-[#292938] border-none h-12 rounded-xl"
+            value={formData.mobile}
+            onChange={handleChange}
+            required
+          />
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="last-name">Last Name</Label>
-            <Input id="last-name" defaultValue="Lexsian" className="bg-slate-800 border-slate-700 text-white" />
-          </div>
+        <div className="space-y-3">
+          <label htmlFor="location" className="text-gray-400 text-sm">
+            Location
+          </label>
+          <Input
+            id="location"
+            name="location"
+            placeholder="Enter your location"
+            className="bg-[#292938] border-none h-12 rounded-xl"
+            value={formData.location}
+            onChange={handleChange}
+            required
+          />
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="email">E-mail</Label>
-            <Input
-              id="email"
-              type="email"
-              defaultValue="Andylexian22@gmail.com"
-              className="bg-slate-800 border-slate-700 text-white"
-              readOnly
-            />
-          </div>
+        <div className="space-y-3">
+          <label htmlFor="preferredGenre" className="text-gray-400 text-sm">
+            Preferred Genre
+          </label>
+          <Input
+            id="preferredGenre"
+            name="preferredGenre"
+            placeholder="e.g., Comedy, Action, Drama, Sci-Fi"
+            className="bg-[#292938] border-none h-12 rounded-xl"
+            value={formData.preferredGenre}
+            onChange={handleChange}
+            required
+          />
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="dob">Date of Birth</Label>
-            <Input
-              id="dob"
-              type="text"
-              defaultValue="24 february 1996"
-              className="bg-slate-800 border-slate-700 text-white"
-            />
-          </div>
+        <Button
+          type="submit"
+          className="w-full text-white bg-[#6c5ce7] hover:bg-[#5b4dd1] h-12 rounded-xl font-medium mt-6"
+        >
+          Update Profile
+        </Button>
+      </form>
 
-          <div className="space-y-2">
-            <Label>Gender</Label>
-            <RadioGroup defaultValue="male" className="flex gap-4">
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="male" id="male" />
-                <Label htmlFor="male">Male</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="female" id="female" />
-                <Label htmlFor="female">Female</Label>
-              </div>
-            </RadioGroup>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
-            <Textarea
-              id="location"
-              defaultValue="Lorem Ipsum is simply dummy text of the printing and typesetting industry."
-              className="bg-slate-800 border-slate-700 text-white min-h-[100px]"
-            />
-          </div>
-
-          <Button className="w-full text-white bg-[#6c5ce7] hover:bg-[#5b4dd1] h-12 rounded-xl font-medium">Save Changes</Button>
-        </form>
-      </main>
     </div>
   )
 }
