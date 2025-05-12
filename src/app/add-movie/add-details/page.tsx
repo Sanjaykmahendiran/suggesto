@@ -65,7 +65,7 @@ export default function MovieDetails() {
     return (
         <div className="container mx-auto py-6 px-4 mb-16">
             <div className="flex items-center mb-6">
-                <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={() => window.history.back()}>
+                <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={() => router.back()}>
                     <ArrowLeft size={20} />
                 </button>
                 <h1 className="text-2xl font-bold">Add Movie Details</h1>

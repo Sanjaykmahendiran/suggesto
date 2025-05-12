@@ -6,6 +6,14 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ArrowLeft } from "lucide-react"
+import { MultiSelect } from "@/components/multi-select"
+
+const genreOptions = [
+  { value: "Comedy", label: "Comedy" },
+  { value: "Action", label: "Action" },
+  { value: "Drama", label: "Drama" },
+  { value: "Sci-Fi", label: "Sci-Fi" },
+]
 
 export default function CompleteAccount() {
   const router = useRouter()
@@ -13,8 +21,9 @@ export default function CompleteAccount() {
     name: "",
     mobile: "",
     location: "",
-    preferredGenre: "",
+    preferredGenre: [] as string[],
   })
+
   const [profilePic, setProfilePic] = useState<File | null>(null)
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -126,16 +135,20 @@ export default function CompleteAccount() {
 
         <div className="space-y-3">
           <label htmlFor="preferredGenre" className="text-gray-400 text-sm">Preferred Genre</label>
-          <Input
+          <MultiSelect
+            options={genreOptions.map((genre) => genre.value)}
+            value={formData.preferredGenre}
+            defaultValue={formData.preferredGenre}
+            onValueChange={(selected: string[]) =>
+              setFormData((prev) => ({ ...prev, preferredGenre: selected }))
+            }
+            placeholder="Select genres"
+            variant="default"
+            maxCount={3}
+            className="bg-[#292938] text-white border-none h-12 rounded-xl"
             id="preferredGenre"
             name="preferredGenre"
-            placeholder="e.g., Comedy, Action, Drama, Sci-Fi"
-            className="bg-[#292938] border-none h-12 rounded-xl"
-            value={formData.preferredGenre}
-            onChange={handleChange}
-            required
           />
-
         </div>
 
         <Button

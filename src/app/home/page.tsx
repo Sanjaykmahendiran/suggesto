@@ -1,244 +1,271 @@
 "use client"
 
 import Image from "next/image"
-import { Search, Bell, Heart, Play, SlidersHorizontal } from "lucide-react"
+import { Search, Bell, Play, Users, Sparkles } from "lucide-react"
 import { BottomNavigation } from "@/components/bottom-navigation"
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { Autoplay } from 'swiper/modules';
+import { Swiper, SwiperSlide } from "swiper/react"
+import { Autoplay } from "swiper/modules"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import FilterComponent from "@/components/filter-component"
+import { motion, AnimatePresence } from "framer-motion"
 import home1 from "@/assets/home-1.jpg"
 import home2 from "@/assets/home-2.jpg"
 import home3 from "@/assets/home-3.jpg"
+import home4 from "@/assets/home-4.jpg"
+import home5 from "@/assets/home-5.jpg"
+import AvatarImg from "@/assets/avatar.jpg"
 
-import 'swiper/css';
-import { useState } from "react";
-import { useRouter } from 'next/navigation';
-import FilterComponent from "@/components/filter-component";
-import { motion, AnimatePresence } from "framer-motion"
+import "swiper/css"
 
+// Placeholder data - replace with your actual data
 const banners = [
-    { id: 1, src: home1, alt: 'Elemental movie' },
-    { id: 2, src: home2, alt: 'Another movie' },
-    { id: 3, src: home3, alt: 'Third movie' },
-];
+    {
+        id: 1,
+        title: "Captain America: The Winter Soldier",
+        imageSrc: home1,
+        alt: "Captain America movie",
+    },
+    {
+        id: 2,
+        title: "Avengers infinity War",
+        imageSrc: home4,
+        alt: "Avengers movie",
+    },
+    {
+        id: 3,
+        title: "Joker",
+        imageSrc: home5,
+        alt: "joker movie",
+    },
+]
 
-const movies = [
-    { id: 1, title: 'The Incredibles', imageSrc: home1, rank: 'TOP #1' },
-    { id: 2, title: 'Inside Out', imageSrc: home2, rank: 'TOP #2' },
-    { id: 3, title: 'Movie 3', imageSrc: home3, rank: 'TOP #3' },
-];
+const recentlyWatched = [
+    {
+        id: 1,
+        title: "Joker",
+        imageSrc: home1,
+        progress: 75,
+    },
+    {
+        id: 2,
+        title: "Stay the Night",
+        imageSrc: home2,
+        progress: 30,
+        episode: "EP 2",
+    },
+]
+
+const friendActivities = [
+    {
+        id: 1,
+        title: "The Incredibles",
+        imageSrc: home1,
+        friend: "Alex",
+        friendAvatar: AvatarImg,
+        action: "watched",
+    },
+    {
+        id: 2,
+        title: "Inside Out",
+        imageSrc: home2,
+        friend: "Sarah",
+        friendAvatar: AvatarImg,
+        action: "added to watchlist",
+    },
+]
+
+const featuredPicks = [
+    {
+        id: 1,
+        title: "Split",
+        imageSrc: home1,
+        rating: 7.3,
+    },
+    {
+        id: 2,
+        title: "A River Runs Through It",
+        imageSrc: home2,
+        rating: 7.8,
+    },
+    {
+        id: 3,
+        title: "The Shallows",
+        imageSrc: home3,
+        rating: 6.3,
+    },
+    {
+        id: 4,
+        title: "Inception",
+        imageSrc: home1,
+        rating: 8.8,
+    },
+]
 
 export default function Home() {
-    const router = useRouter();
-    const [activeIndex, setActiveIndex] = useState(0);
-    const [showFilter, setShowFilter] = useState(false);
+    const router = useRouter()
+    const [activeIndex, setActiveIndex] = useState(0)
+    const [showFilter, setShowFilter] = useState(false)
+    const [notificationCount, setNotificationCount] = useState(3)
 
     return (
-        <div className="bg-[#181826] text-white min-h-screen mb-20">
-            {/* Header */}
-            <header className="flex justify-between items-center p-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-white">Suggesto</h1>
-                    <p className="text-xs text-gray-400">#1 Streaming Platform</p>
-                </div>
-                <div className="flex gap-4">
-                    <button className="text-gray-300" onClick={() => router.push('/search')}>
-                        <Search className="w-5 h-5" />
-                    </button>
-                    <button className="text-gray-300 relative">
-                        <Bell className="w-5 h-5" />
-                        <span className="absolute -top-1 -right-1 bg-red-500 rounded-full w-2 h-2"></span>
-                    </button>
-                </div>
-            </header>
-
-            {/* Tabs and Search */}
-            <div className="top-0 bg-[#181826] z-10 px-4 pt-4">
-                <div className="flex gap-4 mb-4 overflow-x-auto no-scrollbar">
-                    <button className="bg-[#6c5ce7] text-white px-4 py-3 rounded-full text-sm font-medium">ALL</button>
-                    <button className="text-gray-400 px-4 py-1 text-sm font-medium">TV</button>
-                    <button className="text-gray-400 px-4 py-1 text-sm font-medium">MOVIES</button>
-                    <button className="text-gray-400 px-4 py-1 text-sm font-medium">NEWS</button>
-                    <button className="text-gray-400 px-4 py-1 text-sm font-medium">HUBS</button>
-                </div>
-
-                <div className="px-4 mb-4">
-                    <div className="flex items-center bg-[#292938] rounded-full px-4 py-4">
-                        <Search size={18} className="text-gray-400 mr-2" />
-                        <input
-                            type="text"
-                            placeholder="Search..."
-                            className="bg-transparent w-full focus:outline-none text-gray-300"
+        <div className="bg-[#181826] text-white min-h-screen mb-18">
+            {/* Featured Movie */}
+            <div className="relative mb-8 border-0">
+                {/* Fixed Suggesto label (outside Swiper) */}
+                <div className="absolute top-3 left-3 right-3 z-20 flex justify-between items-center px-4">
+                    <div>
+                        <h1 className="text-2xl font-bold text-primary">Suggesto</h1>
+                        <p className="text-xs text-gray-400">#1 Streaming Platform</p>
+                    </div>
+                    <div className="flex gap-4">
+                        <button
+                            aria-label="Search"
+                            className="text-gray-300"
                             onClick={() => router.push("/search")}
-                        />
-                        <SlidersHorizontal
-                            size={18}
-                            className="text-gray-400 cursor-pointer"
-                            onClick={() => setShowFilter(true)}
-                        />
+                        >
+                            <Search className="w-5 h-5" />
+                        </button>
+                        <button
+                            aria-label="Notifications"
+                            className="text-gray-300 relative"
+                            onClick={() => router.push("/notifications")}
+                        >
+                            <Bell className="w-5 h-5" />
+                            {notificationCount > 0 && (
+                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                                    {notificationCount}
+                                </span>
+                            )}
+                        </button>
                     </div>
                 </div>
-            </div>
 
-            {/* Featured Banner */}
-            <div className="relative h-56 mb-8">
+
                 <Swiper
                     modules={[Autoplay]}
-                    autoplay={{ delay: 4000 }}
+                    autoplay={{ delay: 5000 }}
                     loop
                     onSlideChange={(swiper) => setActiveIndex(swiper.realIndex)}
-                    className="h-full w-full"
+                    className="h-full w-full border-0"
                 >
                     {banners.map((banner, index) => (
                         <SwiperSlide key={banner.id}>
                             <motion.div
-                                initial={{ scale: 0.95 }}
-                                animate={{ scale: activeIndex === index ? 1.05 : 0.95 }}
+                                initial={{ opacity: 0.8 }}
+                                animate={{ opacity: activeIndex === index ? 1 : 0.8 }}
                                 transition={{ duration: 0.5 }}
-                                className="relative h-48 w-[80%] mx-auto rounded-lg overflow-hidden"
-                                onClick={() => router.push("/movie-detail-page")}
+                                className="relative w-full aspect-[2/3] rounded-lg  shadow-xl mx-auto"
+                                onClick={() => router.push(`/movie-deatil-page/${banner.id}`)}
                             >
                                 <Image
-                                    src={banner.src}
+                                    src={banner.imageSrc || "/placeholder.svg"}
                                     alt={banner.alt}
                                     fill
-                                    className="object-cover"
+                                    className="object-cover w-full h-full"
                                 />
+
+                                {/* Overlay gradient */}
+                                <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-[#181826]/60 to-[#181826]" />
+
+                                {/* Bottom content */}
+                                <div className="absolute bottom-0 left-0 w-full p-4 flex flex-col z-20">
+                                    <div className="flex justify-between items-end w-full">
+                                        {/* Left section */}
+                                        <div>
+                                            <h2 className="text-2xl font-bold text-white mb-1">{banner.title}</h2>
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <span className="bg-primary text-white text-xs px-1 rounded">HD</span>
+                                                <span className="text-gray-300 text-xs">120:00</span>
+                                                <span className="text-gray-300 text-xs">13+</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Right section */}
+                                        <div className="flex gap-1">
+                                            {banners.map((_, index) => (
+                                                <div
+                                                    key={index}
+                                                    className={`rounded-full transition-all duration-300 h-2 ${activeIndex === index ? "w-6 bg-primary" : "w-2 bg-gray-600"}`}
+                                                ></div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
                             </motion.div>
                         </SwiperSlide>
                     ))}
                 </Swiper>
-
-                <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 z-10 flex gap-1 items-center">
-                    {banners.map((_, index) => (
-                        <div
-                            key={index}
-                            className={`rounded-full transition-all duration-300 h-2 ${activeIndex === index ? 'w-6 bg-[#9370ff]' : 'w-2 bg-gray-600'
-                                }`}
-                        ></div>
-                    ))}
-                </div>
             </div>
 
-            {/* Movies Today */}
-            <div className="px-4 mb-6">
+
+            {/* Popular Movies */}
+            {/* <div className="px-4 mb-6">
                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-lg font-semibold">Movies Today's</h2>
-                    <a href="#" className="text-sm text-[#9370ff]">See All</a>
+                    <h2 className="text-lg font-semibold">Popular Movies</h2>
+                    <a href="#" className="text-sm text-primary">
+                        See All
+                    </a>
                 </div>
 
-                <div className="flex gap-4 overflow-x-auto no-scrollbar">
-                    {movies.map((movie, index) => (
+                <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
+                    {featuredPicks.map((movie) => (
                         <motion.div
                             key={movie.id}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.1 }}
+                            transition={{ delay: movie.id * 0.1 }}
                             whileHover={{ scale: 1.05 }}
-                            className="relative min-w-[160px] rounded-lg overflow-hidden cursor-pointer"
-                            onClick={() => router.push("/movie-detail-page")}
+                            className="relative min-w-[120px] h-[180px] rounded-lg overflow-hidden cursor-pointer"
+                            onClick={() => router.push(`/movie/${movie.id}`)}
                         >
-                            <Image
-                                src={movie.imageSrc}
-                                alt={movie.title}
-                                width={160}
-                                height={180}
-                                className="w-full object-cover"
-                            />
+                            <Image src={movie.imageSrc || "/placeholder.svg"} alt={movie.title} fill className="object-cover" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
-                            <span className="absolute top-2 left-2 bg-primary text-white text-xs px-2 py-0.5 rounded-sm">
-                                {movie.rank}
-                            </span>
-                            <div className="absolute bottom-2 left-0 right-0 flex justify-center">
-                                <button className="bg-black/50 backdrop-blur-md w-full text-white text-xs flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg">
-                                    <Play className="w-3 h-3" fill="white" />
-                                    WATCH MOVIE
-                                </button>
+                            <div className="absolute bottom-2 left-2">
+                                <h3 className="text-sm font-medium text-white">{movie.title}</h3>
                             </div>
                         </motion.div>
                     ))}
                 </div>
-            </div>
+            </div> */}
 
-            {/* Promo Section */}
-            <div className="px-4 mb-6">
-                <div className="flex justify-between items-center mb-2">
-                    <h2 className="text-lg font-semibold">Special Promo this Week</h2>
-                    <div className="flex gap-1">
-                        <div className="w-6 h-2 bg-[#9370ff] rounded-full"></div>
-                        <div className="w-2 h-2 bg-gray-600 rounded-full"></div>
-                        <div className="w-2 h-2 bg-gray-600 rounded-full"></div>
-                    </div>
-                </div>
-
-                <motion.div
-                    initial={{ opacity: 0, y: 50 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6 }}
-                    className="bg-[#6c5ce7] rounded-xl p-4 flex flex-wrap sm:flex-nowrap"
-                >
-                    <div className="w-full sm:w-1/2 pr-4 mb-4 sm:mb-0">
-                        <h3 className="text-white font-semibold mb-1">Suggesto</h3>
-                        <p className="text-sm mb-3">Become our subscription member and get unlimited movie streaming.</p>
-                        <button
-                            className="bg-white text-[#6c5ce7] text-xs font-medium py-2 px-4 rounded-full"
-                            onClick={() => router.push("/pricing")}
-                        >
-                            Check Now
-                        </button>
-                    </div>
-                    <div className="w-1/2 relative">
-                        <div className="absolute inset-0">
-                            <Image
-                                src={home1}
-                                alt="Movie poster"
-                                layout="fill"
-                                className="rounded-md z-50 object-cover"
-                            />
-                        </div>
-                    </div>
-                </motion.div>
-            </div>
-
-            {/* Top Movie Awards */}
+            {/* Continue Watching */}
             <div className="px-4 mb-6">
                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-lg font-semibold">Top Movie Awards</h2>
-                    <a href="#" className="text-sm text-[#6c5ce7]">See All</a>
+                    <h2 className="text-lg font-semibold">Continue Watching</h2>
+                    <a href="#" className="text-sm text-primary">
+                        See All
+                    </a>
                 </div>
 
-                <div className="space-y-10">
-                    {[home1, home2].map((img, i) => (
+                <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
+                    {recentlyWatched.map((item) => (
                         <motion.div
-                            key={i}
-                            initial={{ opacity: 0, y: 30 }}
+                            key={item.id}
+                            initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.15 }}
+                            transition={{ delay: item.id * 0.1 }}
+                            whileHover={{ scale: 1.05 }}
+                            className="relative min-w-[160px] h-[180px] rounded-lg overflow-hidden cursor-pointer"
+                            onClick={() => router.push(`/watch/${item.id}`)}
                         >
-                            <div className="flex gap-3" onClick={() => router.push("/movie-detail-page")}>
-                                <div className="relative w-28 h-36 flex-shrink-0">
-                                    <Image
-                                        src={img}
-                                        alt="Movie"
-                                        fill
-                                        className="rounded-lg object-cover"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-center justify-center">
-                                        <div className="w-10 h-10 bg-black/50 rounded-full flex items-center justify-center mt-12">
-                                            <Play className="w-5 h-5 text-white" fill="white" />
-                                        </div>
-                                    </div>
-                                    <span className="absolute top-2 right-2 bg-[#6c5ce7] text-xs px-2 py-0.5 rounded-sm">NEW</span>
+                            <Image src={item.imageSrc || "/placeholder.svg"} alt={item.title} fill className="object-cover" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+
+                            {item.episode && (
+                                <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm px-2 py-1 rounded text-xs">
+                                    {item.episode}
                                 </div>
-                                <div className="flex-1">
-                                    <div className="flex justify-between">
-                                        <h3 className="font-semibold">{i === 0 ? "Onward" : "Luca"}</h3>
-                                        <Heart className="w-5 h-5 text-gray-400" />
-                                    </div>
-                                    <p className="text-xs text-gray-400 mt-1">Animation, Adventure, Family</p>
-                                    <p className="text-xs text-gray-300 mt-2 line-clamp-3">
-                                        {i === 0 ? "“Onward” is an enchanting animated adventure..." : "“Luca” is a heartwarming animated film..."}
-                                    </p>
-                                    <p className="text-xs text-gray-400 mt-2">2 hrs 15 mins • English • 1400HD</p>
+                            )}
+
+                            <div className="absolute bottom-8 left-2">
+                                <h3 className="text-sm font-medium text-white">{item.title}</h3>
+                            </div>
+
+                            <div className="absolute bottom-2 left-2 right-2">
+                                <div className="w-full bg-gray-700 rounded-full h-1">
+                                    <div className="bg-primary h-1 rounded-full" style={{ width: `${item.progress}%` }}></div>
                                 </div>
                             </div>
                         </motion.div>
@@ -246,7 +273,92 @@ export default function Home() {
                 </div>
             </div>
 
-            <BottomNavigation currentPath={"/home"} />
+            {/* Friend Activities */}
+            <div className="px-4 mb-6">
+                <div className="flex justify-between items-center mb-4">
+                    <div className="flex items-center gap-2">
+                        <Users className="w-5 h-5 text-primary" />
+                        <h2 className="text-lg font-semibold">Friend Activities</h2>
+                    </div>
+                    <a href="#" className="text-sm text-primary">
+                        See All
+                    </a>
+                </div>
+
+                <div className="space-y-3">
+                    {friendActivities.map((activity) => (
+                        <motion.div
+                            key={activity.id}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: activity.id * 0.1 }}
+                            className="flex items-center gap-3 bg-[#292938] p-3 rounded-lg"
+                        >
+                            <div className="relative w-10 h-10">
+                                <Image
+                                    src={activity.friendAvatar || "/placeholder.svg"}
+                                    alt={activity.friend}
+                                    fill
+                                    className="rounded-full object-cover"
+                                />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-sm">
+                                    <span className="font-medium">{activity.friend}</span>{" "}
+                                    <span className="text-gray-400">{activity.action}</span>
+                                </p>
+                                <p className="text-xs text-gray-400">{activity.title}</p>
+                            </div>
+                            <div className="relative w-12 h-16 rounded overflow-hidden">
+                                <Image
+                                    src={activity.imageSrc || "/placeholder.svg"}
+                                    alt={activity.title}
+                                    fill
+                                    className="object-cover"
+                                />
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Featured Suggesto Picks */}
+            <div className="px-4 mb-20">
+                <div className="flex justify-between items-center mb-4">
+                    <div className="flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-primary" />
+                        <h2 className="text-lg font-semibold">Featured Suggesto Picks</h2>
+                    </div>
+                    <a href="#" className="text-sm text-primary">
+                        See All
+                    </a>
+                </div>
+
+                <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
+                    {featuredPicks.map((movie) => (
+                        <motion.div
+                            key={movie.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: movie.id * 0.1 }}
+                            whileHover={{ scale: 1.05 }}
+                            className="relative min-w-[120px] h-[180px] rounded-lg overflow-hidden cursor-pointer"
+                            onClick={() => router.push(`/movie/${movie.id}`)}
+                        >
+                            <Image src={movie.imageSrc || "/placeholder.svg"} alt={movie.title} fill className="object-cover" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                            <div className="absolute top-2 right-2 bg-primary text-white text-xs px-1.5 py-0.5 rounded">
+                                {movie.rating}
+                            </div>
+                            <div className="absolute bottom-2 left-2">
+                                <h3 className="text-sm font-medium text-white">{movie.title}</h3>
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+            </div>
+
+            <BottomNavigation currentPath={"home"} />
 
             {/* Filter Panel */}
             <AnimatePresence>

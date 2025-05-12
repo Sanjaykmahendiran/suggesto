@@ -1,18 +1,13 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
-import { Search, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { useRouter, useSearchParams } from "next/navigation"
+import { type ChangeEvent, useState } from "react"
+import Image, { type StaticImageData } from "next/image"
 import Link from "next/link"
-import Image, { StaticImageData } from "next/image"
-import home1 from "@/assets/home-1.jpg"
-import home2 from "@/assets/home-2.jpg"
-import home3 from "@/assets/home-3.jpg"
+import { ArrowLeft, MoreVertical, Search } from "lucide-react"
 import { BottomNavigation } from "@/components/bottom-navigation"
 
 interface Movie {
@@ -21,165 +16,163 @@ interface Movie {
     poster: string | StaticImageData
     release_date: string
     overview: string
+    liked_reason?: string
 }
 
-export default function AddMovie() {
-    const [searchQuery, setSearchQuery] = useState("")
+const AddMoviePage = () => {
+    const router = useRouter()
+    const searchParams = useSearchParams()
+
+    const [searchTerm, setSearchTerm] = useState("")
     const [searchResults, setSearchResults] = useState<Movie[]>([])
-    const [isLoading, setIsLoading] = useState(false)
+    const [selectedFriends, setSelectedFriends] = useState<Array<{ id: number; name: string }>>([])
+    const [likedReason, setLikedReason] = useState("")
 
-    const handleSearch = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!searchQuery.trim()) return
+    const handleSearch = async (e: ChangeEvent<HTMLInputElement>) => {
+        const term = e.target.value
+        setSearchTerm(term)
 
-        setIsLoading(true)
-        // This would be replaced with actual TMDb API call
-        setTimeout(() => {
-            setSearchResults([
-                {
-                    id: 1,
-                    title: "Inception",
-                    poster: home1,
-                    release_date: "2010-07-16",
-                    overview:
-                        "A thief who steals corporate secrets through the use of dream-sharing technology is given the inverse task of planting an idea into the mind of a C.E.O.",
-                },
-                {
-                    id: 2,
-                    title: "The Dark Knight",
-                    poster: home2,
-                    release_date: "2008-07-18",
-                    overview:
-                        "When the menace known as the Joker wreaks havoc and chaos on the people of Gotham, Batman must accept one of the greatest psychological and physical tests of his ability to fight injustice.",
-                },
-                {
-                    id: 3,
-                    title: "Interstellar",
-                    poster: home3,
-                    release_date: "2014-11-05",
-                    overview:
-                        "A team of explorers travel through a wormhole in space in an attempt to ensure humanity's survival.",
-                },
-            ])
-            setIsLoading(false)
-        }, 1000)
+        if (term.length > 2) {
+            try {
+                const response = await fetch(`/api/search-movie?query=${term}`)
+                const data = await response.json()
+
+                setSearchResults(
+                    data.results.map((movie: any) => ({
+                        id: movie.id,
+                        title: movie.title,
+                        poster: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
+                        release_date: movie.release_date,
+                        overview: movie.overview,
+                    })),
+                )
+            } catch (error) {
+                console.error("Search error:", error)
+            }
+        } else {
+            setSearchResults([])
+        }
+    }
+
+    const handleSuggestToFriend = (movie: Movie) => {
+        // This would be replaced with actual friend selection and suggestion logic
+        router.push(`/suggest?movieId=${movie.id}&title=${encodeURIComponent(movie.title)}`)
     }
 
     return (
-        <div className="container mx-auto py-6 px-4 mb-16">
-            <div className="flex items-center mb-6">
-                <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={() => window.history.back()}>
-                    <ArrowLeft size={20} />
+        <div className=" min-h-screen text-white mb-16">
+            <header className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={() => router.back()}>
+                        <ArrowLeft size={20} />
+                    </button>
+                    <h1 className="text-xl font-semibold">Add Movie</h1>
+                </div>
+                <button>
+                    <MoreVertical className="w-6 h-6" />
                 </button>
-                <h1 className="text-2xl font-bold">Add Movie</h1>
+            </header>
+<div className="p-4">
+            <div className="relative mb-6">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                    type="search"
+                    value={searchTerm}
+                    onChange={handleSearch}
+                    className="bg-[#292938] text-white w-full pl-10 pr-4 py-3 rounded-full focus:outline-none focus:ring-1 focus:ring-[#5d5fef]"
+                    placeholder="Search for a movie..."
+                />
             </div>
 
-            <Tabs defaultValue="search" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-6 bg-transparent">
-                    <TabsTrigger value="search" className="transition-colors duration-200 bg-transparent active:bg-[#1f1f2e]">
-                        Search TMDb
-                    </TabsTrigger>
-                    <TabsTrigger value="manual" className="transition-colors duration-200 bg-transparent active:bg-[#1f1f2e]">
-                        Manual Entry
-                    </TabsTrigger>
-                </TabsList>
+            {searchTerm.length > 2 && searchResults.length === 0 && <p>No movies found for "{searchTerm}".</p>}
 
-                <TabsContent value="search">
-                    <form onSubmit={handleSearch} className="mb-6">
-                        <div className="relative">
-                            <Input
-                                type="search"
-                                placeholder="Search for a movie..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-10 pr-4 py-6"
-                            />
-                            <div className="absolute inset-y-0 left-3 flex items-center">
-                                <Search className="h-5 w-5 text-muted-foreground" />
-                            </div>
-                            <Button
-                                type="submit"
-                                className="absolute right-2 top-1/2 transform -translate-y-1/2"
-                                disabled={isLoading}
-                            >
-                                {isLoading ? "Searching..." : "Search"}
-                            </Button>
-                        </div>
-                    </form>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+                {searchResults.map((movie) => (
+                    <Link href={`/add-movie/add-details?id=${movie.id}`} key={movie.id}>
+                        <Card className="h-full bg-transparent text-white p-0 border-0">
+                            <CardContent className="p-4 flex">
+                                <div className="relative w-20 h-28 flex-shrink-0 mr-4">
+                                    <Image
+                                        src={movie.poster || "/placeholder.svg"}
+                                        alt={movie.title}
+                                        fill
+                                        className="object-cover rounded-md"
+                                    />
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="font-bold mb-1">{movie.title}</h3>
+                                    <p className="text-xs text-muted-foreground mb-2 ">{new Date(movie.release_date).getFullYear()}</p>
+                                    <p className="text-xs line-clamp-3 mb-3">{movie.overview}</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="text-xs"
+                                            onClick={(e) => {
+                                                e.preventDefault()
+                                                // Add to watchlist logic
+                                                alert(`Added ${movie.title} to watchlist`)
+                                            }}
+                                        >
+                                            Add to Watchlist
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            className="text-xs bg-[#6c5ce7] hover:bg-[#6c5ce7]/80"
+                                            onClick={(e) => {
+                                                e.preventDefault()
+                                                handleSuggestToFriend(movie)
+                                            }}
+                                        >
+                                            Suggest to Friend
+                                        </Button>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </Link>
+                ))}
+            </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {searchResults.map((movie) => (
-                            <Link href={`/add-movie/add-details?id=${movie.id}`} key={movie.id}>
-                                <Card className="h-full bg-transparent text-white p-0 border-0">
-                                    <CardContent className="p-4 flex">
-                                        <div className="relative w-20 h-28 flex-shrink-0 mr-4">
-                                            <Image
-                                                src={movie.poster || "/placeholder.svg"}
-                                                alt={movie.title}
-                                                fill
-                                                className="object-cover rounded-md"
-                                            />
-                                        </div>
-                                        <div>
-                                            <h3 className="font-bold mb-1">{movie.title}</h3>
-                                            <p className="text-xs text-muted-foreground mb-2 ">{new Date(movie.release_date).getFullYear()}</p>
-                                            <p className="text-xs line-clamp-3">{movie.overview}</p>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </Link>
-                        ))}
-                    </div>
-                </TabsContent>
+            <div>
+                <h2 className="text-xl font-semibold mb-3">Can't find your movie?</h2>
+                <Link href="/add-movie/add-details" className="text-blue-500 hover:underline">
+                    Add it manually
+                </Link>
+            </div>
 
-                <TabsContent value="manual">
-                    <form className="space-y-4">
-                        <div>
-                            <label htmlFor="title" className="block text-sm font-medium mb-1">
-                                Movie Title
-                            </label>
-                            <Input id="title" placeholder="Enter movie title" />
-                        </div>
+            <div className="mt-6 border rounded-md p-4">
+                <h3 className="text-lg font-semibold mb-4">Manual Entry</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                    Enter the movie details manually if you can't find it in the search results.
+                </p>
 
-                        <div>
-                            <label htmlFor="year" className="block text-sm font-medium mb-1">
-                                Release Year
-                            </label>
-                            <Input id="year" placeholder="Enter release year" type="number" />
-                        </div>
+                <div>
+                    <label htmlFor="liked-reason" className="block text-sm font-medium mb-1">
+                        Why You Liked It (optional)
+                    </label>
+                    <textarea
+                        id="liked-reason"
+                        placeholder="Share why you enjoyed this movie..."
+                        className="w-full min-h-[100px] rounded-md border border-input px-3 py-2 text-sm"
+                        value={likedReason}
+                        onChange={(e) => setLikedReason(e.target.value)}
+                    />
+                </div>
 
-                        <div>
-                            <label htmlFor="director" className="block text-sm font-medium mb-1">
-                                Director
-                            </label>
-                            <Input id="director" placeholder="Enter director name" />
-                        </div>
-
-                        <div>
-                            <label htmlFor="overview" className="block text-sm font-medium mb-1">
-                                Overview
-                            </label>
-                            <textarea
-                                id="overview"
-                                placeholder="Enter movie overview"
-                                className="w-full min-h-[100px] rounded-md border border-input  px-3 py-2 text-sm"
-                            />
-                        </div>
-
-                        <div>
-                            <label htmlFor="poster" className="block text-sm font-medium mb-1">
-                                Poster Image URL
-                            </label>
-                            <Input id="poster" placeholder="Enter poster image URL" />
-                        </div>
-                        <Link href={`/add-movie/add-details?id=${1}`}>
-                        <Button type="submit" className="w-full">
-                            Continue to Add Details
-                        </Button></Link>
-                    </form>
-                </TabsContent>
-            </Tabs>
-            <BottomNavigation currentPath="/add-movie" />
+                <Link
+                    href="/add-movie/add-details"
+                    className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 mt-4"
+                >
+                    Continue to Add Details
+                </Link>
+            </div>
+            </div>
+                        <BottomNavigation currentPath="/add-movie" />
         </div>
     )
 }
+
+export default AddMoviePage

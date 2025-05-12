@@ -34,7 +34,7 @@ export default function MovieDetailPage() {
 
                     {/* Header navigation */}
                     <div className="absolute top-0 left-0 right-0 flex justify-between items-center p-4 ">
-                        <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={() => window.history.back()}>
+                        <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={() => router.back()}>
                             <ArrowLeft size={20} />
                         </button>
                         <h1 className="text-xl font-semibold">Detail</h1>

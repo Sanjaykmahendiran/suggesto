@@ -19,10 +19,13 @@ export default function VerifyOTP() {
   const [activeInput, setActiveInput] = useState(0)
 
   useEffect(() => {
-    if (inputRefs[0].current) {
-      inputRefs[0].current.focus()
-    }
+    const timer = setTimeout(() => {
+      inputRefs[0].current?.focus()
+    }, 300)
+
+    return () => clearTimeout(timer)
   }, [])
+
 
   const handleInputChange = (index: number, value: string) => {
     if (value.length <= 1) {
@@ -61,10 +64,10 @@ export default function VerifyOTP() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#181826] px-6 py-8">
+    <div className="flex flex-col min-h-screen px-6 py-8">
       <button
         onClick={() => router.back()}
-        className="w-10 h-10 rounded-full bg-[#1e1e1e] flex items-center justify-center mb-8"
+        className="w-10 h-10 rounded-full bg-[#292938] flex items-center justify-center mb-8"
       >
         <ArrowLeft className="h-5 w-5" />
       </button>
@@ -84,11 +87,13 @@ export default function VerifyOTP() {
               pattern="[0-9]*"
               maxLength={1}
               value={digit}
+              autoFocus={index === 0} 
               onChange={(e) => handleInputChange(index, e.target.value)}
               onKeyDown={(e) => handleKeyDown(index, e)}
               onFocus={() => setActiveInput(index)}
               className="w-full h-full bg-[#292938] text-center border-2 rounded-full focus:outline-none focus:border-[#6c5ce7] text-2xl text-white placeholder-gray-500"
             />
+
           </div>
         ))}
       </div>

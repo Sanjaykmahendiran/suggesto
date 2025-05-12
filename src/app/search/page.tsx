@@ -10,6 +10,7 @@ import home1 from "@/assets/home-1.jpg"
 import home2 from "@/assets/home-2.jpg"
 import home3 from "@/assets/home-3.jpg"
 import searchNotFound from "@/assets/search-not-found.png"
+import { useRouter } from "next/navigation"
 
 type Movie = {
     id: string
@@ -26,6 +27,7 @@ type Movie = {
 type SearchState = "initial" | "results" | "not-found"
 
 export default function Search() {
+      const router = useRouter()
     const [searchTerm, setSearchTerm] = useState("")
     const [searchState, setSearchState] = useState<SearchState>("initial")
     const [lastSearches, setLastSearches] = useState<string[]>(["Toy Story", "Nemo", "The Incredibles", "Ratatouille"])
@@ -150,7 +152,7 @@ export default function Search() {
         <main className="flex min-h-screen flex-col items-center bg-[#181826] text-white">
             <div className="w-full max-w-md mx-auto p-4">
                 <div className="flex items-center mb-6">
-                    <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={() => window.history.back()}>
+                    <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={() => router.back()}>
                         <ArrowLeft size={24} />
                     </button>
                     <h1 className="text-xl font-semibold">Search</h1>

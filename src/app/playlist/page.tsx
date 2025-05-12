@@ -18,7 +18,7 @@ export default function Playlist() {
     <div className="min-h-screen text-white">
       {/* Header */}
       <div className="flex items-center justify-between p-4">
-        <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={() => window.history.back()}>
+        <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={() => router.back()}>
           <ArrowLeft size={20} />
         </button>
         <h1 className="text-xl font-semibold">Play List</h1>

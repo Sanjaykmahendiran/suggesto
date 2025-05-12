@@ -14,7 +14,7 @@ export default function LoginSuccess() {
                 <CardContent className="space-y-6 pt-4">
                     <p className="text-center text-slate-400">Congratulations! You have successfully logged into your account.</p>
 
-                    <Link href="/home">
+                    <Link href="/interests">
                         <Button className="w-full text-white bg-[#6c5ce7] hover:bg-[#5b4dd1] h-12 rounded-xl font-medium">Continue</Button>
                     </Link>
                 </CardContent>

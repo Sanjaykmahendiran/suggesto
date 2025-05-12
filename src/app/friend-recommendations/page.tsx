@@ -10,6 +10,8 @@ import Image, { StaticImageData } from "next/image"
 import home1 from "@/assets/home-1.jpg"
 import home2 from "@/assets/home-2.jpg"
 import home3 from "@/assets/home-3.jpg"
+import AvatarImg from "@/assets/avatar.jpg"
+import { useRouter } from "next/navigation"
 
 interface Recommendation {
     id: number
@@ -23,6 +25,7 @@ interface Recommendation {
 }
 
 export default function FriendRecommendations() {
+      const router = useRouter()
     const [recommendations, setRecommendations] = useState<Recommendation[]>([
         {
             id: 1,
@@ -30,7 +33,7 @@ export default function FriendRecommendations() {
             poster: home3,
             friend: {
                 name: "Alex",
-                avatar: "/placeholder.svg?height=40&width=40",
+                avatar: AvatarImg,
             },
             comment: "This movie blew my mind! The multiverse concept is executed perfectly.",
         },
@@ -40,7 +43,7 @@ export default function FriendRecommendations() {
             poster: home1,
             friend: {
                 name: "Jamie",
-                avatar: "/placeholder.svg?height=40&width=40",
+                avatar: AvatarImg,
             },
             comment: "A masterpiece that explores class divide. You have to see this!",
         },
@@ -79,7 +82,7 @@ export default function FriendRecommendations() {
     return (
         <div className="container mx-auto py-6 px-4">
             <div className="flex items-center mb-6">
-                <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={() => window.history.back()}>
+                <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={() => router.back()}>
                     <ArrowLeft size={20} />
                 </button>
                 <h1 className="text-2xl font-bold">Friend Recommendations</h1>

@@ -3,13 +3,16 @@
 import Image from "next/image"
 import { ArrowLeft, MoreVertical, Search, Plus } from "lucide-react"
 import { BottomNavigation } from "@/components/bottom-navigation"
+import { useRouter } from "next/navigation"
 
 export default function FriendsPage() {
+    const router = useRouter()
+    
     return (
         <div className=" min-h-screen text-white mb-16">
             <header className="p-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={() => window.history.back()}>
+                    <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={() => router.back()}>
                         <ArrowLeft size={20} />
                     </button>
                     <h1 className="text-xl font-semibold">Friends List</h1>

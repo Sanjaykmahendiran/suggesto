@@ -3,13 +3,16 @@
 
 import { BottomNavigation } from "@/components/bottom-navigation"
 import { ArrowLeft, MoreVertical } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 export default function WatchStatsPage() {
+      const router = useRouter()
+      
     return (
         <div className=" min-h-screen text-white mb-16">
             <header className="p-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={() => window.history.back()}>
+                    <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={() => router.back()}>
                         <ArrowLeft size={20} />
                     </button>
                     <h1 className="text-xl font-semibold">Your Watch Stats</h1>

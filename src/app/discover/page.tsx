@@ -10,6 +10,7 @@ import home2 from "@/assets/home-2.jpg"
 import home3 from "@/assets/home-3.jpg"
 import Image, { StaticImageData } from "next/image"
 import { BottomNavigation } from "@/components/bottom-navigation"
+import { useRouter } from "next/navigation"
 
 interface Movie {
     id: number
@@ -21,6 +22,7 @@ interface Movie {
 }
 
 export default function Discover() {
+      const router = useRouter()
     const [aiSuggestions] = useState<Movie[]>([
         {
             id: 1,
@@ -89,7 +91,7 @@ export default function Discover() {
     return (
         <div className="container mx-auto py-6 px-4 text-white">
             <div className="flex items-center mb-6">
-                <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={() => window.history.back()}>
+                <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={() => router.back()}>
                     <ArrowLeft size={20} />
                 </button>
                 <h1 className="text-2xl font-bold">Discover</h1>
