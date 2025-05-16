@@ -17,7 +17,6 @@ interface Language {
 
 export default function LanguagePage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   
   const [selectedLanguages, setSelectedLanguages] = useState<Language[]>([])
   const [languages, setLanguages] = useState<Language[]>([])
