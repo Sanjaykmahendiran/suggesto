@@ -32,17 +32,23 @@ jobs:
           ls -lh out.zip
           unzip -l out.zip
 
+      - name: Install sshpass
+        run: sudo apt-get install -y sshpass
+
       - name: Upload via SCP
         run: |
-          scp -P 22 out.zip ${{ secrets.CPANEL_USERNAME }}@${{ secrets.CPANEL_SERVER }}:/home/suggesto/
+          sshpass -p "$SSHPASS" scp -o StrictHostKeyChecking=no -P 22 out.zip ${{ secrets.CPANEL_USERNAME }}@${{ secrets.CPANEL_SERVER }}:/home/suggesto/
         env:
           SSHPASS: ${{ secrets.CPANEL_PASSWORD }}
 
       - name: Extract via SSH
         run: |
-          ssh -p 22 ${{ secrets.CPANEL_USERNAME }}@${{ secrets.CPANEL_SERVER }} << 'EOF'
+          sshpass -p "$SSHPASS" ssh -o StrictHostKeyChecking=no -p 22 ${{ secrets.CPANEL_USERNAME }}@${{ secrets.CPANEL_SERVER }} << 'EOF'
             cd /home/suggesto
             unzip -o out.zip -d .
             rm out.zip
             ls -la
           EOF
+        env:
+          SSHPASS: ${{ secrets.CPANEL_PASSWORD }}
+
