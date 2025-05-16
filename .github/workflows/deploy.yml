@@ -32,30 +32,17 @@ jobs:
           ls -lh out.zip
           unzip -l out.zip
 
-      - name: Upload to cPanel via SCP
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.CPANEL_SERVER }}
-          username: ${{ secrets.CPANEL_USERNAME }}
-          password: ${{ secrets.CPANEL_PASSWORD }}
-          port: 22
-          source: "out.zip"
-          target: "/home/suggesto/"
-          timeout: 60s
-          command_timeout: 10m
-          rm: true
-          overwrite: true
+      - name: Upload via SCP
+        run: |
+          scp -P 22 out.zip ${{ secrets.CPANEL_USERNAME }}@${{ secrets.CPANEL_SERVER }}:/home/suggesto/
+        env:
+          SSHPASS: ${{ secrets.CPANEL_PASSWORD }}
 
-
-      - name: Extract on server via SSH
-        uses: garygrossgarten/github-action-ssh@release
-        with:
-          host: ${{ secrets.CPANEL_SERVER }}
-          username: ${{ secrets.CPANEL_USERNAME }}
-          password: ${{ secrets.CPANEL_PASSWORD }}
-          port: 22
-          command: |
+      - name: Extract via SSH
+        run: |
+          ssh -p 22 ${{ secrets.CPANEL_USERNAME }}@${{ secrets.CPANEL_SERVER }} << 'EOF'
             cd /home/suggesto
             unzip -o out.zip -d .
-            ls -la
             rm out.zip
+            ls -la
+          EOF
