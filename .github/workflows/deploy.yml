@@ -41,6 +41,11 @@ jobs:
           port: 22
           source: "out.zip"
           target: "/home/suggesto/"
+          timeout: 60s
+          command_timeout: 10m
+          rm: true
+          overwrite: true
+
 
       - name: Extract on server via SSH
         uses: garygrossgarten/github-action-ssh@release
