@@ -1,0 +1,56 @@
+name: Deploy to cPanel via SCP + SSH
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project (creates out/)
+        run: npm run build
+
+      - name: Zip the out folder
+        run: |
+          cd out
+          zip -r ../out.zip .
+          cd ..
+          ls -lh out.zip
+          unzip -l out.zip
+
+      - name: Upload to cPanel via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.CPANEL_SERVER }}
+          username: ${{ secrets.CPANEL_USERNAME }}
+          password: ${{ secrets.CPANEL_PASSWORD }}
+          port: 22
+          source: "out.zip"
+          target: "/home/suggesto/"
+
+      - name: Extract on server via SSH
+        uses: garygrossgarten/github-action-ssh@release
+        with:
+          host: ${{ secrets.CPANEL_SERVER }}
+          username: ${{ secrets.CPANEL_USERNAME }}
+          password: ${{ secrets.CPANEL_PASSWORD }}
+          port: 22
+          command: |
+            cd /home/suggesto/
+            unzip -o out.zip -d .
+            ls -la
+            rm out.zip

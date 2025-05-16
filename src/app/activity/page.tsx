@@ -9,7 +9,7 @@ import { BottomNavigation } from "@/components/bottom-navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import AvatarImg  from "@/assets/avatar.jpg"
+import AvatarImg from "@/assets/avatar.jpg"
 import home1 from "@/assets/home-1.jpg"
 import home2 from "@/assets/home-2.jpg"
 import home3 from "@/assets/home-3.jpg"
@@ -196,9 +196,9 @@ export default function ActivityPage() {
       {/* Header */}
       <header className="flex justify-between items-center p-4">
         <div className="flex items-center gap-2">
-        <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={() => router.back()}>
-                        <ArrowLeft size={20} />
-                    </button>
+          <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={() => router.back()}>
+            <ArrowLeft size={20} />
+          </button>
           <h1 className="text-xl font-bold">Activity</h1>
         </div>
         <div className="flex gap-4">
@@ -212,7 +212,7 @@ export default function ActivityPage() {
       {/* Tabs */}
       <Tabs defaultValue="notifications" className="w-full" onValueChange={setActiveTab}>
         <div className="px-4">
-        <TabsList className="w-full h-12 p-1 bg-transparent">
+          <TabsList className="w-full h-12 p-1 bg-transparent">
             <TabsTrigger value="notifications" className="transition-colors duration-200 bg-transparent active:bg-[#1f1f2e]">
               Notifications
             </TabsTrigger>
@@ -231,9 +231,8 @@ export default function ActivityPage() {
                   key={notification.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className={`bg-[#292938] rounded-lg overflow-hidden p-3 ${
-                    !notification.read ? "border-l-4 border-[#6c5ce7]" : ""
-                  }`}
+                  className={`bg-[#292938] rounded-lg overflow-hidden p-3 ${!notification.read ? "border-l-4 border-[#6c5ce7]" : ""
+                    }`}
                 >
                   <div className="flex items-start gap-3">
                     <div className="bg-[#181826] rounded-full p-2">{getNotificationIcon(notification.type)}</div>

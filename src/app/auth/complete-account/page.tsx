@@ -1,52 +1,140 @@
 "use client"
 
 import type React from "react"
-import { useRef, useState } from "react"
+import { useRef, useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ArrowLeft } from "lucide-react"
-import { MultiSelect } from "@/components/multi-select"
-
-const genreOptions = [
-  { value: "Comedy", label: "Comedy" },
-  { value: "Action", label: "Action" },
-  { value: "Drama", label: "Drama" },
-  { value: "Sci-Fi", label: "Sci-Fi" },
-]
+import Cookies from "js-cookie"
 
 export default function CompleteAccount() {
   const router = useRouter()
+  const [userID, setUserID] = useState<string | undefined>()
+  const [profilePic, setProfilePic] = useState<File | null>(null)
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
   const [formData, setFormData] = useState({
     name: "",
-    mobile: "",
+    email: "",
     location: "",
-    preferredGenre: [] as string[],
   })
+  
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  const [profilePic, setProfilePic] = useState<File | null>(null)
-  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    // Get userID from cookies on component mount (client-side)
+    const id = Cookies.get("userID")
+    setUserID(id)
+  }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setProfilePic(file);
-    }
-  };
-
   const handleDivClick = () => {
-    inputRef.current?.click();
-  };
-  const handleSubmit = (e: React.FormEvent) => {
+    inputRef.current?.click()
+  }
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setProfilePic(file)
+    await uploadImage(file)
+  }
+
+  const uploadImage = async (file: File) => {
+    try {
+      const reader = new FileReader()
+      
+      reader.onload = async () => {
+        const base64String = reader.result?.toString().split(',')[1]
+
+        if (!base64String) return
+
+        const response = await fetch("https://suggesto.xyz/App/api.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            gofor: "image_upload",
+            imgname: base64String,
+            type: "create account",
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to upload image")
+        }
+
+        const data = await response.json()
+
+        if (data.success && data.url) {
+          setUploadedImageUrl(data.url)
+        } else {
+          setError("Failed to get image URL from server")
+        }
+      }
+
+      reader.onerror = () => {
+        setError("Error reading file")
+      }
+      
+      reader.readAsDataURL(file)
+    } catch (err) {
+      setError(`Upload error: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle form submission logic here
-    console.log("Submitted:", { ...formData, profilePic })
-    router.push("/auth/success")
+    
+    if (!userID) {
+      setError("User ID not found. Please log in again.")
+      return
+    }
+
+    if (!uploadedImageUrl) {
+      setError("Please upload a profile picture")
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+      setError(null)
+      
+      const response = await fetch("https://suggesto.xyz/App/api.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          gofor: "usersedit",
+          user_id: userID,
+          name: formData.name,
+          email: formData.email,
+          location: formData.location,
+          imgname: uploadedImageUrl,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to update profile")
+      }
+
+      const data = await response.json()
+      
+      if (data.register_level_status === 2 || data.success === true) {
+        router.push("/auth/success")
+      } else {
+        setError(data.message || "Failed to update profile")
+      }
+    } catch (err) {
+      setError(`Submit error: ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -55,11 +143,19 @@ export default function CompleteAccount() {
         <button
           onClick={() => router.back()}
           className="w-10 h-10 rounded-full bg-[#292938] flex items-center justify-center"
+          type="button"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <h2 className="text-xl font-semibold mx-auto pr-10">Sign Up</h2>
+        <h2 className="text-xl font-semibold mx-auto pr-10">Create Profile</h2>
       </div>
+
+      {/* Error message */}
+      {error && (
+        <div className="mb-4 p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-200 text-sm">
+          {error}
+        </div>
+      )}
 
       {/* Profile Picture Upload */}
       <div className="flex flex-col items-center mb-6">
@@ -79,7 +175,7 @@ export default function CompleteAccount() {
           </div>
         )}
 
-        <p className="text-sm text-gray-400 mb-2">Upload Profile Image</p>
+        <p className="text-sm text-gray-400 mb-2">Upload Image</p>
 
         <input
           type="file"
@@ -89,9 +185,6 @@ export default function CompleteAccount() {
           className="hidden"
         />
       </div>
-
-      <h1 className="text-2xl font-bold mb-1">Complete your account</h1>
-      <p className="text-gray-400 text-sm mb-6">Finish setting up your account now.</p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-3">
@@ -108,13 +201,14 @@ export default function CompleteAccount() {
         </div>
 
         <div className="space-y-3">
-          <label htmlFor="mobile" className="text-gray-400 text-sm">Mobile</label>
+          <label htmlFor="email" className="text-gray-400 text-sm">Email</label>
           <Input
-            id="mobile"
-            name="mobile"
-            placeholder="Enter your mobile number"
+            id="email"
+            name="email"
+            type="email"
+            placeholder="Enter your email"
             className="bg-[#292938] border-none h-12 rounded-xl"
-            value={formData.mobile}
+            value={formData.email}
             onChange={handleChange}
             required
           />
@@ -133,29 +227,12 @@ export default function CompleteAccount() {
           />
         </div>
 
-        <div className="space-y-3">
-          <label htmlFor="preferredGenre" className="text-gray-400 text-sm">Preferred Genre</label>
-          <MultiSelect
-            options={genreOptions.map((genre) => genre.value)}
-            value={formData.preferredGenre}
-            defaultValue={formData.preferredGenre}
-            onValueChange={(selected: string[]) =>
-              setFormData((prev) => ({ ...prev, preferredGenre: selected }))
-            }
-            placeholder="Select genres"
-            variant="default"
-            maxCount={3}
-            className="bg-[#292938] text-white border-none h-12 rounded-xl"
-            id="preferredGenre"
-            name="preferredGenre"
-          />
-        </div>
-
         <Button
           type="submit"
           className="w-full text-white bg-[#6c5ce7] hover:bg-[#5b4dd1] h-12 rounded-xl font-medium mt-6"
+          disabled={isSubmitting || !uploadedImageUrl}
         >
-          Sign Up
+          {isSubmitting ? "Submitting..." : "Sign Up"}
         </Button>
       </form>
 

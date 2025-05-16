@@ -74,7 +74,7 @@ export default function VerifyOTP() {
 
       <h1 className="text-2xl font-bold text-center mb-2">Enter OTP</h1>
       <p className="text-gray-400 text-center text-sm mb-8">
-        We have just sent you 4 digit code via your email example@gmail.com
+        We have just sent you 4 digit code via your Mobile example@gmail.com
       </p>
 
       <div className="flex justify-center space-x-4 mb-8">
@@ -84,10 +84,10 @@ export default function VerifyOTP() {
               ref={inputRefs[index]}
               type="text"
               inputMode="numeric"
-              pattern="[0-9]*"
+              pattern="\d*"
               maxLength={1}
               value={digit}
-              autoFocus={index === 0} 
+              autoFocus={index === 0}
               onChange={(e) => handleInputChange(index, e.target.value)}
               onKeyDown={(e) => handleKeyDown(index, e)}
               onFocus={() => setActiveInput(index)}

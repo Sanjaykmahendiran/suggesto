@@ -4,7 +4,11 @@ import {
   Bell, ChevronRight, CreditCard, LogOut,
   Settings, Film, Bookmark, Star, Heart,
   Users, Clock, HelpCircle, Shield, Info,
-  ArrowLeft
+  ArrowLeft,
+  Contact,
+  Globe,
+  Music,
+  Crown
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -12,24 +16,50 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { BottomNavigation } from "@/components/bottom-navigation"
-import  AvatarImg from "@/assets/avatar.jpg"
+import AvatarImg from "@/assets/avatar.jpg"
+import Cookies from "js-cookie"
+import { useEffect } from "react"
+import { Skeleton } from "@/components/ui/skeleton"
+
+
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState("overview")
-  const router = useRouter()
   const [notificationCount, setNotificationCount] = useState(3)
+  const [genreInterests, setGenreInterests] = useState<string[]>([])
+  const router = useRouter()
+  const [loading, setLoading] = useState<boolean>(true)
 
-  // Mock user data - would come from API/state in real app
+  useEffect(() => {
+    const userId = Cookies.get("userID")
+
+    if (userId) {
+      fetch(`https://suggesto.xyz/App/api.php?gofor=userintlist&user_id=${userId}`)
+        .then(res => res.json())
+        .then(data => {
+          const genres = data.map((item: any) => item.genre_name)
+          setGenreInterests(genres)
+        })
+        .catch(err => {
+          console.error("Failed to fetch genre interests:", err)
+        })
+        .finally(() => {
+          setLoading(false)
+        })
+    } else {
+      setLoading(false)
+    }
+  }, [])
+
   const userData = {
     name: "Sanjaykumar",
     username: "@sk222",
-    avatar: AvatarImg, // Replace with actual path
+    avatar: AvatarImg,
     stats: {
       watched: 143,
       favorites: 37,
       friends: 28
-    },
-    genreInterests: ["Action", "Sci-Fi", "Thriller", "Comedy"]
+    }
   }
 
   return (
@@ -37,10 +67,7 @@ export default function ProfilePage() {
       {/* Header */}
       <header className="flex items-center justify-between p-4 ">
         <div className="flex items-center gap-2">
-          <button
-            className="mr-2 p-2 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors"
-            onClick={() => router.back()}
-          >
+          <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={() => router.back()}>
             <ArrowLeft size={20} />
           </button>
           <h1 className="text-xl font-bold text-white">My Profile</h1>
@@ -90,15 +117,39 @@ export default function ProfilePage() {
 
         {/* Genre Interests Pills */}
         <div className="flex flex-wrap gap-2 mt-4">
-          {userData.genreInterests.map((genre, index) => (
-            <span
-              key={index}
-              className="px-3 py-1 bg-gray-700 rounded-full text-xs text-gray-300"
+          {loading ? (
+            Array.from({ length: 4 }).map((_, index) => (
+              <Skeleton key={index} className="h-6 w-20 rounded-full bg-[#292938]" />
+            ))
+          ) : genreInterests.length > 0 ? (
+            <>
+              {genreInterests.slice(0, 4).map((genre, index) => (
+                <span
+                  key={index}
+                  className="px-3 py-1 bg-[#292938] rounded-full text-xs text-gray-300"
+                >
+                  {genre}
+                </span>
+              ))}
+              {genreInterests.length > 4 && (
+                <span
+                  className="p-1.5 bg-[#292938] rounded-full text-xs text-gray-300 flex items-center justify-center cursor-pointer"
+                  onClick={() => router.push("/genres-interests")}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </span>
+              )}
+            </>
+          ) : (
+            <><p className="text-gray-300">Choose genres</p><span
+              className="px-3 py-1 bg-[#292938] rounded-full text-xs text-gray-300 flex items-center gap-1 cursor-pointer"
+              onClick={() => router.push("/genres-interests")}
             >
-              {genre}
-            </span>
-          ))}
+              <ChevronRight className="h-4 w-4" />
+            </span></>
+          )}
         </div>
+
 
         {/* Stats */}
         <div className="w-full flex justify-between mt-6 px-4 py-3 rounded-xl">
@@ -153,9 +204,29 @@ export default function ProfilePage() {
                 link="/notifications"
               />
               <MenuItem
+                icon={<Users className="h-5 w-5 text-gray-400" />}
+                label="Friend"
+                link="/friends"
+              />
+              <MenuItem
+                icon={<Music className="h-5 w-5 text-gray-400" />}
+                label="Genres"
+                link="/genres-interests"
+              />
+              <MenuItem
+                icon={<Globe className="h-5 w-5 text-gray-400" />}
+                label="Languages"
+                link="/language"
+              />
+              <MenuItem
                 icon={<Shield className="h-5 w-5 text-gray-400" />}
-                label="Privacy & Security"
-                link="/privacy"
+                label="Policies"
+                link="/policies"
+              />
+              <MenuItem
+                icon={<Crown className="h-5 w-5 text-gray-400" />}
+                label="Pro"
+                link="/pro-subscription"
               />
             </div>
 
@@ -164,13 +235,18 @@ export default function ProfilePage() {
             <div className="space-y-1">
               <MenuItem
                 icon={<HelpCircle className="h-5 w-5 text-gray-400" />}
-                label="FAQs & Support"
-                link="/faq-contactus"
+                label="FAQs"
+                link="/faq"
+              />
+              <MenuItem
+                icon={<Contact className="h-5 w-5 text-gray-400" />}
+                label="Support"
+                link="/contactus"
               />
               <MenuItem
                 icon={<Info className="h-5 w-5 text-gray-400" />}
                 label="About"
-                link="/about"
+                link="/aboutus"
               />
               <MenuItem
                 icon={<LogOut className="h-5 w-5 text-red-400" />}
@@ -179,6 +255,11 @@ export default function ProfilePage() {
                 danger
               />
             </div>
+            {/* Share App Button */}
+            <Button className="mt-8 w-full rounded-full py-4 text-xl font-semibold text-white">
+              Share App
+            </Button>
+
           </div>
         )}
 

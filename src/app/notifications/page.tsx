@@ -1,108 +1,53 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Image from "next/image"
-import { ArrowLeft, Bell, Heart, Play, Clock, Film, ThumbsUp, Eye } from 'lucide-react'
+import { ArrowLeft, Bell, Film } from 'lucide-react'
 import { useRouter } from "next/navigation"
-import { BottomNavigation } from "@/components/bottom-navigation"
 import { motion } from "framer-motion"
-import home1 from "@/assets/home-1.jpg"
-import home2 from "@/assets/home-2.jpg"
-import home3 from "@/assets/home-3.jpg"
-import home4 from "@/assets/home-4.jpg"
-import home5 from "@/assets/home-5.jpg"
+import { Skeleton } from "@/components/ui/skeleton"
 import AvatarImg from "@/assets/avatar.jpg"
 
-// Sample notification data
-const notifications = [
-    {
-        id: 1,
-        type: "reaction",
-        user: "Alex",
-        userAvatar: AvatarImg,
-        content: "reacted to your suggestion",
-        movie: "The Avengers",
-        movieImage: home1,
-        time: "2 hours ago",
-        read: false,
-        reactionType: "like"
-    },
-    {
-        id: 2,
-        type: "watched",
-        user: "Sarah",
-        userAvatar: AvatarImg,
-        content: "watched a movie you suggested",
-        movie: "Joker",
-        movieImage: home2,
-        time: "Yesterday",
-        read: false
-    },
-    {
-        id: 3,
-        type: "reaction",
-        user: "Mike",
-        userAvatar: AvatarImg,
-        content: "reacted to your suggestion",
-        movie: "Inception",
-        movieImage: home3,
-        time: "2 days ago",
-        read: true,
-        reactionType: "love"
-    },
-    {
-        id: 4,
-        type: "watched",
-        user: "Emma",
-        userAvatar: AvatarImg,
-        content: "watched a movie you suggested",
-        movie: "The Shallows",
-        movieImage: home4,
-        time: "3 days ago",
-        read: true
-    },
-    {
-        id: 5,
-        type: "suggestion",
-        user: "System",
-        userAvatar: AvatarImg,
-        content: "New movie suggestion for you",
-        movie: "Split",
-        movieImage: home5,
-        time: "5 days ago",
-        read: true
-    }
-]
+interface Notification {
+    id: number
+    user_id: number
+    title: string
+    message: string
+    is_read: number
+    created_date: string
+}
 
 export default function NotificationsPage() {
     const router = useRouter()
-    const [notificationsList, setNotificationsList] = useState(notifications)
+    const [notificationsList, setNotificationsList] = useState<Notification[]>([])
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        const fetchNotifications = async () => {
+            try {
+                const res = await fetch("https://suggesto.xyz/App/api.php?gofor=notifications")
+                const data = await res.json()
+                setNotificationsList(data)
+            } catch (error) {
+                console.error("Error fetching notifications:", error)
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        fetchNotifications()
+    }, [])
 
     const markAllAsRead = () => {
         setNotificationsList(prev =>
-            prev.map(notification => ({ ...notification, read: true }))
+            prev.map(notification => ({ ...notification, is_read: 1 }))
         )
     }
 
-    const getNotificationIcon = (type: string, reactionType?: string) => {
-        switch (type) {
-            case "reaction":
-                return reactionType === "love" ?
-                    <Heart className="w-5 h-5 text-red-500" /> :
-                    <ThumbsUp className="w-5 h-5 text-primary" />
-            case "watched":
-                return <Eye className="w-5 h-5 text-green-500" />
-            case "suggestion":
-                return <Film className="w-5 h-5 text-purple-500" />
-            default:
-                return <Bell className="w-5 h-5 text-primary" />
-        }
-    }
-
-    const unreadCount = notificationsList.filter(n => !n.read).length
+    const unreadCount = notificationsList.filter(n => n.is_read === 0).length
 
     return (
-        <div className=" text-white min-h-screen pb-20">
+        <div className="text-white min-h-screen pb-20">
             {/* Header */}
             <div className="sticky top-0 z-10 ">
                 <div className="flex items-center justify-between p-4">
@@ -116,7 +61,7 @@ export default function NotificationsPage() {
                         <h1 className="text-xl font-bold">Notifications</h1>
                     </div>
 
-                    {unreadCount > 0 && (
+                    {unreadCount > 0 && !loading && (
                         <button
                             onClick={markAllAsRead}
                             className="text-xs text-primary"
@@ -129,7 +74,23 @@ export default function NotificationsPage() {
 
             {/* Notifications List */}
             <div className="p-4">
-                {notificationsList.length === 0 ? (
+                {loading ? (
+                    <div className="space-y-3">
+                        {[...Array(5)].map((_, index) => (
+                            <div
+                                key={index}
+                                className="flex items-center gap-3 p-3 rounded-lg "
+                            >
+                                <Skeleton className="w-10 h-10 rounded-full bg-[#292938]" />
+                                <div className="flex-1 space-y-2">
+                                    <Skeleton className="h-4 w-1/2 bg-[#292938]" />
+                                    <Skeleton className="h-3 w-3/4 bg-[#292938]" />
+                                    <Skeleton className="h-3 w-1/3 bg-[#292938]" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : notificationsList.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20">
                         <Bell className="w-16 h-16 text-gray-600 mb-4" />
                         <p className="text-gray-400">No notifications yet</p>
@@ -142,51 +103,34 @@ export default function NotificationsPage() {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: index * 0.05 }}
-                                className={`flex items-center gap-3 p-3 rounded-lg ${notification.read ? "bg-[#292938]" : "bg-[#292938] border-l-4 border-primary"
-                                    }`}
+                                className={`flex items-center gap-3 p-3 rounded-lg ${
+                                    notification.is_read
+                                        ? "bg-[#292938]"
+                                        : "bg-[#292938] border-l-4 border-primary"
+                                }`}
                             >
-                                <div className="relative">
-                                    <div className="relative w-10 h-10">
-                                        <Image
-                                            src={notification.userAvatar || "/placeholder.svg"}
-                                            alt={notification.user}
-                                            fill
-                                            className="rounded-full object-cover"
-                                        />
-                                    </div>
+                                <div className="relative w-10 h-10">
+                                    <Image
+                                        src={AvatarImg}
+                                        alt="User Avatar"
+                                        fill
+                                        className="rounded-full object-cover"
+                                    />
                                     <div className="absolute -bottom-1 -right-1 p-1 rounded-full bg-[#292938]">
-                                        {getNotificationIcon(notification.type, notification.reactionType)}
+                                        <Film className="w-5 h-5 text-purple-500" />
                                     </div>
                                 </div>
 
                                 <div className="flex-1">
-                                    <p className="text-sm">
-                                        <span className="font-medium">{notification.user}</span>{" "}
-                                        <span className="text-gray-300">{notification.content}</span>
-                                    </p>
-                                    <p className="text-xs text-gray-400">{notification.movie}</p>
-                                    <p className="text-xs text-gray-500 mt-1">{notification.time}</p>
-                                </div>
-
-                                <div className="relative w-12 h-16 rounded overflow-hidden">
-                                    <Image
-                                        src={notification.movieImage || "/placeholder.svg"}
-                                        alt={notification.movie}
-                                        fill
-                                        className="object-cover"
-                                    />
-                                    {notification.type === "watched" && (
-                                        <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                                            <Play className="w-5 h-5 text-white" fill="white" />
-                                        </div>
-                                    )}
+                                    <p className="text-sm font-medium">{notification.title}</p>
+                                    <p className="text-xs text-gray-300">{notification.message}</p>
+                                    <p className="text-xs text-gray-500 mt-1">{notification.created_date}</p>
                                 </div>
                             </motion.div>
                         ))}
                     </div>
                 )}
             </div>
-
         </div>
     )
 }

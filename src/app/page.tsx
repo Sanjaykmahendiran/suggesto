@@ -138,12 +138,6 @@ export default function OnboardingPage() {
           ))}
         </div>
 
-        <button
-          className="absolute right-4 top-1/2 z-20 transform -translate-y-1/2 bg-white/70 rounded-full p-2 shadow-md hidden md:block"
-          onClick={nextSlide}
-        >
-          <ChevronRight className="w-6 h-6 text-teal-500" />
-        </button>
       </div>
     </section>
   );
