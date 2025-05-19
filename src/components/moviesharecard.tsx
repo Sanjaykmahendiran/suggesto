@@ -12,6 +12,7 @@ interface ShareButtonProps {
 
 interface ShareCardProps {
     onClick: () => void;
+    movieTitle: string;
 }
 
 const ShareButton: React.FC<ShareButtonProps> = ({ icon, label }) => (
@@ -23,7 +24,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({ icon, label }) => (
     </button>
 );
 
-const MovieShareCard: React.FC<ShareCardProps> = ({ onClick }) => {
+const MovieShareCard: React.FC<ShareCardProps> = ({ onClick, movieTitle }) => {
     return (
         <div className="bg-[#1a1a24] w-full text-white w-96 rounded-t-2xl p-5 shadow-xl space-y-10">
             <div className="flex justify-between items-center">
@@ -41,7 +42,7 @@ const MovieShareCard: React.FC<ShareCardProps> = ({ onClick }) => {
                 />
                 <div className="flex-1">
                     <div className="flex items-center gap-2">
-                        <h3 className="text-lg font-semibold">Ratatouille</h3>
+                        <h3 className="text-lg font-semibold">{movieTitle}</h3>
                         <span className="text-xs text-white bg-[#6c5ce7] px-2 py-0.5 rounded-full">NEW</span>
                     </div>
                     <p className="text-sm text-gray-300">Animation, Adventure, Family</p>

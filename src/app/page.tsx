@@ -1,144 +1,189 @@
-"use client";
+"use client"
 
-import type React from "react";
-import { useState, useEffect, useCallback } from "react";
-import Image from "next/image";
-import Link from "next/link";
-import { ChevronRight } from "lucide-react";
-import gifone from "@/assets/1.gif";
-import profileone from "@/assets/1.png";
-import profiletwo from "@/assets/2.png";
-import profilethree from "@/assets/3.png";
-import design from "@/assets/line-design.svg";
+import Image from "next/image"
+import { useRouter } from "next/navigation"
+import { ChevronRight } from "lucide-react"
+import { useEffect, useState, useRef } from "react"
+import image from "@/assets/startup-bg.png"
+import { motion, useMotionValue, useSpring, useTransform } from "framer-motion"
 
-export default function OnboardingPage() {
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [touchStart, setTouchStart] = useState(0);
-  const [touchEnd, setTouchEnd] = useState(0);
+const carouselTexts = [
+  ["Lorem ipsum", "dolor sit amet,", "consectetur"],
+  ["Welcome to", "Your Next", "Big Opportunity"],
+  ["Innovate.", "Grow.", "Succeed."]
+]
 
-  const slides = [
-    {
-      poster: profileone,
-      title: "Now Discuss Anything",
-      description:
-        "Create conferences, invite people, Discuss any topic together.",
-    },
-    {
-      poster: profiletwo,
-      title: "See Each Other Anytime",
-      description:
-        "Get to see each other anywhere, anytime. Enjoy safe, discreet messaging",
-    },
-    {
-      poster: profilethree,
-      title: "Plan Anything & Anywhere",
-      description:
-        "Just call your group and plan your trip or meeting at any time.",
-    },
-  ];
-
-  const nextSlide = useCallback(() => {
-    setCurrentSlide((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
-  }, [slides.length]);
-
-  const prevSlide = () => {
-    setCurrentSlide((prev) => (prev === 0 ? slides.length - 1 : prev - 1));
-  };
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
-  const handleTouchEnd = () => {
-    if (touchStart - touchEnd > 50) {
-      nextSlide();
+export default function Home() {
+  const [index, setIndex] = useState(0)
+  const router = useRouter()
+  const containerRef = useRef(null)
+  
+  // Track the slider width to make calculations easier
+  const [sliderWidth, setSliderWidth] = useState(0)
+  
+  // Get the width of the container on mount
+  useEffect(() => {
+    if (containerRef.current) {
+      setSliderWidth(containerRef.current.offsetWidth)
     }
-    if (touchStart - touchEnd < -50) {
-      prevSlide();
+    
+    // Handle window resize
+    const handleResize = () => {
+      if (containerRef.current) {
+        setSliderWidth(containerRef.current.offsetWidth)
+      }
     }
-  };
-
+    
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+  
+  // Calculate threshold based on container width
+  const slideThreshold = sliderWidth * 0.6
+  
+  // Motion values for the slider
+  const x = useMotionValue(0)
+  
+  // Add spring physics for smoother return animation
+  const springX = useSpring(x, { stiffness: 500, damping: 30 })
+  
+  // Dynamic background gradient based on slide position
+  const progress = useTransform(x, [0, slideThreshold], [0, 1])
+  const background = useTransform(
+    progress,
+    [0, 1],
+    ["linear-gradient(90deg, #6c5ce7 0%, #8c7ae6 100%)", 
+     "linear-gradient(90deg, #00b894 0%, #00cec9 100%)"]
+  )
+  
+  // Dynamic opacity for chevron icons
+  const arrowOpacity = useTransform(progress, [0, 0.8], [1, 0])
+  
+  // Text for slider changes based on progress
+  const sliderText = useTransform(
+    progress,
+    [0, 0.8, 1],
+    ["Slide to Get Started", "Get Started...", "Welcome!"]
+  )
+  
+  // Carousel text rotation
   useEffect(() => {
     const interval = setInterval(() => {
-      nextSlide();
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [nextSlide]);
+      setIndex((prev) => (prev + 1) % carouselTexts.length)
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
-    <section
-      className="min-h-screen bg-[#181826] overflow-hidden"
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
-      <div className="relative h-screen">
-        <div className="h-full">
-          {slides.map((slide, index) => (
-            <div
-              key={index}
-              className={`absolute inset-0 transition-opacity duration-500 ease-in-out ${
-                index === currentSlide ? "opacity-100 z-10" : "opacity-0 z-0"
-              }`}
+    <div className="flex flex-col items-center min-h-screen bg-[#181826] text-white">
+      <div className="w-full max-w-md flex flex-col items-center relative">
+        
+        {/* Image with gradient overlay */}
+        <div className="w-full flex justify-center items-center mb-10 relative">
+          <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-[#181826] to-transparent z-20 pointer-events-none" />
+          <div className="rounded-3xl overflow-hidden relative z-10">
+            <Image
+              src={image}
+              alt="Movie Poster Collage"
+              width={500}
+              height={600}
+              className="object-cover max-h-[80%]"
+            />
+          </div>
+          
+          {/* Gradient overlay */}
+          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#181826] to-transparent z-20 pointer-events-none" />
+        </div>
+        
+        {/* Carousel Text with smooth transitions */}
+        <motion.div 
+          className="text-center mb-4 relative z-30 h-40"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          key={index}
+          transition={{ duration: 0.5 }}
+        >
+          {carouselTexts[index].map((line, i) => (
+            <motion.h1 
+              key={i} 
+              className="text-4xl font-bold mb-1"
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.5, delay: i * 0.1 }}
             >
-              <div className="flex flex-col h-full">
-                {/* GIF shown for all slides */}
-                <div className="w-full h-[40vh] relative overflow-hidden">
-                  <Image
-                    src={gifone}
-                    alt="Onboarding animation"
-                    width={400}
-                    height={300}
-                    className="w-full object-cover"
-                  />
-                </div>
-
-                <div className="relative px-4">
-                  <div className=" rounded-t-3xl pt-4 pb-4 relative">
-                    <div className="relative mx-auto max-w-[500px]">
-                      <div className="relative mb-8">
-                        <Image
-                          src={slide.poster}
-                          alt="Poster"
-                          width={300}
-                          height={300}
-                          className="mx-auto"
-                        />
-                      </div>
-                      <div className="text-center px-4">
-                        <h2 className="text-2xl font-bold mb-2">{slide.title}</h2>
-                        <div className="mb-3">
-                          <Image
-                            src={design}
-                            alt="border-design"
-                            width={150}
-                            height={10}
-                            className="mx-auto"
-                          />
-                        </div>
-                        <h5 className="text-gray-600 text-sm mb-6">
-                          {slide.description}
-                        </h5>
-                        <Link href="/auth/create-account" className="inline-block pb-8">
-                          <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center shadow-lg">
-                            <ChevronRight className="text-white w-8 h-8" />
-                          </div>
-                        </Link>
-                      </div>
-                    </div>
-                    
-                  </div>
-                </div>
-              </div>
-            </div>
+              {line}
+            </motion.h1>
+          ))}
+        </motion.div>
+        
+        {/* Pagination dots */}
+        <div className="flex gap-2 items-center justify-center mb-8 relative z-30">
+          {carouselTexts.map((_, i) => (
+            <motion.div
+              key={i}
+              className="rounded-full bg-white"
+              animate={{
+                width: index === i ? 24 : 12,
+                height: 12,
+                opacity: index === i ? 1 : 0.3
+              }}
+              transition={{ duration: 0.3 }}
+            />
           ))}
         </div>
-
+        
+        {/* Improved slider */}
+        <div 
+          ref={containerRef}
+          className="flex w-full max-w-md mx-auto relative px-6 z-30 rounded-full overflow-hidden mb-4"
+        >
+          <div className="relative w-full h-16 bg-white/10 backdrop-blur-sm rounded-full">
+            <motion.div
+              className="absolute h-16 rounded-full flex items-center justify-center cursor-grab active:cursor-grabbing z-10"
+              style={{ 
+                width: sliderWidth * 0.8,
+                background,
+                x: springX
+              }}
+              drag="x"
+              dragConstraints={{ left: 0, right: slideThreshold }}
+              dragElastic={0.1}
+              dragMomentum={false}
+              onDragEnd={(_, info) => {
+                if (info.offset.x > slideThreshold * 0.8) {
+                  // Animate to the end before redirecting
+                  x.set(slideThreshold)
+                  setTimeout(() => {
+                    router.push("/auth/create-account")
+                  }, 300)
+                } else {
+                  // Spring back to start
+                  x.set(0)
+                }
+              }}
+            >
+              <motion.span 
+                className="font-medium text-white"
+                style={{ opacity: useTransform(progress, [0.9, 1], [1, 0]) }}
+              >
+                {sliderText}
+              </motion.span>
+            </motion.div>
+            
+            {/* Arrow indicators */}
+            <motion.div 
+              className="absolute inset-0 flex items-center justify-end px-6 text-white/60 pointer-events-none"
+              style={{ opacity: arrowOpacity }}
+            >
+              <div className="flex space-x-1">
+                <ChevronRight className="w-6 h-6 text-white animate-pulse" />
+                <ChevronRight className="w-6 h-6 text-white animate-pulse" style={{ animationDelay: "0.1s" }} />
+                <ChevronRight className="w-6 h-6 text-white animate-pulse" style={{ animationDelay: "0.2s" }} />
+              </div>
+            </motion.div>
+          </div>
+        </div>
       </div>
-    </section>
-  );
+    </div>
+  )
 }
