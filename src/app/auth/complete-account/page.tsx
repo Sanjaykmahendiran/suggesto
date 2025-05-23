@@ -15,13 +15,15 @@ export default function CompleteAccount() {
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+
 
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     location: "",
   })
-  
+
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -49,11 +51,11 @@ export default function CompleteAccount() {
 
   const uploadImage = async (file: File) => {
     try {
+      setIsUploading(true)
       const reader = new FileReader()
-      
-      reader.onload = async () => {
-        const base64String = reader.result?.toString().split(',')[1]
 
+      reader.onload = async () => {
+        const base64String = reader.result?.toString().split(",")[1]
         if (!base64String) return
 
         const response = await fetch("https://suggesto.xyz/App/api.php", {
@@ -66,9 +68,7 @@ export default function CompleteAccount() {
           }),
         })
 
-        if (!response.ok) {
-          throw new Error("Failed to upload image")
-        }
+        if (!response.ok) throw new Error("Failed to upload image")
 
         const data = await response.json()
 
@@ -79,19 +79,20 @@ export default function CompleteAccount() {
         }
       }
 
-      reader.onerror = () => {
-        setError("Error reading file")
-      }
-      
+      reader.onerror = () => setError("Error reading file")
+
       reader.readAsDataURL(file)
     } catch (err) {
       setError(`Upload error: ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      setIsUploading(false)
     }
   }
 
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!userID) {
       setError("User ID not found. Please log in again.")
       return
@@ -105,7 +106,7 @@ export default function CompleteAccount() {
     try {
       setIsSubmitting(true)
       setError(null)
-      
+
       const response = await fetch("https://suggesto.xyz/App/api.php", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -124,7 +125,7 @@ export default function CompleteAccount() {
       }
 
       const data = await response.json()
-      
+
       if (data.register_level_status === 2 || data.success === true) {
         router.push("/auth/success")
       } else {
@@ -159,7 +160,11 @@ export default function CompleteAccount() {
 
       {/* Profile Picture Upload */}
       <div className="flex flex-col items-center mb-6">
-        {profilePic ? (
+        {isUploading ? (
+          <div className="w-24 h-24 rounded-full bg-[#292938] flex items-center justify-center text-white mb-2 animate-pulse">
+            Uploading...
+          </div>
+        ) : profilePic ? (
           <img
             src={URL.createObjectURL(profilePic)}
             alt="Profile Preview"
@@ -174,9 +179,7 @@ export default function CompleteAccount() {
             Upload
           </div>
         )}
-
         <p className="text-sm text-gray-400 mb-2">Upload Image</p>
-
         <input
           type="file"
           accept="image/*"
@@ -185,6 +188,7 @@ export default function CompleteAccount() {
           className="hidden"
         />
       </div>
+
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-3">

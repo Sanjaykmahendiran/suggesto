@@ -14,7 +14,7 @@ interface BottomNavigationProps {
 const navItems = [
   { href: "/home", label: "Home", icon: Home },
   { href: "/watch-now", label: "Watch Now", icon: PlayCircle },
-  { href: "/add-movie", label: "Add Movie", icon: Clapperboard },
+  { href: "/watch-room", label: "Watch Room", icon: Clapperboard },
   { href: "/suggest", label: "Suggest", icon: Sparkles },
   { href: "/profile", label: "My Profile", icon: UserCircle },
 ];
@@ -23,7 +23,7 @@ export function BottomNavigation({ currentPath }: BottomNavigationProps) {
   const isActive = (path: string) => currentPath === path
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-slate-800 border-t border-slate-700 py-2">
+    <div className="fixed bottom-0 left-0 right-0 bg-slate-800 border-t border-slate-700 py-2 z-50">
       <div className="flex justify-around items-center">
         {navItems.map(({ href, label, icon: Icon }) => (
           <Link

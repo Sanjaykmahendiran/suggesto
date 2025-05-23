@@ -12,7 +12,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import Cookies from "js-cookie"
 
 interface Movie {
-  movie_id: number
+  watchlist_id: number
+  movie_id: string
   title: string
   poster_path: string
   backdrop_path: string
@@ -88,7 +89,8 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
   const fetchMovies = async () => {
     setLoadingMovies(true)
     try {
-      const response = await fetch('https://suggesto.xyz/App/api.php?gofor=movieslist')
+      const userId = Cookies.get('userID') || '1'
+      const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=watchlist&user_id=${userId}`)
       if (!response.ok) throw new Error('Failed to fetch movies')
       const data: Movie[] = await response.json()
       setMovies(data)
@@ -148,7 +150,7 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
         })
 
         if (!response.ok) throw new Error('Failed to suggest movie')
-        
+
         onSuggest(selectedMovie, selectedFriend, note)
         resetSuggestFlow()
       } catch (error) {
@@ -229,7 +231,7 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
               ) : (
                 filteredMovies.map((movie) => (
                   <motion.div
-                    key={movie.movie_id}
+                    key={movie.watchlist_id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#181826] cursor-pointer"
@@ -237,7 +239,7 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
                   >
                     <div className="relative w-16 h-24 rounded-lg overflow-hidden flex-shrink-0">
                       <Image
-                        src={movie.poster_path}
+                        src={`https://suggesto.xyz/App/${movie.poster_path}`}
                         alt={movie.title}
                         fill
                         className="object-cover"
@@ -251,13 +253,6 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
                       <h3 className="font-medium">{movie.title}</h3>
                       <p className="text-xs text-gray-400">{new Date(movie.release_date).getFullYear()}</p>
                       <p className="text-xs text-gray-400">Rating: {movie.rating}/10</p>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {movie.genres.slice(0, 2).map((genre, index) => (
-                          <span key={index} className="text-xs bg-[#292938] px-2 py-1 rounded">
-                            {genre}
-                          </span>
-                        ))}
-                      </div>
                     </div>
                   </motion.div>
                 ))
@@ -275,7 +270,7 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
               <div className="mb-4 flex items-center gap-3">
                 <div className="relative w-16 h-24 rounded-lg overflow-hidden flex-shrink-0">
                   <Image
-                    src={`https://suggesto.xyz/App/posters/${selectedMovie?.poster_path}`}
+                    src={`https://suggesto.xyz/App/${selectedMovie?.poster_path}`}
                     alt={selectedMovie?.title ?? "Movie image"}
                     fill
                     className="object-cover"
@@ -308,8 +303,8 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
                       onClick={() => handleFriendSelect(friend)}
                     >
                       <Avatar className="w-14 h-14">
-                        <AvatarImage 
-                          src={friend.profile_pic || "/api/placeholder/56/56"} 
+                        <AvatarImage
+                          src={`https://suggesto.xyz/App/${friend.profile_pic}`}
                           alt={friend.name}
                           onError={(e) => {
                             const target = e.target as HTMLImageElement
@@ -336,7 +331,7 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
               <div className="flex items-center gap-3">
                 <div className="relative w-16 h-24 rounded-lg overflow-hidden flex-shrink-0">
                   <Image
-                    src={`https://suggesto.xyz/App/posters/${selectedMovie?.poster_path}`}
+                    src={`https://suggesto.xyz/App/${selectedMovie?.poster_path}`}
                     alt={selectedMovie?.title ?? "Movie image"}
                     fill
                     className="object-cover"
@@ -351,8 +346,8 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-xs text-gray-400">To:</span>
                     <Avatar className="w-5 h-5">
-                      <AvatarImage 
-                        src={selectedFriend?.profile_pic || "/api/placeholder/20/20"} 
+                      <AvatarImage
+                        src={`https://suggesto.xyz/App/${selectedFriend?.profile_pic}`}
                         alt={selectedFriend?.name}
                         onError={(e) => {
                           const target = e.target as HTMLImageElement
@@ -386,8 +381,8 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
                 </div>
               </div>
 
-              <Button 
-                className="w-full bg-[#6c5ce7] hover:bg-[#6c5ce7]/80 h-12" 
+              <Button
+                className="w-full bg-[#6c5ce7] hover:bg-[#6c5ce7]/80 h-12"
                 onClick={handleSuggest}
                 disabled={submitting}
               >

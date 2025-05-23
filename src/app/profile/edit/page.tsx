@@ -13,7 +13,7 @@ type CompleteAccountProps = {
     mobile: string
     location: string
     preferredGenre: string
-    profilePicUrl?: string // for existing image
+    profilePicUrl?: string 
   }
 }
 

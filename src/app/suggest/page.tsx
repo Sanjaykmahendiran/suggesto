@@ -147,7 +147,7 @@ export default function SuggestPage() {
 
     try {
       const userId = Cookies.get('userID') || ''
-      const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=suggestedmovies&user_id=${userId}`)
+      const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=suggestedmovies&user_id=${1}`)
 
       if (!response.ok) {
         throw new Error('Failed to fetch suggested movies')
@@ -375,7 +375,7 @@ export default function SuggestPage() {
                   <div className="flex p-3">
                     <div className="relative w-20 h-28 rounded-lg overflow-hidden flex-shrink-0">
                       <Image
-                        src={`https://suggesto.xyz/App/posters/${movie.poster_path}`}
+                        src={`https://suggesto.xyz/App/${movie.poster_path}`}
                         alt={movie.title}
                         fill
                         className="object-cover"
@@ -484,7 +484,7 @@ export default function SuggestPage() {
                   <div className="flex p-3">
                     <div className="relative w-20 h-28 rounded-lg overflow-hidden flex-shrink-0">
                       <Image
-                        src={`https://suggesto.xyz/App/posters/${suggestion.poster_path}`}
+                        src={`https://suggesto.xyz/App/${suggestion.poster_path}`}
                         alt={suggestion.title}
                         fill
                         className="object-cover"
@@ -518,7 +518,7 @@ export default function SuggestPage() {
                         <Button 
                           size="sm" 
                           className="rounded-full text-xs h-8 px-3 bg-[#6c5ce7] hover:bg-[#6c5ce7]/80"
-                          onClick={() => router.push(`/movie-detail-page?id=${suggestion.movie_id}`)}
+                          onClick={() => router.push(`/movie-detail-page?movie_id=${suggestion.movie_id}`)}
                         >
                           View Details
                         </Button>

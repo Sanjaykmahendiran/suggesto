@@ -10,9 +10,10 @@ import CinemaIcon from "@/assets/cinema-icon.png"
 import Cookies from "js-cookie"
 
 
-export default function AuthFlow() {
+export default function login() {
   const router = useRouter()
   const [step, setStep] = useState("mobile")
+  const [mockOTP, setMockOTP] = useState("")
   const [mobile, setMobile] = useState("")
   const [otp, setOtp] = useState(["", "", "", ""])
   const [loading, setLoading] = useState(false)
@@ -75,7 +76,7 @@ export default function AuthFlow() {
       if (data.user_id) {
         // Store user_id in localStorage for later use
         localStorage.setItem("user_id", data.user_id)
-
+        setMockOTP(data.otp)
         // Move to OTP verification step
         setStep("otp")
         setResendDisabled(true)
@@ -115,42 +116,47 @@ export default function AuthFlow() {
 
   const handleVerifyOTP = async () => {
     // Clear previous messages
-    setError("")
-    setSuccessMessage("")
+    setError("");
+    setSuccessMessage("");
 
     if (!otp.every(digit => digit)) {
-      setError("Please enter the complete OTP")
-      return
+      setError("Please enter the complete OTP");
+      return;
     }
 
-    setLoading(true)
-    const otpValue = otp.join("")
+    setLoading(true);
+    const otpValue = otp.join("");
 
     try {
-      // Call the API to verify OTP
-      const apiUrl = `https://suggesto.xyz/App/api.php?gofor=verify_otp&mobilenumber=${mobile}&otp=${otpValue}`
-      const response = await fetch(apiUrl)
-      const data = await response.json()
+      const apiUrl = `https://suggesto.xyz/App/api.php?gofor=verify_otp&mobilenumber=${mobile}&otp=${otpValue}`;
+      const response = await fetch(apiUrl);
+      const data = await response.json();
 
       if (data.user_id && data.message === "OTP is success") {
-        setSuccessMessage("OTP verified successfully!")
+        setSuccessMessage("OTP verified successfully!");
 
         // Set user_id cookie (expires in 7 days)
-        Cookies.set("userID", data.user_id, { expires: 7 })
+        Cookies.set("userID", data.user_id, { expires: 7 });
 
+        // Redirect based on register_level_status
         setTimeout(() => {
-          router.push("/auth/complete-account")
-        }, 1500)
+          if (data.register_level_status === 2) {
+            router.push("/home");
+          } else {
+            router.push("/auth/complete-account");
+          }
+        }, 1500);
       } else {
-        setError(data.message || "Invalid OTP. Please try again.")
+        setError(data.message || "Invalid OTP. Please try again.");
       }
     } catch (err) {
-      setError("Something went wrong. Please try again.")
-      console.error("API error:", err)
+      setError("Something went wrong. Please try again.");
+      console.error("API error:", err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
+
 
   const handleResendCode = async () => {
     if (resendDisabled) return
@@ -268,7 +274,7 @@ export default function AuthFlow() {
               </div>
             ))}
           </div>
-
+          <p className="mb-4">OTP: {mockOTP}</p>
           {error && <p className="text-red-500 text-sm text-center mb-4">{error}</p>}
           {successMessage && <p className="text-green-500 text-sm text-center mb-4">{successMessage}</p>}
 

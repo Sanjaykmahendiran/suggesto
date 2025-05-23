@@ -4,10 +4,11 @@ import Image from "next/image"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { Search, SlidersHorizontal, Shuffle, Sparkles, Clock, Star, Plus, Play, X } from "lucide-react"
+import { Search, SlidersHorizontal, Clock, Star, Plus, Play, X, ArrowLeft, Heart } from "lucide-react"
 import { BottomNavigation } from "@/components/bottom-navigation"
 import WatchNowFilterComponent from "@/components/watchnow-filter"
 import { Skeleton } from "@/components/ui/skeleton"
+import { cn } from "@/lib/utils"
 import Cookies from 'js-cookie'
 import Link from "next/link"
 
@@ -25,6 +26,17 @@ interface Movie {
   overview?: string
 }
 
+type SearchState = "initial" | "results" | "not-found"
+
+const SkeletonMovie = () => (
+  <div className="relative min-w-[120px] h-[180px] rounded-lg overflow-hidden">
+    <Skeleton className="h-full w-full bg-[#292938]" />
+    <div className="absolute bottom-2 left-2 right-2">
+      <Skeleton className="h-4 w-24 bg-[#292938]/80 mb-1" />
+    </div>
+  </div>
+)
+
 export default function WatchNow() {
   const router = useRouter()
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -35,6 +47,16 @@ export default function WatchNow() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showPlaylist, setShowPlaylist] = useState(false)
+
+  // Search related states
+  const [showSearch, setShowSearch] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [searchState, setSearchState] = useState<SearchState>("initial")
+  const [filteredMovies, setFilteredMovies] = useState<Movie[]>([])
+  const [lastSearches, setLastSearches] = useState<string[]>([])
+  const [activeFilter, setActiveFilter] = useState("All")
+
+  const filters = ["All", "Action", "Adventure", "Mystery", "Drama", "Comedy", "Thriller"]
 
   // Fetch movies from API
   useEffect(() => {
@@ -62,6 +84,29 @@ export default function WatchNow() {
     fetchMovies()
   }, [])
 
+  // Search functionality
+  useEffect(() => {
+    if (searchTerm.trim() === "") {
+      setSearchState("initial")
+      return
+    }
+
+    const lowercaseSearch = searchTerm.toLowerCase()
+
+    // Filter movies based on search term (title and overview)
+    const results = movies.filter((movie) =>
+      movie.title.toLowerCase().includes(lowercaseSearch) ||
+      (movie.overview && movie.overview.toLowerCase().includes(lowercaseSearch))
+    )
+
+    if (results.length > 0) {
+      setFilteredMovies(results)
+      setSearchState("results")
+    } else {
+      setSearchState("not-found")
+    }
+  }, [searchTerm, movies])
+
   // Smart suggestion based on time
   useEffect(() => {
     const now = new Date()
@@ -82,22 +127,10 @@ export default function WatchNow() {
   const handleSwipe = (direction: "left" | "right") => {
     if (direction === "left") {
       // Skip this movie
-      shuffleNext()
+      setCurrentIndex((prev) => (prev + 1) % movies.length)
     } else {
       // Like this movie
       setExpandedCard(currentIndex)
-    }
-  }
-
-  const shuffleNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % movies.length)
-  }
-
-  const feelingLucky = () => {
-    if (movies.length > 0) {
-      const randomIndex = Math.floor(Math.random() * movies.length)
-      setCurrentIndex(randomIndex)
-      setExpandedCard(randomIndex)
     }
   }
 
@@ -113,25 +146,227 @@ export default function WatchNow() {
     return new Date(dateString).getFullYear().toString()
   }
 
-  // Helper function to format full date
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString()
-  }
-
   // Helper function to get poster URL
   const getPosterUrl = (path: string) => {
-    return path.includes('http') ? path : `https://image.tmdb.org/t/p/w500${path}`
+    return path.includes('http') ? path : `https://suggesto.xyz/App/${path}`
+  }
+
+  // Search handlers
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value)
+  }
+
+  const clearSearch = () => {
+    setSearchTerm("")
+    setSearchState("initial")
+  }
+
+  const handleLastSearchClick = (search: string) => {
+    setSearchTerm(search)
+  }
+
+  const removeFromLastSearches = (search: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setLastSearches(lastSearches.filter((item) => item !== search))
+  }
+
+  const clearAllLastSearches = () => {
+    setLastSearches([])
+  }
+
+  const addToLastSearches = (term: string) => {
+    if (term.trim() && !lastSearches.includes(term)) {
+      setLastSearches(prev => [term, ...prev.slice(0, 4)]) // Keep only last 5 searches
+    }
+  }
+
+  const handleSearchSubmit = () => {
+    if (searchTerm.trim()) {
+      addToLastSearches(searchTerm.trim())
+    }
+  }
+
+  const openSearch = () => {
+    setShowSearch(true)
+  }
+
+  const closeSearch = () => {
+    setShowSearch(false)
+    setSearchTerm("")
+    setSearchState("initial")
+  }
+
+  // If search is open, show search interface
+  if (showSearch) {
+    return (
+      <div className="min-h-screen bg-[#181826] text-white">
+        <div className="w-full max-w-md mx-auto p-4">
+          <div className="flex items-center mb-6">
+            <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={closeSearch}>
+              <ArrowLeft size={24} />
+            </button>
+            <h1 className="text-xl font-semibold">Search Watchlist</h1>
+          </div>
+
+          <div className="relative mb-6">
+            <div className="flex items-center bg-[#292938] rounded-full px-4 py-4">
+              <Search size={20} className="text-gray-400 mr-2" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={handleSearch}
+                onKeyPress={(e) => e.key === 'Enter' && handleSearchSubmit()}
+                placeholder="Search your watchlist..."
+                className="bg-transparent border-none outline-none flex-1 text-white"
+                autoFocus
+              />
+              {searchTerm && (
+                <button onClick={clearSearch} className="ml-2">
+                  <X size={20} className="text-gray-400" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {searchState === "initial" && (
+            <div>
+              {lastSearches.length > 0 && (
+                <>
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-lg font-medium">Recent Searches</h2>
+                    <button onClick={clearAllLastSearches} className="text-sm text-red-500">
+                      Clear All
+                    </button>
+                  </div>
+
+                  <div className="space-y-3 mb-6">
+                    {lastSearches.map((search, index) => (
+                      <div
+                        key={index}
+                        onClick={() => handleLastSearchClick(search)}
+                        className="flex items-center justify-between border-b border-[#292938] p-3 cursor-pointer hover:bg-[#292938]/30 rounded-lg"
+                      >
+                        <div className="flex items-center">
+                          <Clock size={18} className="text-gray-400 mr-3" />
+                          <span>{search}</span>
+                        </div>
+                        <button onClick={(e) => removeFromLastSearches(search, e)} className="text-gray-400">
+                          <X size={18} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              <h2 className="text-lg font-medium mb-4">Your Planned Movies ({movies.length})</h2>
+              <div className="grid grid-cols-2 gap-3">
+                {movies.slice(0, 6).map((movie) => (
+                  <Link href={`/movie-detail-page?movie_id=${movie.movie_id}`} key={movie.watchlist_id}>
+                    <motion.div
+                      className="relative w-full h-[200px] rounded-lg overflow-hidden cursor-pointer"
+                      whileHover={{ scale: 1.05 }}
+                    >
+                      <Image
+                        src={getPosterUrl(movie.poster_path)}
+                        alt={movie.title}
+                        fill
+                        className="object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                      <div className="absolute top-2 right-2 bg-[#9370ff] text-white text-xs px-1.5 py-0.5 rounded">
+                        {movie.rating}
+                      </div>
+                      <div className="absolute bottom-2 left-2">
+                        <h3 className="text-sm font-medium text-white line-clamp-2">{movie.title}</h3>
+                        <p className="text-xs text-gray-300">{formatReleaseYear(movie.release_date)}</p>
+                      </div>
+                    </motion.div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {searchState === "results" && (
+            <div>
+              <h2 className="text-lg font-medium mb-4">Found ({filteredMovies.length})</h2>
+
+              <div className="space-y-4">
+                {filteredMovies.map((movie) => (
+                  <Link href={`/movie-detail-page?movie_id=${movie.movie_id}`} key={movie.watchlist_id}>
+                    <div className="flex bg-[#292938] rounded-lg overflow-hidden hover:bg-[#333342] transition-colors">
+                      <div className="relative w-24 h-32 flex-shrink-0">
+                        <Image
+                          src={getPosterUrl(movie.poster_path)}
+                          alt={movie.title}
+                          fill
+                          className="object-cover"
+                        />
+                        <div className="absolute top-2 left-2 bg-[#9370ff] text-xs font-bold px-2 py-0.5 rounded text-white">
+                          {movie.rating}
+                        </div>
+                      </div>
+                      <div className="flex-1 p-3">
+                        <div className="flex justify-between items-start">
+                          <h3 className="font-bold text-white">{movie.title}</h3>
+                          <button className="text-gray-400">
+                            <Heart size={20} />
+                          </button>
+                        </div>
+                        <p className="text-xs text-[#9370ff] mb-1">{formatReleaseYear(movie.release_date)}</p>
+                        <p className="text-xs text-gray-300 mb-2 line-clamp-2">
+                          {movie.overview || "No description available"}
+                        </p>
+                        <div className="flex text-xs text-gray-400 space-x-2">
+                          <span>Added: {new Date(movie.added_date).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {searchState === "not-found" && (
+            <div className="flex flex-col items-center justify-center text-center mt-16">
+              <div className="w-16 h-16 bg-[#292938] rounded-lg flex items-center justify-center mb-4">
+                <Search size={32} className="text-[#9370ff]" />
+              </div>
+              <h2 className="text-2xl font-medium mb-2">
+                No movies found
+              </h2>
+              <p className="text-sm text-gray-400 mb-4">
+                We couldn't find "{searchTerm}" in your watchlist
+              </p>
+              <button
+                onClick={clearSearch}
+                className="text-[#9370ff] font-medium"
+              >
+                Clear search
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="bg-[#181826] text-white min-h-screen mb-18">
+    <div className="min-h-screen bg-[#181826]">
       {/* Header */}
-      <header className="flex justify-between items-center p-4">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Watch List</h1>
-          <p className="text-xs text-gray-400">
-            Find your next favorite from your planned list
-          </p>
+      <header className="p-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <button className="mr-2 p-2 rounded-full bg-[#292938]" onClick={() => router.back()}>
+            <ArrowLeft size={20} />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-white">Watch List</h1>
+            <p className="text-xs text-gray-400">
+              Find your next favorite from your planned list
+            </p>
+          </div>
         </div>
         <div className="flex gap-4">
           <button
@@ -175,75 +410,52 @@ export default function WatchNow() {
             )}
           </button>
           {!showPlaylist && (
-            <>
-              <button className="text-gray-300" onClick={() => setShowFilter(true)}>
-                <SlidersHorizontal className="w-5 h-5" />
-              </button>
-              <button className="text-gray-300" onClick={shuffleNext}>
-                <Shuffle className="w-5 h-5" />
-              </button>
-            </>
+            <button className="text-gray-300" onClick={() => setShowFilter(true)}>
+              <SlidersHorizontal className="w-5 h-5" />
+            </button>
           )}
         </div>
       </header>
 
       {showPlaylist ? (
-        <div className="px-4 pb-20">
+        <div className="grid grid-cols-2 gap-4 p-4">
           {loading ? (
-            Array(5).fill(0).map((_, index) => (
-              <div key={index} className="flex gap-4 py-3 border-b border-gray-800">
-                <Skeleton className="flex-shrink-0 w-16 h-24 rounded-md" />
-                <div className="flex-1">
-                  <Skeleton className="h-5 w-3/4 mb-2" />
-                  <Skeleton className="h-4 w-1/4 mb-1" />
-                  <Skeleton className="h-4 w-full" />
-                </div>
-              </div>
-            ))
-          ) : movies.length > 0 ? (
+            <>
+              <SkeletonMovie />
+              <SkeletonMovie />
+              <SkeletonMovie />
+              <SkeletonMovie />
+            </>
+          ) : (
             movies.map((movie) => (
               <Link href={`/movie-detail-page?movie_id=${movie.movie_id}`} key={movie.watchlist_id}>
-                <div className="flex gap-4 py-3 border-b border-gray-800">
-                  <div className="flex-shrink-0 w-16 h-24 relative rounded-md overflow-hidden">
-                    {movie.poster_path ? (
-                      <Image
-                        src={getPosterUrl(movie.poster_path)}
-                        alt={movie.title}
-                        fill
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gray-800 flex items-center justify-center">
-                        <span className="text-xs text-gray-400">No image</span>
-                      </div>
-                    )}
+                <motion.div
+                  key={movie.movie_id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: movie.movie_id * 0.1 }}
+                  whileHover={{ scale: 1.05 }}
+                  className="relative w-full h-[180px] rounded-lg overflow-hidden cursor-pointer"
+                >
+                  <Image
+                    src={getPosterUrl(movie.poster_path)}
+                    alt={movie.title}
+                    fill
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                  <div className="absolute top-2 right-2 bg-primary text-white text-xs px-1.5 py-0.5 rounded">
+                    {movie.rating}
                   </div>
-                  <div className="flex-1">
-                    <h3 className="text-white font-medium">{movie.title}</h3>
-                    <p className="text-gray-400 text-sm mb-1">{formatDate(movie.release_date)}</p>
-                    <p className="text-gray-300 text-sm line-clamp-2">{movie.overview || "No overview available"}</p>
+                  <div className="absolute bottom-2 left-2">
+                    <h3 className="text-sm font-medium text-white">{movie.title}</h3>
                   </div>
-                </div>
+                </motion.div>
               </Link>
             ))
-          ) : (
-            <div className="flex flex-col items-center justify-center py-10 text-center">
-              <div className="mb-4">
-                <Plus className="w-12 h-12 text-[#9370ff] mx-auto" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">No planned movies</h3>
-              <p className="text-gray-400 mb-4">
-                Your planned watchlist is empty. Add some movies to get started!
-              </p>
-              <button
-                className="text-[#9370ff] font-medium"
-                onClick={() => router.push("/search")}
-              >
-                Find movies to add
-              </button>
-            </div>
           )}
         </div>
+
       ) : (
         <>
           {/* Search */}
@@ -252,9 +464,10 @@ export default function WatchNow() {
               <Search size={18} className="text-gray-400 mr-2" />
               <input
                 type="text"
-                placeholder="Search by title, genre..."
+                placeholder="Search your watchlist..."
                 className="bg-transparent w-full focus:outline-none text-gray-300"
-                onClick={() => router.push("/search")}
+                onClick={openSearch}
+                readOnly
               />
             </div>
           </div>
@@ -263,7 +476,7 @@ export default function WatchNow() {
           {suggestion && (
             <div className="px-4 mb-4">
               <div className="bg-[#292938]/50 rounded-lg p-3 flex items-center">
-                <Sparkles className="w-4 h-4 text-[#9370ff] mr-2" />
+                <Clock className="w-4 h-4 text-[#9370ff] mr-2" />
                 <p className="text-sm text-gray-200">{suggestion}</p>
               </div>
             </div>
@@ -309,11 +522,11 @@ export default function WatchNow() {
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0.9, opacity: 0 }}
                     transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                    className="absolute inset-0 bg-[#292938] rounded-xl overflow-hidden"
+                    className="absolute inset-0 h-[500px] bg-[#292938] rounded-xl overflow-hidden shadow-lg"
                   >
                     <div className="relative h-[250px]">
                       <Image
-                        src={movies[expandedCard].backdrop_path || movies[expandedCard].poster_path || "/placeholder.svg"}
+                        src={getPosterUrl(movies[expandedCard].backdrop_path || movies[expandedCard].poster_path || "/placeholder.svg")}
                         alt={movies[expandedCard].title}
                         fill
                         className="object-cover"
@@ -328,7 +541,7 @@ export default function WatchNow() {
                     </div>
 
                     <div className="p-4">
-                      <h2 className="text-xl font-bold mb-2">{movies[expandedCard].title}</h2>
+                      <h2 className="text-xl font-bold mb-3">{movies[expandedCard].title}</h2>
 
                       <div className="flex items-center gap-3 mb-4">
                         <div className="flex items-center">
@@ -340,17 +553,21 @@ export default function WatchNow() {
                         </span>
                       </div>
 
-                      <p className="text-sm text-gray-300 mb-4">
-                        Release Date {new Date(movies[expandedCard].release_date).toLocaleDateString()}
+                      <p className="text-sm text-gray-300 mb-5">
+                        {movies[expandedCard].overview || "No overview available for this title."}
                       </p>
 
-                      <div className="flex gap-3">
+                      <p className="text-xs text-gray-400 mb-5">
+                        Release Date: {new Date(movies[expandedCard].release_date).toLocaleDateString()}
+                      </p>
+
+                      <div className="flex">
                         <button
-                          className="flex-1 bg-[#9370ff] text-white py-3 rounded-lg flex items-center justify-center gap-2"
+                          className="w-full bg-[#9370ff] text-white py-3 rounded-lg flex items-center justify-center gap-2"
                           onClick={() => handleViewDetail(movies[expandedCard].movie_id)}
                         >
                           <Play className="w-4 h-4" fill="white" />
-                          View Detail
+                          View Details
                         </button>
                       </div>
                     </div>
@@ -366,12 +583,12 @@ export default function WatchNow() {
                             initial={offset === 0 ? { scale: 0.8, y: 20, opacity: 0 } : {}}
                             animate={{
                               scale: 1 - offset * 0.05,
-                              y: offset * 15,
+                              y: offset * 22,
                               opacity: 1 - offset * 0.2,
                               zIndex: 10 - offset,
                             }}
                             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                            className="absolute inset-x-4 rounded-xl overflow-hidden bg-[#292938] shadow-lg"
+                            className="absolute inset-x-4 h-[500px] rounded-xl overflow-hidden bg-[#292938] border-10 shadow-lg"
                             style={{ top: "10px", bottom: "10px" }}
                             onClick={() => offset === 0 && setExpandedCard(index)}
                             drag={offset === 0 ? "x" : false}
@@ -391,7 +608,7 @@ export default function WatchNow() {
                             )}
                             <div className="relative h-full">
                               <Image
-                                src={movies[index].backdrop_path || movies[index].poster_path || "/placeholder.svg"}
+                                src={getPosterUrl(movies[index].backdrop_path || movies[index].poster_path || "/placeholder.svg")}
                                 alt={movies[index].title}
                                 fill
                                 className="object-cover"
@@ -405,7 +622,7 @@ export default function WatchNow() {
                                     <Star className="w-4 h-4 text-yellow-400 mr-1" fill="rgb(250 204 21)" />
                                     <span className="text-sm">{movies[index].rating}</span>
                                   </div>
-                                  <span className="text-sm bg-[#9370ff]/20 text-[#9370ff] px-2 py-0.5 rounded">
+                                  <span className="text-sm bg-[#9370ff]/20 text-[#9370ff] text-white px-2 py-0.5 rounded">
                                     {formatReleaseYear(movies[index].release_date)}
                                   </span>
                                 </div>
@@ -425,7 +642,7 @@ export default function WatchNow() {
                         </p>
                         <button
                           className="text-[#9370ff] font-medium"
-                          onClick={() => router.push("/search")}
+                          onClick={() => router.push("/add-movie")}
                         >
                           Find movies to add
                         </button>
@@ -434,22 +651,6 @@ export default function WatchNow() {
                   </>
                 )}
               </AnimatePresence>
-            )}
-          </div>
-
-          {/* Action Buttons */}
-          <div className="px-4 mb-6">
-            {loading ? (
-              <Skeleton className="w-full h-14 rounded-xl" />
-            ) : (
-              <button
-                onClick={feelingLucky}
-                disabled={movies.length === 0}
-                className="w-full bg-gradient-to-r from-[#9370ff] to-[#6c5ce7] text-white py-4 rounded-xl font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Sparkles className="w-5 h-5" />
-                I'm Feeling Lucky
-              </button>
             )}
           </div>
 
@@ -463,7 +664,7 @@ export default function WatchNow() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 backdrop-blur-xs bg-white/30 transition-all duration-300"
+                className="fixed inset-0 z-50 backdrop-blur-xs bg-black/30 transition-all duration-300"
               >
                 <motion.div
                   initial={{ y: "100%" }}
@@ -479,6 +680,16 @@ export default function WatchNow() {
           </AnimatePresence>
         </>
       )}
+
+      {/* Floating Action Button */}
+      <motion.button
+        className="fixed bottom-24 right-4 w-14 h-14  z-50 rounded-full bg-[#6c5ce7] flex items-center justify-center shadow-lg"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => router.push("/add-movie")}
+      >
+        <Plus className="w-6 h-6" />
+      </motion.button>
     </div>
   )
 }

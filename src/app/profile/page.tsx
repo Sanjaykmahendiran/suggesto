@@ -1,47 +1,47 @@
 "use client"
 
 import {
-  Bell, ChevronRight, CreditCard, LogOut,
-  Settings, Film, Bookmark, Star, Heart,
-  Users, Clock, HelpCircle, Shield, Info,
-  ArrowLeft,
-  Contact,
-  Globe,
-  Music,
-  Crown
+  Bell, ChevronRight, ArrowLeft,
+  Settings, Users, Music, Globe, Crown
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { BottomNavigation } from "@/components/bottom-navigation"
-import AvatarImg from "@/assets/avatar.jpg"
 import Cookies from "js-cookie"
-import { useEffect } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
 
-
-
 export default function ProfilePage() {
-  const [activeTab, setActiveTab] = useState("overview")
+  const [userData, setUserData] = useState<any>(null)
   const [notificationCount, setNotificationCount] = useState(3)
   const [genreInterests, setGenreInterests] = useState<string[]>([])
-  const router = useRouter()
   const [loading, setLoading] = useState<boolean>(true)
+  const router = useRouter()
+
+  const userStats = {
+    stats: {
+      watched: 143,
+      favorites: 37,
+      friends: 28
+    }
+  }
 
   useEffect(() => {
     const userId = Cookies.get("userID")
 
     if (userId) {
-      fetch(`https://suggesto.xyz/App/api.php?gofor=userintlist&user_id=${userId}`)
-        .then(res => res.json())
-        .then(data => {
-          const genres = data.map((item: any) => item.genre_name)
-          setGenreInterests(genres)
+      Promise.all([
+        fetch(`https://suggesto.xyz/App/api.php?gofor=userget&user_id=${userId}`).then(res => res.json()),
+        fetch(`https://suggesto.xyz/App/api.php?gofor=userintlist&user_id=${userId}`).then(res => res.json())
+      ])
+        .then(([userData, interestsData]) => {
+          setUserData(userData)
+          setGenreInterests(interestsData.map((item: any) => item.genre_name))
         })
         .catch(err => {
-          console.error("Failed to fetch genre interests:", err)
+          console.error("Failed to fetch data:", err)
         })
         .finally(() => {
           setLoading(false)
@@ -51,28 +51,29 @@ export default function ProfilePage() {
     }
   }, [])
 
-  const userData = {
-    name: "Sanjaykumar",
-    username: "@sk222",
-    avatar: AvatarImg,
-    stats: {
-      watched: 143,
-      favorites: 37,
-      friends: 28
+  const handleShare = () => {
+    if (navigator.canShare?.()) {
+      navigator.share({
+        title: "Suggesto",
+        text: "Check out Suggesto – your personalized movie and show recommendations!",
+        url: "https://suggesto.top",
+      }).catch((error) => console.error("Error sharing:", error));
+    } else {
+      alert("Sharing is not supported on this device.");
     }
-  }
+  };
+
 
   return (
-    <div className="flex flex-col min-h-screen text-white mb-18 ">
+    <div className="flex flex-col min-h-screen text-white mb-18">
       {/* Header */}
-      <header className="flex items-center justify-between p-4 ">
+      <header className="flex items-center justify-between p-4">
         <div className="flex items-center gap-2">
           <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={() => router.back()}>
             <ArrowLeft size={20} />
           </button>
           <h1 className="text-xl font-bold text-white">My Profile</h1>
         </div>
-
         <div className="flex items-center gap-4">
           <button
             aria-label="Notifications"
@@ -99,23 +100,34 @@ export default function ProfilePage() {
         <div className="flex items-center gap-4">
           {/* Avatar */}
           <div className="h-14 w-14 overflow-hidden rounded-full border-2 border-primary">
-            <Image
-              src={userData.avatar}
-              alt="Profile"
-              width={56}
-              height={56}
-              className="h-full w-full object-cover"
-            />
+            {loading ? (
+              <Skeleton className="h-14 w-14 rounded-full" />
+            ) : (
+              <Image
+                src={userData?.imgname || "/fallback-avatar.png"}
+                alt="Profile"
+                width={56}
+                height={56}
+                className="h-full w-full object-cover"
+              />
+            )}
           </div>
-
-          {/* Name and Username */}
           <div>
-            <h2 className="font-semibold text-2xl">{userData.name}</h2>
-            <p className="text-sm text-gray-400">{userData.username}</p>
+            {loading ? (
+              <>
+                <Skeleton className="h-6 w-40 rounded-md mb-2" />
+                <Skeleton className="h-4 w-28 rounded-md" />
+              </>
+            ) : (
+              <>
+                <h2 className="font-semibold text-2xl">{userData?.name}</h2>
+                <p className="text-sm text-gray-400">{userData?.mobilenumber}</p>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Genre Interests Pills */}
+        {/* Genre Interests */}
         <div className="flex flex-wrap gap-2 mt-4">
           {loading ? (
             Array.from({ length: 4 }).map((_, index) => (
@@ -141,143 +153,71 @@ export default function ProfilePage() {
               )}
             </>
           ) : (
-            <><p className="text-gray-300">Choose genres</p><span
-              className="px-3 py-1 bg-[#292938] rounded-full text-xs text-gray-300 flex items-center gap-1 cursor-pointer"
-              onClick={() => router.push("/genres-interests")}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </span></>
+            <>
+              <p className="text-gray-300">Choose genres</p>
+              <span
+                className="px-3 py-1 bg-[#292938] rounded-full text-xs text-gray-300 flex items-center gap-1 cursor-pointer"
+                onClick={() => router.push("/genres-interests")}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </span>
+            </>
           )}
         </div>
 
-
         {/* Stats */}
         <div className="w-full flex justify-between mt-6 px-4 py-3 rounded-xl">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-primary">{userData.stats.watched}</p>
-            <p className="text-gray-300 text-xs">Watched</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-primary">{userData.stats.favorites}</p>
-            <p className="text-gray-300 text-xs">Favorites</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-primary">{userData.stats.friends}</p>
-            <p className="text-gray-300 text-xs">Friends</p>
-          </div>
+          {loading ? (
+            <>
+              <Skeleton className="h-10 w-12 rounded-md" />
+              <Skeleton className="h-10 w-12 rounded-md" />
+              <Skeleton className="h-10 w-12 rounded-md" />
+            </>
+          ) : (
+            <>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-primary">{userStats.stats.watched}</p>
+                <p className="text-gray-300 text-xs">Watched</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-primary">{userStats.stats.favorites}</p>
+                <p className="text-gray-300 text-xs">Favorites</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-primary">{userStats.stats.friends}</p>
+                <p className="text-gray-300 text-xs">Friends</p>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="flex border-b border-gray-700">
-        <button
-          className={`flex-1 py-3 text-center ${activeTab === 'overview' ? 'border-b-2 border-primary text-primary font-medium' : 'text-gray-400'}`}
-          onClick={() => setActiveTab('overview')}
-        >
-          Overview
-        </button>
-        <button
-          className={`flex-1 py-3 text-center ${activeTab === 'watchlist' ? 'border-b-2 border-primary text-primary font-medium' : 'text-gray-400'}`}
-          onClick={() => setActiveTab('watchlist')}
-        >
-          Watchlist
-        </button>
-        <button
-          className={`flex-1 py-3 text-center ${activeTab === 'watched' ? 'border-b-2 border-primary text-primary font-medium' : 'text-gray-400'}`}
-          onClick={() => setActiveTab('watched')}
-        >
-          Watched
-        </button>
-      </div>
-
-      {/* Main Content Based on Tab */}
+      {/* Overview Content */}
       <main className="flex-1 px-6 py-4">
-        {activeTab === 'overview' && (
-          <div className="flex flex-col">
-
-            {/* Settings Section */}
-            <h3 className="text-lg font-medium mb-4">Settings</h3>
-            <div className="mb-6 space-y-1">
-              <MenuItem
-                icon={<Bell className="h-5 w-5 text-gray-400" />}
-                label="Notifications"
-                link="/notifications"
-              />
-              <MenuItem
-                icon={<Users className="h-5 w-5 text-gray-400" />}
-                label="Friend"
-                link="/friends"
-              />
-              <MenuItem
-                icon={<Music className="h-5 w-5 text-gray-400" />}
-                label="Genres"
-                link="/genres-interests"
-              />
-              <MenuItem
-                icon={<Globe className="h-5 w-5 text-gray-400" />}
-                label="Languages"
-                link="/language"
-              />
-              <MenuItem
-                icon={<Shield className="h-5 w-5 text-gray-400" />}
-                label="Policies"
-                link="/policies"
-              />
-              <MenuItem
-                icon={<Crown className="h-5 w-5 text-gray-400" />}
-                label="Pro"
-                link="/pro-subscription"
-              />
+        <div className="flex flex-col min-h-full justify-between">
+          <div>
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <MenuItem icon={<Users className="h-10 w-10 text-white" />} value={28} label="Friends" link="/friends" />
+              <MenuItem icon={<Music className="h-10 w-10 text-white" />} value={50} label="Genres" link="/genres-interests" />
+              <MenuItem icon={<Globe className="h-10 w-10 text-white" />} value={20} label="Languages" link="/language" />
+              <MenuItem icon={<Crown className="h-10 w-10 text-white" />} value="Pro" label="Pro" link="/pro-subscription" />
             </div>
 
-            {/* Help Section */}
-            <h3 className="text-lg font-medium mb-4">Help & About</h3>
-            <div className="space-y-1">
-              <MenuItem
-                icon={<HelpCircle className="h-5 w-5 text-gray-400" />}
-                label="FAQs"
-                link="/faq"
-              />
-              <MenuItem
-                icon={<Contact className="h-5 w-5 text-gray-400" />}
-                label="Support"
-                link="/contactus"
-              />
-              <MenuItem
-                icon={<Info className="h-5 w-5 text-gray-400" />}
-                label="About"
-                link="/aboutus"
-              />
-              <MenuItem
-                icon={<LogOut className="h-5 w-5 text-red-400" />}
-                label="Log out"
-                link="/"
-                danger
-              />
-            </div>
             {/* Share App Button */}
-            <Button className="mt-8 w-full rounded-full py-4 text-xl font-semibold text-white">
+            <Button
+              onClick={handleShare}
+              className="mt-8 w-full rounded-full p-4 text-xl font-semibold text-white"
+            >
               Share App
             </Button>
-
           </div>
-        )}
 
-        {activeTab === 'watchlist' && (
-          <div className="flex flex-col items-center justify-center h-64">
-            <Bookmark className="h-12 w-12 text-gray-500 mb-4" />
-            <p className="text-gray-400">Your watchlist content will appear here</p>
-            <Button className="mt-4 px-6" variant="default">Browse Movies</Button>
+          {/* Left-aligned Footer */}
+          <div className="mt-10 text-left">
+            <p className="text-xl text-gray-400">Suggesto</p>
+            <p className="text-sm text-gray-400">V1.0.0</p>
           </div>
-        )}
-
-        {activeTab === 'watched' && (
-          <div className="flex flex-col items-center justify-center h-64">
-            <Clock className="h-12 w-12 text-gray-500 mb-4" />
-            <p className="text-gray-400">Your watch history will appear here</p>
-            <Button className="mt-4 px-6" variant="default">Browse Movies</Button>
-          </div>
-        )}
+        </div>
       </main>
 
       {/* Bottom Navigation */}
@@ -289,24 +229,23 @@ export default function ProfilePage() {
 function MenuItem({
   icon,
   label,
+  value,
   link,
-  danger = false
 }: {
   icon: React.ReactNode;
   label: string;
+  value: string | number;
   link: string;
-  danger?: boolean;
 }) {
   return (
-    <Link
-      href={link}
-      className={`flex items-center justify-between py-4 border-b border-gray-700 ${danger ? 'text-red-400' : 'text-white'}`}
-    >
-      <div className="flex items-center gap-4">
-        {icon}
-        <span>{label}</span>
+    <Link href={link}>
+      <div className="flex items-center gap-4 bg-[#1f1f2b] p-8 rounded-xl hover:bg-[#2a2a3a] transition-colors cursor-pointer">
+        <div className="text-white ">{icon}</div>
+        <div className="flex flex-col">
+          <p className="text-xl font-bold text-white">{value}</p>
+          <p className="text-sm text-gray-400">{label}</p>
+        </div>
       </div>
-      <ChevronRight className="h-5 w-5 text-gray-500" />
     </Link>
   )
 }
