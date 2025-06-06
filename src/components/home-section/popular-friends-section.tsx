@@ -36,7 +36,7 @@ export const PopularWithFriendsSection = ({
           <Users className="w-5 h-5 text-[#9370ff]" />
           <h2 className="text-lg font-semibold">{title}</h2>
         </div>
-        <a href="/friends-popular" className="text-sm text-[#9370ff]">
+        <a href="/watch-list" className="text-sm text-[#9370ff]">
           See All
         </a>
       </div>
@@ -76,7 +76,7 @@ export const PopularWithFriendsSection = ({
               transition={{ delay: index * 0.1 }}
               whileHover={{ scale: 1.05 }}
               className="relative min-w-[120px] h-[180px] rounded-lg overflow-hidden cursor-pointer"
-              onClick={() => router.push(`/movie-deatil-page?movie_id=${movie.movie_id}`)}
+              onClick={() => router.push(`/movie-detail-page?movie_id=${movie.movie_id}`)}
             >
               <img
                 src={

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { ChevronDown, ChevronUp, Search, ArrowLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageTransitionProvider, PageTransitionWrapper } from "@/components/PageTransition";
 
 // Define interfaces for TypeScript
 interface FAQ {
@@ -69,6 +70,8 @@ export default function HelpCenterPage() {
     )
 
     return (
+
+//   <PageTransitionWrapper>
         <div className="min-h-screen text-white">
             {/* Header */}
             <div className="flex items-center gap-3 p-4">
@@ -172,5 +175,7 @@ export default function HelpCenterPage() {
                 </div>
             )}
         </div>
+        // </PageTransitionWrapper>
+
     )
 }

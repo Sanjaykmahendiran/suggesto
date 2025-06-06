@@ -75,7 +75,7 @@ export const AiRandomizerSection = ({ movies, title = "AI Recommendations" }: Ai
                             transition={{ delay: index * 0.1 }}
                             whileHover={{ scale: 1.05 }}
                             className="relative min-w-[100px] h-[150px] rounded-lg overflow-hidden cursor-pointer"
-                            onClick={() => router.push(`/movie-deatil-paage?movie_id=${movie.movie_id}`)}
+                            onClick={() => router.push(`/movie-detail-page?movie_id=${movie.movie_id}`)}
                         >
                             <img
                                 src={
@@ -109,8 +109,8 @@ export const AiRandomizerSection = ({ movies, title = "AI Recommendations" }: Ai
                 {movies.length > 6 && (
                     <div className="mt-3 text-center">
                         <Button
-                            size="sm"
-                            className="rounded-full text-xs h-8 px-4 bg-[#6c5ce7] hover:bg-[#6c5ce7]/80 text-white"
+                            variant="default"
+                            className="rounded-full px-4 bg-[#6c5ce7] hover:bg-[#6c5ce7]/80 text-white"
                             onClick={() => router.push('/ai-recommendations')}
                         >
                             View All {movies.length} Recommendations

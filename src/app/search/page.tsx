@@ -152,7 +152,7 @@ export default function Search() {
         <main className="flex min-h-screen flex-col items-center bg-[#181826] text-white">
             <div className="w-full max-w-md mx-auto p-4">
                 <div className="flex items-center mb-6">
-                    <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={() => router.back()}>
+                    <button className="mr-2 p-2 rounded-full bg-[#292938]" onClick={() => router.back()}>
                         <ArrowLeft size={24} />
                     </button>
                     <h1 className="text-xl font-semibold">Search</h1>
@@ -282,34 +282,6 @@ export default function Search() {
 
                 {searchState === "not-found" && (
                     <div className="flex flex-col items-center justify-center">
-                        <div className="w-full overflow-x-auto pb-2 no-scrollbar">
-                            <div className="flex space-x-2 w-max px-4">
-                                {filters.map((filter) => (
-                                    <button
-                                        key={filter}
-                                        onClick={() => setActiveFilter(filter)}
-                                        className={cn(
-                                            "px-6 py-2 rounded-full border border-gray-600 text-white text-sm whitespace-nowrap",
-                                            activeFilter === filter
-                                                ? "bg-[#6c5ce7] text-white"
-                                                : "bg-transparent text-gray-300"
-                                        )}
-                                    >
-                                        {filter}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* <div className="w-16 h-16 bg-[#1E1E1E] rounded-lg flex items-center justify-center mb-4 mt-16">
-                            <div className="w-10 h-10 rounded border border-[#5D5FEF] flex flex-col items-center justify-center">
-                                <div className="w-4 h-1 bg-[#5D5FEF] mb-1 rounded-full"></div>
-                                <div className="flex space-x-1">
-                                    <div className="w-1 h-1 bg-[#5D5FEF] rounded-full"></div>
-                                    <div className="w-1 h-1 bg-[#5D5FEF] rounded-full"></div>
-                                </div>
-                            </div>
-                        </div> */}
                         <div className=" flex items-center justify-center mb-4 mt-16">
                             <Image
                                 src={searchNotFound}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { ArrowLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { PageTransitionProvider, PageTransitionWrapper } from "@/components/PageTransition"
 
 export default function AboutPage() {
   const router = useRouter()
@@ -27,6 +28,8 @@ export default function AboutPage() {
   }
 
   return (
+
+    // <PageTransitionWrapper>
     <div className="flex flex-col min-h-screen text-white">
       {/* Header */}
       <header className="flex items-center p-4">
@@ -49,5 +52,7 @@ export default function AboutPage() {
         </section>
       </main>
     </div>
+    // </PageTransitionWrapper>
+
   )
 }

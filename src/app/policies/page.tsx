@@ -1,5 +1,6 @@
 "use client"
 
+import { PageTransitionProvider, PageTransitionWrapper } from "@/components/PageTransition"
 import { ArrowLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
@@ -119,43 +120,47 @@ export default function PoliciesPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen text-white ">
-      {/* Fixed Header */}
-      <header className="flex items-center justify-between p-4 ">
-        <div className="flex items-center gap-2">
-          <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={() => router.back()}>
-            <ArrowLeft size={20} />
-          </button>
-          <h1 className="text-xl font-bold text-white">Policies</h1>
+    
+      // <PageTransitionWrapper>
+        <div className="flex flex-col h-screen text-white ">
+          {/* Fixed Header */}
+          <header className="flex items-center justify-between p-4 ">
+            <div className="flex items-center gap-2">
+              <button className="mr-2 p-2 rounded-full bg-[#292938]" onClick={() => router.back()}>
+                <ArrowLeft size={20} />
+              </button>
+              <h1 className="text-xl font-bold text-white">Policies</h1>
+            </div>
+          </header>
+
+          {/* Fixed Tab Navigation */}
+          <div className="flex ">
+            <button
+              className={`flex-1 py-3 text-center ${activePolicy === "privacy" ? "border-b-2 border-primary text-primary font-medium" : "text-gray-400"}`}
+              onClick={() => setActivePolicy("privacy")}
+            >
+              Privacy Policy
+            </button>
+            <button
+              className={`flex-1 py-3 text-center ${activePolicy === "terms" ? "border-b-2 border-primary text-primary font-medium" : "text-gray-400"}`}
+              onClick={() => setActivePolicy("terms")}
+            >
+              Terms of Service
+            </button>
+            <button
+              className={`flex-1 py-3 text-center ${activePolicy === "returnpolicy" ? "border-b-2 border-primary text-primary font-medium" : "text-gray-400"}`}
+              onClick={() => setActivePolicy("returnpolicy")}
+            >
+              Return Policy
+            </button>
+          </div>
+
+          {/* Scrollable Main Content */}
+          <main className="flex-1 px-6 py-4 overflow-y-auto">
+            {renderPolicyContent()}
+          </main>
         </div>
-      </header>
-
-      {/* Fixed Tab Navigation */}
-      <div className="flex ">
-        <button
-          className={`flex-1 py-3 text-center ${activePolicy === "privacy" ? "border-b-2 border-primary text-primary font-medium" : "text-gray-400"}`}
-          onClick={() => setActivePolicy("privacy")}
-        >
-          Privacy Policy
-        </button>
-        <button
-          className={`flex-1 py-3 text-center ${activePolicy === "terms" ? "border-b-2 border-primary text-primary font-medium" : "text-gray-400"}`}
-          onClick={() => setActivePolicy("terms")}
-        >
-          Terms of Service
-        </button>
-        <button
-          className={`flex-1 py-3 text-center ${activePolicy === "returnpolicy" ? "border-b-2 border-primary text-primary font-medium" : "text-gray-400"}`}
-          onClick={() => setActivePolicy("returnpolicy")}
-        >
-          Return Policy
-        </button>
-      </div>
-
-      {/* Scrollable Main Content */}
-      <main className="flex-1 px-6 py-4 overflow-y-auto">
-        {renderPolicyContent()}
-      </main>
-    </div>
+      // </PageTransitionWrapper>
+    
   )
 }

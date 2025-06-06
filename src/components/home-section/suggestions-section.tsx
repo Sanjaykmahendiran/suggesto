@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { Share2, MessageSquare } from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
+import { ArrowRight, CheckCircle, Clock, MessageSquare, XCircle } from "lucide-react"
+import Image from "next/image"
 import Cookies from "js-cookie"
+import { Button } from "../ui/button"
 
 interface Suggestion {
     movsug_id: number
@@ -22,6 +22,7 @@ interface Movie {
     title: string
     poster_path: string
     rating: string
+    genres?: string[]
 }
 
 interface Friend {
@@ -33,11 +34,6 @@ interface Friend {
 interface SuggestionsSectionProps {
     suggestions: Suggestion[]
     title?: string
-}
-
-function getCookie(name: string): string | null {
-    const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"))
-    return match ? match[2] : null
 }
 
 export const SuggestionsSection: React.FC<SuggestionsSectionProps> = ({
@@ -55,34 +51,25 @@ export const SuggestionsSection: React.FC<SuggestionsSectionProps> = ({
 
             try {
                 setIsLoading(true)
+                const movieRes = await fetch("https://suggesto.xyz/App/api.php?gofor=movieslist")
+                const movies: Movie[] = await movieRes.json()
 
-                // Fetch movie data
-                const movieResponse = await fetch("https://suggesto.xyz/App/api.php?gofor=movieslist")
-                const moviesData: Movie[] = await movieResponse.json()
-
-                // Get user ID from cookies
                 const user_id = Cookies.get("userID")
                 if (!user_id) throw new Error("User ID not found in cookies.")
 
-                // Fetch friends data
-                const friendResponse = await fetch(`https://suggesto.xyz/App/api.php?gofor=friendslist&user_id=${user_id}`)
-                const friendsData: Friend[] = await friendResponse.json()
+                const friendRes = await fetch(`https://suggesto.xyz/App/api.php?gofor=friendslist&user_id=${user_id}`)
+                const friends: Friend[] = await friendRes.json()
 
-                // Map movie and friend details
                 const movieMap: Record<number, Movie> = {}
-                moviesData.forEach((movie) => {
-                    movieMap[movie.movie_id] = movie
-                })
+                movies.forEach((movie) => (movieMap[movie.movie_id] = movie))
 
                 const friendMap: Record<number, Friend> = {}
-                friendsData.forEach((friend) => {
-                    friendMap[friend.friend_id] = friend
-                })
+                friends.forEach((friend) => (friendMap[friend.friend_id] = friend))
 
                 setMovieDetails(movieMap)
                 setFriendDetails(friendMap)
             } catch (err) {
-                console.error("Error fetching suggestion details:", err)
+                console.error("Error fetching data:", err)
             } finally {
                 setIsLoading(false)
             }
@@ -103,6 +90,43 @@ export const SuggestionsSection: React.FC<SuggestionsSectionProps> = ({
         return date.toLocaleDateString()
     }
 
+    const getStatusClass = (status: string) => {
+        if (status === "pending") return "text-yellow-400"
+        if (status === "accepted") return "text-green-400"
+        return "text-gray-400"
+    }
+
+    const getStatusIcon = (status: string) => {
+        switch (status) {
+            case 'accepted':
+                return <CheckCircle className="w-4 h-4 text-green-400" />
+            case 'rejected':
+                return <XCircle className="w-4 h-4 text-red-400" />
+            case 'pending':
+            default:
+                return <Clock className="w-4 h-4 text-yellow-400" />
+        }
+    }
+
+    const getStatusText = (status: string) => {
+        if (status === "pending") return "Pending"
+        if (status === "accepted") return "Accepted"
+        return "Viewed"
+    }
+
+    const renderActionButtons = (suggestion: Suggestion) => {
+        return (
+            <div className="flex gap-2 items-center justify-end">
+                <button
+                    className="p-0"
+                    onClick={() => router.push(`/suggest/suggest-detail-page?movsug_id=${suggestion.movsug_id}`)}
+                >
+                    <ArrowRight className="w-8 h-6 text-primary" /> {/* Increased width */}
+                </button>
+            </div>
+        )
+    }
+
     if (!suggestions || suggestions.length === 0 || isLoading) return null
 
     return (
@@ -112,12 +136,12 @@ export const SuggestionsSection: React.FC<SuggestionsSectionProps> = ({
                     <MessageSquare className="w-5 h-5 text-[#6c5ce7]" />
                     <h2 className="text-lg font-semibold">{title}</h2>
                 </div>
-                <a href="/suggestions" className="text-sm text-[#6c5ce7]">
+                <a href="/suggest" className="text-sm text-[#6c5ce7]">
                     See All
                 </a>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
                 {suggestions.map((suggestion) => {
                     const movie = movieDetails[suggestion.movie_id]
                     const friend = friendDetails[suggestion.suggested_by]
@@ -127,87 +151,66 @@ export const SuggestionsSection: React.FC<SuggestionsSectionProps> = ({
                             key={suggestion.movsug_id}
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="bg-[#292938] rounded-lg w-full"
+                            className="bg-[#292938] rounded-lg overflow-hidden"
+                            onClick={
+                                suggestion.status === "pending"
+                                    ? () => router.push(`/suggest/suggest-detail-page?movsug_id=${suggestion.movsug_id}`)
+                                    : undefined
+                            }
                         >
                             <div className="flex p-3">
-                                <div
-                                    className="relative w-20 h-28 rounded-lg overflow-hidden flex-shrink-0 cursor-pointer"
-                                    onClick={() => router.push(`/movie-detail-page?movie_id=${suggestion.movie_id}`)}
-                                >
-                                    <img
+                                {/* Movie Poster */}
+                                <div className="relative w-20 h-28 rounded-lg overflow-hidden flex-shrink-0">
+                                    <Image
                                         src={
-                                            movie.poster_path.startsWith("http")
+                                            movie?.poster_path?.startsWith("http")
                                                 ? movie.poster_path
-                                                : `https://suggesto.xyz/App/${movie.poster_path}`
+                                                : `https://suggesto.xyz/App/${movie?.poster_path || ""}`
                                         }
-                                        alt={movie?.title || "Movie poster"}
-                                        className="w-full h-full object-cover"
+                                        alt={movie?.title || "Poster"}
+                                        fill
+                                        className="object-cover"
+                                        onError={(e) => {
+                                            const target = e.target as HTMLImageElement
+                                            target.src = "/api/placeholder/80/112"
+                                        }}
                                     />
                                 </div>
 
-                                <div className="ml-3 flex-1">
-                                    <div className="flex items-center gap-2 mb-1 text-xs text-gray-400">
-                                        <Avatar className="w-5 h-5">
-                                            <AvatarImage
-                                                src={friend?.profile_pic || "/api/placeholder/20/20"}
-                                                alt={friend?.name || "Friend"}
-                                            />
-                                            <AvatarFallback>{friend?.name?.[0] || "U"}</AvatarFallback>
-                                        </Avatar>
-                                        <span>{friend?.name || "A friend"} suggested</span>
-                                        <span className="text-gray-500">• {formatDate(suggestion.created_date)}</span>
-                                    </div>
+                                {/* Movie Info */}
+                                <div className="ml-4 flex flex-col justify-between flex-1">
+                                    <div>
+                                        <div className="flex items-center justify-between gap-2 mb-1">
+                                            <p className="text-xs text-gray-400">
+                                                Suggested by{" "}
+                                                <span className="font-bold pl-1 text-white">{friend?.name || "user"}</span>
+                                            </p>
+                                            <span className="text-xs text-gray-500">• {formatDate(suggestion.created_date)}</span>
+                                        </div>
 
-                                    <h3
-                                        className="font-medium mb-1 text-sm cursor-pointer"
-                                        onClick={() => router.push(`/movie-detail-page?movie_id=${suggestion.movie_id}`)}
-                                    >
-                                        {movie?.title || "Movie suggestion"}
-                                    </h3>
+                                        <h3 className="font-medium text-sm text-white mb-1">
+                                            {movie?.title || "Movie Suggestion"}
+                                        </h3>
 
-                                    <p className="text-xs text-gray-400 bg-[#181826] p-2 rounded-lg mb-2">
-                                        {suggestion.note || "Check this out!"}
-                                    </p>
-
-                                    <div className="flex items-center gap-2">
-                                        <Button
-                                            size="sm"
-                                            className="rounded-full text-xs h-8 px-3 bg-[#6c5ce7] hover:bg-[#6c5ce7]/80"
-                                            onClick={() =>
-                                                router.push(`/movie-detail-page?movie_id=${suggestion.movie_id}`)
-                                            }
-                                        >
-                                            Watch Now
-                                        </Button>
-
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            className="rounded-full text-xs h-8 px-3 border-gray-600 hover:bg-[#6c5ce7]/20 hover:text-white"
-                                            onClick={() => {
-                                                alert("Added to watchlist!")
-                                            }}
-                                        >
-                                            {suggestion.status === "pending" ? "Accept" : "Add to List"}
-                                        </Button>
-
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            className="rounded-full text-xs h-8 w-8 p-0 border-gray-600 hover:bg-[#6c5ce7]/20 hover:text-white ml-auto"
-                                            onClick={() => {
-                                                navigator
-                                                    .share?.({
-                                                        title: movie?.title || "Movie suggestion",
-                                                        text: suggestion.note,
-                                                        url: `https://suggesto.xyz/movie/${suggestion.movie_id}`,
-                                                    })
-                                                    .catch(console.error)
-                                            }}
-                                        >
-                                            <Share2 className="w-3 h-3" />
-                                        </Button>
+                                        <p className="text-xs text-gray-400 mb-2">
+                                            {Array.isArray(movie?.genres) && movie.genres.length > 0
+                                                ? movie.genres.join(", ")
+                                                : "No genres available"}
+                                        </p>
+                                        <div className="flex items-center justify-between gap-3 whitespace-nowrap ">
+                                            <div className="flex items-center gap-2">
+                                                <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 bg-[#181826] ${getStatusClass(suggestion.status)}`}>
+                                                    {getStatusIcon(suggestion.status)}
+                                                    {getStatusText(suggestion.status)}
+                                                </span>
+                                                <span className="text-xs text-gray-400">
+                                                    Rating: {parseFloat(movie?.rating).toFixed(1)}/10
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-end gap-2">
+                                                {renderActionButtons(suggestion)}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

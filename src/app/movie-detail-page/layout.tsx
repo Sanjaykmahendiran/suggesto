@@ -17,7 +17,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} bg-[#181826]`}>
-        <Suspense fallback={<div className="text-white p-4">Loading...</div>}>
+        <Suspense fallback={<div className="text-white p-4"></div>}>
           {children}
         </Suspense>
       </body>

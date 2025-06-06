@@ -3,15 +3,20 @@
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { motion } from "framer-motion"
-import { ArrowLeft, Filter, Share2, Plus, CheckCircle, Clock, XCircle } from "lucide-react"
+import { AnimatePresence, motion } from "framer-motion"
+import { ArrowLeft, Plus, CheckCircle, Clock, XCircle, ArrowRight, User, Send, Film } from "lucide-react"
 import { BottomNavigation } from "@/components/bottom-navigation"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { SuggestDialog } from "./_components/suggest-dialog"
 import Cookies from "js-cookie"
 import { Skeleton } from "@/components/ui/skeleton"
+import NotFound from "@/components/notfound"
+import Link from "next/link"
+import { useUser } from "@/contexts/UserContext"
+import { SuggestedMovie, ReceivedMovie, Movie, Friend } from "./type"
+import { PageTransitionProvider, PageTransitionWrapper } from "@/components/PageTransition"
+import ReceviedSuggestion from "./_components/recevied-suggestion"
 
 // Skeleton component for suggestions
 const SkeletonSuggestion = () => (
@@ -35,74 +40,8 @@ const SkeletonSuggestion = () => (
   </div>
 )
 
-// Types
-interface SuggestedMovie {
-  movsug_id: number
-  movie_id: number
-  title: string
-  poster_path: string
-  backdrop_path: string
-  release_date: string
-  rating: string
-  status: string
-  added_date: string
-  note?: string
-}
 
-interface ReceivedMovie {
-  movsug_id: number
-  movie_id: number
-  title: string
-  poster_path: string
-  backdrop_path: string
-  release_date: string
-  rating: string
-  status: string
-  added_date: string
-  note?: string
-}
-
-interface ReceivedSuggestion {
-  movsug_id: number
-  movie_id: number
-  title: string
-  poster_path: string
-  backdrop_path: string
-  release_date: string
-  rating: string
-  status: string
-  added_date: string
-  note: string
-  suggested_by_name: string
-  suggested_by_profile: string
-}
-
-interface Movie {
-  movie_id: number
-  title: string
-  poster_path: string
-  backdrop_path: string
-  release_date: string
-  rating: string
-  language: string
-  is_adult: string
-  genres: string[]
-  otts: Array<{
-    ott_id: number
-    name: string
-    logo_url: string
-  }>
-}
-
-interface Friend {
-  friend_id: number
-  name: string
-  profile_pic: string
-  joined_date: string
-  genre: string
-}
-
-type ReceivedStatus = "pending" | "accepted" | "rejected" | "all"
+type ReceivedStatus = "pending" | "accepted" | "rejected"
 
 // Helper function to format date
 function formatDate(dateString: string): string {
@@ -123,11 +62,17 @@ export default function SuggestPage() {
   const [showSuggestDialog, setShowSuggestDialog] = useState(false)
   const [suggestedMovies, setSuggestedMovies] = useState<SuggestedMovie[]>([])
   const [receivedMovies, setReceivedMovies] = useState<ReceivedMovie[]>([])
-  const [receivedStatus, setReceivedStatus] = useState<ReceivedStatus>("all")
+  const [receivedStatus, setReceivedStatus] = useState<ReceivedStatus>("pending")
   const [loading, setLoading] = useState(false)
   const [receivedLoading, setReceivedLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [receivedError, setReceivedError] = useState<string | null>(null)
+  const { user, setUser } = useUser()
+  const [isOpen, setIsOpen] = useState(false);
+
+
+
+  const toggleMenu = () => setIsOpen(!isOpen);
 
   // Fetch suggestions when component mounts
   useEffect(() => {
@@ -146,8 +91,8 @@ export default function SuggestPage() {
     setError(null)
 
     try {
-      const userId = Cookies.get('userID') || ''
-      const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=suggestedmovies&user_id=${1}`)
+      const userId = Cookies.get('userID') || '1'
+      const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=suggestedmovies&user_id=${userId}`)
 
       if (!response.ok) {
         throw new Error('Failed to fetch suggested movies')
@@ -169,34 +114,14 @@ export default function SuggestPage() {
 
     try {
       const userId = Cookies.get('userID') || '1'
-      let allMovies: ReceivedMovie[] = []
-      
-      if (receivedStatus === "all") {
-        // Fetch movies from all statuses
-        const statusTypes: ReceivedStatus[] = ["pending", "accepted", "rejected"]
-        
-        for (const status of statusTypes) {
-          const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=receivedmovies&user_id=${userId}&status=${status}`)
-          
-          if (!response.ok) {
-            throw new Error(`Failed to fetch ${status} received movies`)
-          }
-          
-          const data: ReceivedMovie[] = await response.json()
-          allMovies = [...allMovies, ...data]
-        }
-      } else {
-        // Fetch movies for specific status
-        const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=receivedmovies&user_id=${userId}&status=${receivedStatus}`)
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch ${receivedStatus} received movies`)
-        }
-        
-        allMovies = await response.json()
+      const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=receivedmovies&user_id=${userId}&status=${receivedStatus}`)
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch ${receivedStatus} received movies`)
       }
-      
-      setReceivedMovies(allMovies)
+
+      const data: ReceivedMovie[] = await response.json()
+      setReceivedMovies(data)
     } catch (err) {
       console.error('Error fetching received movies:', err)
       setReceivedError(err instanceof Error ? err.message : 'An error occurred')
@@ -231,7 +156,7 @@ export default function SuggestPage() {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'accepted':
-        return 'Watched'
+        return 'Accepted'
       case 'rejected':
         return 'Declined'
       case 'pending':
@@ -252,318 +177,364 @@ export default function SuggestPage() {
     }
   }
 
+
+  // Renders action buttons for each movie based on its status
+  function renderActionButtons(movie: ReceivedMovie) {
+    switch (movie.status) {
+      case 'pending':
+        return (
+          <button
+            className="p-0"
+            onClick={() => router.push(`/suggest/suggest-detail-page?movsug_id=${movie.movsug_id}`)}
+          >
+            <ArrowRight className="w-8 h-6 text-primary" />
+          </button>
+        );
+      default:
+        return <div className="flex gap-2"></div>;
+    }
+  }
+
+
   return (
-    <div className="text-white min-h-screen mb-18">
-      {/* Header */}
-      <header className="flex justify-between items-center p-4">
-        <div className="flex items-center gap-2">
-          <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={() => router.back()}>
-            <ArrowLeft size={20} />
-          </button>
-          <h1 className="text-xl font-bold">Suggest</h1>
-        </div>
-        <div className="flex gap-4">
-          <button className="text-gray-300 p-2 rounded-full bg-[#292938]">
-            <Filter className="w-5 h-5" />
-          </button>
-        </div>
-      </header>
 
-      {/* Tabs */}
-      <Tabs defaultValue="received" className="w-full" onValueChange={setActiveTab}>
-        <div className="px-4">
-          <TabsList className="grid w-full grid-cols-2 mb-6 bg-transparent">
-            <TabsTrigger
-              value="received"
-              className="data-[state=active]:bg-[#6c5ce7] transition-colors duration-200"
-            >
-              Received
-            </TabsTrigger>
-            <TabsTrigger
-              value="sent"
-              className="data-[state=active]:bg-[#6c5ce7] transition-colors duration-200"
-            >
-              Sent
-            </TabsTrigger>
-          </TabsList>
-        </div>
-
-        {/* Received Tab */}
-        <TabsContent value="received" className="mt-4">
-          {/* Categories */}
-          <div className="flex space-x-2 px-4 overflow-x-auto pb-2 no-scrollbar">
-            <button 
-              className={`flex items-center justify-center px-6 py-2 rounded-full text-sm whitespace-nowrap ${
-                receivedStatus === 'all' 
-                  ? 'bg-[#6c5ce7] text-white' 
-                  : 'bg-transparent text-gray-300 border border-gray-600'
-              }`}
-              onClick={() => setReceivedStatus('all')}
-            >
-              All
+    // <PageTransitionWrapper>
+      <div className="text-white min-h-screen mb-22">
+        {/* Header */}
+        <header className="flex justify-between items-center p-4">
+          <div className="flex items-center gap-2">
+            <button className="mr-2 p-2 rounded-full bg-[#292938]" onClick={() => router.back()}>
+              <ArrowLeft size={20} />
             </button>
-            <button 
-              className={`flex items-center justify-center px-6 py-2 rounded-full text-sm whitespace-nowrap ${
-                receivedStatus === 'pending' 
-                  ? 'bg-[#6c5ce7] text-white' 
-                  : 'bg-transparent text-gray-300 border border-gray-600'
-              }`}
-              onClick={() => setReceivedStatus('pending')}
-            >
-              <Clock className="w-4 h-4 mr-1" />
-              Pending
-            </button>
-            <button 
-              className={`flex items-center justify-center px-6 py-2 rounded-full text-sm whitespace-nowrap ${
-                receivedStatus === 'accepted' 
-                  ? 'bg-[#6c5ce7] text-white' 
-                  : 'bg-transparent text-gray-300 border border-gray-600'
-              }`}
-              onClick={() => setReceivedStatus('accepted')}
-            >
-              <CheckCircle className="w-4 h-4 mr-1" />
-              Accepted
-            </button>
-            <button 
-              className={`flex items-center justify-center px-6 py-2 rounded-full text-sm whitespace-nowrap ${
-                receivedStatus === 'rejected' 
-                  ? 'bg-[#6c5ce7] text-white' 
-                  : 'bg-transparent text-gray-300 border border-gray-600'
-              }`}
-              onClick={() => setReceivedStatus('rejected')}
-            >
-              <XCircle className="w-4 h-4 mr-1" />
-              Rejected
-            </button>
+            <h1 className="text-xl font-bold">Suggest</h1>
           </div>
-          
-          <div className="px-4 mt-2">
-            {receivedLoading && (
+          <Link href="/profile">
+            <div className="w-10 h-10 rounded-full border-2 border-primary overflow-hidden">
+              <Image
+                src={user?.imgname || "/placeholder.svg"}
+                alt="Profile"
+                width={40}
+                height={40}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </Link>
+        </header>
+
+        {/* Tabs */}
+        <Tabs defaultValue="received" className="w-full" onValueChange={setActiveTab}>
+          <div className="px-4">
+            <TabsList className="grid w-full grid-cols-3 mb-6 bg-transparent">
+              <TabsTrigger
+                value="received"
+                className="data-[state=active]:bg-[#6c5ce7] transition-colors duration-200"
+              >
+                Received
+              </TabsTrigger>
+              <TabsTrigger
+                value="sent"
+                className="data-[state=active]:bg-[#6c5ce7] transition-colors duration-200"
+              >
+                Sent
+              </TabsTrigger>
+              <TabsTrigger
+                value="requests"
+                className="data-[state=active]:bg-[#6c5ce7] transition-colors duration-200"
+              >
+                Requested you
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          {/* Received Tab */}
+          <TabsContent value="received" className="mt-4">
+            {/* Categories */}
+            <div className="flex space-x-2 px-4 overflow-x-auto pb-2 no-scrollbar">
+              <button
+                className={`flex items-center justify-center px-6 py-2 rounded-full text-sm whitespace-nowrap ${receivedStatus === 'pending'
+                  ? 'bg-[#6c5ce7] text-white'
+                  : 'bg-transparent text-gray-300 border border-gray-600'
+                  }`}
+                onClick={() => setReceivedStatus('pending')}
+              >
+                <Clock className="w-4 h-4 mr-1" />
+                Pending
+              </button>
+              <button
+                className={`flex items-center justify-center px-6 py-2 rounded-full text-sm whitespace-nowrap ${receivedStatus === 'accepted'
+                  ? 'bg-[#6c5ce7] text-white'
+                  : 'bg-transparent text-gray-300 border border-gray-600'
+                  }`}
+                onClick={() => setReceivedStatus('accepted')}
+              >
+                <CheckCircle className="w-4 h-4 mr-1" />
+                Accepted
+              </button>
+              <button
+                className={`flex items-center justify-center px-6 py-2 rounded-full text-sm whitespace-nowrap ${receivedStatus === 'rejected'
+                  ? 'bg-[#6c5ce7] text-white'
+                  : 'bg-transparent text-gray-300 border border-gray-600'
+                  }`}
+                onClick={() => setReceivedStatus('rejected')}
+              >
+                <XCircle className="w-4 h-4 mr-1" />
+                Rejected
+              </button>
+            </div>
+
+            <div className="px-4 mt-2">
+              {receivedLoading && (
+                <div className="space-y-4">
+                  <SkeletonSuggestion />
+                  <SkeletonSuggestion />
+                </div>
+              )}
+
+              {receivedError && (
+                <div className="text-center text-red-400 py-8">
+                  {receivedError}
+                  <Button
+                    variant="outline"
+                    className="ml-4 text-xs"
+                    onClick={fetchReceivedMovies}
+                  >
+                    Retry
+                  </Button>
+                </div>
+              )}
+
+              {!receivedLoading && !receivedError && receivedMovies.length === 0 && (
+                <NotFound
+                  description={`No suggestions received with ${receivedStatus} status yet.`}
+                />
+              )}
+
               <div className="space-y-4">
-                <SkeletonSuggestion />
-                <SkeletonSuggestion />
-              </div>
-            )}
+                {receivedMovies.map((movie) => (
+                  <motion.div
+                    key={movie.movsug_id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-[#292938] rounded-lg overflow-hidden"
+                    onClick={movie.status === 'pending' ? () => router.push(`/suggest/suggest-detail-page?movsug_id=${movie.movsug_id}`) : undefined}
+                  >
+                    <div className="flex p-3">
+                      {/* Movie Poster */}
+                      <div className="relative w-20 h-28 rounded-lg overflow-hidden flex-shrink-0">
+                        <Image
+                          src={`https://suggesto.xyz/App/${movie.poster_path}`}
+                          alt={movie.title}
+                          fill
+                          className="object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement
+                            target.src = "/api/placeholder/80/112"
+                          }}
+                        />
+                      </div>
 
-            {receivedError && (
-              <div className="text-center text-red-400 py-8">
-                {receivedError}
-                <Button
-                  variant="outline"
-                  className="ml-4 text-xs"
-                  onClick={fetchReceivedMovies}
-                >
-                  Retry
-                </Button>
-              </div>
-            )}
+                      {/* Movie Content */}
+                      <div className="ml-4 flex flex-col justify-between flex-1">
+                        <div>
+                          {/* Header Info */}
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <p className="text-xs text-gray-400 flex items-center"><User className="w-4 h-4" />
+                              <span className="font-bold pl-1 text-white">{movie.suggested_by_name || "user"}</span>
+                            </p>
+                            <span className="text-xs text-gray-500">• {formatDate(movie.added_date)}</span>
+                          </div>
 
-            {!receivedLoading && !receivedError && receivedMovies.length === 0 && (
-              <div className="text-center text-gray-400 py-8">
-                No suggestions received{receivedStatus !== "all" ? ` with ${receivedStatus} status` : ""} yet.
-              </div>
-            )}
+                          {/* Title */}
+                          <h3 className="font-medium text-sm text-white mb-1">{movie.title}</h3>
 
-            <div className="space-y-4">
-              {receivedMovies.map((movie) => (
-                <motion.div
-                  key={movie.movsug_id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-[#292938] rounded-lg overflow-hidden"
-                >
-                  <div className="flex p-3">
-                    <div className="relative w-20 h-28 rounded-lg overflow-hidden flex-shrink-0">
-                      <Image
-                        src={`https://suggesto.xyz/App/${movie.poster_path}`}
-                        alt={movie.title}
-                        fill
-                        className="object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement
-                          target.src = "/api/placeholder/80/112"
-                        }}
-                      />
+                          {/* Genres */}
+                          <p className="text-xs text-gray-400 mb-2">
+                            {Array.isArray(movie.genres) && movie.genres.length > 0
+                              ? movie.genres.join(", ")
+                              : "No genres available"}
+                          </p>
+
+                          {/* Status and Rating */}
+                          <div className="flex items-center justify-between gap-3 whitespace-nowrap ">
+                            <div className="flex items-center gap-2">
+                              <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 bg-[#181826] ${getStatusClass(movie.status)}`}>
+                                {getStatusIcon(movie.status)}
+                                {getStatusText(movie.status)}
+                              </span>
+                              <span className="text-xs text-gray-400">
+                                Rating: {parseFloat(movie.rating).toFixed(1)}/10
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-end gap-2">
+                              {renderActionButtons(movie)}
+                            </div>
+                          </div>
+
+                        </div>
+
+
+                      </div>
                     </div>
-                    <div className="ml-3 flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs text-gray-400">Suggested to you</span>
-                        <span className="text-xs text-gray-500">• {formatDate(movie.added_date)}</span>
-                        <div className="ml-auto flex items-center gap-1">
-                          {getStatusIcon(movie.status)}
-                          <span className={`text-xs ${getStatusClass(movie.status)}`}>
-                            {getStatusText(movie.status)}
-                          </span>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Sent Tab */}
+          <TabsContent value="sent" className="mt-4">
+            <div className="px-4">
+              {loading && (
+                <div className="space-y-4">
+                  <SkeletonSuggestion />
+                  <SkeletonSuggestion />
+                </div>
+              )}
+
+              {error && (
+                <div className="text-center text-red-400 py-8">
+                  {error}
+                  <Button
+                    variant="outline"
+                    className="ml-4 text-xs"
+                    onClick={fetchSuggestedMovies}
+                  >
+                    Retry
+                  </Button>
+                </div>
+              )}
+
+              {!loading && !error && suggestedMovies.length === 0 && (
+                <NotFound
+                  description="You haven't suggested any movies yet."
+                />
+              )}
+
+              <div className="space-y-4">
+                {suggestedMovies.map((suggestion) => (
+                  <motion.div
+                    key={suggestion.movsug_id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-[#292938] rounded-lg overflow-hidden"
+                  >
+                    <div className="flex p-3">
+                      {/* Movie Poster */}
+                      <div className="relative w-20 h-28 rounded-lg overflow-hidden flex-shrink-0">
+                        <Image
+                          src={`https://suggesto.xyz/App/${suggestion.poster_path}`}
+                          alt={suggestion.title}
+                          fill
+                          className="object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement
+                            target.src = "/api/placeholder/80/112"
+                          }}
+                        />
+                      </div>
+
+                      {/* Movie Content */}
+                      <div className="ml-4 flex flex-col justify-between flex-1">
+                        <div>
+                          {/* Header Info */}
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <p className="text-xs text-gray-400 flex items-center"><User className="w-4 h-4" />
+                              <span className="font-bold pl-1 text-white">{suggestion.suggested_to_name || "user"}</span>
+                            </p>
+                            <span className="text-xs text-gray-500">• {formatDate(suggestion.added_date)}</span>
+                          </div>
+
+                          {/* Title */}
+                          <h3 className="font-medium text-sm text-white mb-1">{suggestion.title}</h3>
+
+                          {/* Genres */}
+                          <p className="text-xs text-gray-400 mb-2">
+                            {Array.isArray(suggestion.genres) && suggestion.genres.length > 0
+                              ? suggestion.genres.join(", ")
+                              : "No genres available"}
+                          </p>
+
+                          {/* Status and Rating */}
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 bg-[#181826] ${getStatusClass(suggestion.status)}`}>
+                              {getStatusIcon(suggestion.status)}
+                              {getStatusText(suggestion.status)}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              Rating: {parseFloat(suggestion.rating).toFixed(1)}/10
+                            </span>
+
+                          </div>
                         </div>
                       </div>
-                      <h3 className="font-medium mb-1">{movie.title}</h3>
-                      {movie.note && (
-                        <p className="text-xs text-gray-400 bg-[#181826] p-2 rounded-lg mb-2">
-                          {movie.note}
-                        </p>
-                      )}
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          className="rounded-full text-xs h-8 px-3 bg-[#6c5ce7] hover:bg-[#6c5ce7]/80"
-                          onClick={() => router.push(`/movie-detail-page?id=${movie.movie_id}`)}
-                        >
-                          Watch Now
-                        </Button>
-                        {movie.status === "pending" && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="rounded-full text-xs h-8 px-3 bg-transparent border-green-600 text-green-400 hover:bg-green-600/20 hover:text-white"
-                            >
-                              Mark Watched
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="rounded-full text-xs h-8 px-3 bg-transparent border-red-600 text-red-400 hover:bg-red-600/20 hover:text-white"
-                            >
-                              Decline
-                            </Button>
-                          </>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="rounded-full text-xs h-8 w-8 p-0 bg-transparent border-gray-600 hover:bg-[#6c5ce7]/20 hover:text-white ml-auto"
-                        >
-                          <Share2 className="w-3 h-3" />
-                        </Button>
-                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                ))}
+              </div>
             </div>
-          </div>
-        </TabsContent>
+          </TabsContent>
 
-        {/* Sent Tab */}
-        <TabsContent value="sent" className="mt-4">
-          <div className="px-4">
-            {loading && (
-              <div className="space-y-4">
-                <SkeletonSuggestion />
-                <SkeletonSuggestion />
-              </div>
-            )}
+          <TabsContent value="requests" className="mt-4">
+            <ReceviedSuggestion />
+          </TabsContent>
+        </Tabs>
 
-            {error && (
-              <div className="text-center text-red-400 py-8">
-                {error}
-                <Button
-                  variant="outline"
-                  className="ml-4 text-xs"
-                  onClick={fetchSuggestedMovies}
-                >
-                  Retry
-                </Button>
-              </div>
-            )}
+        {/* Floating Action Button */}
+        <motion.button
+          className="fixed bottom-24 right-4 w-14 h-14 rounded-full bg-[#6c5ce7] flex items-center justify-center shadow-lg z-50"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={toggleMenu}
+        >
+          <Plus className="w-6 h-6 text-white" />
+        </motion.button>
 
-            {!loading && !error && suggestedMovies.length === 0 && (
-              <div className="text-center text-gray-400 py-8">
-                You haven't suggested any movies yet.
-              </div>
-            )}
+        <AnimatePresence>
+          {isOpen && (
+            <>
+              <motion.button
+                initial={{ opacity: 0, y: 0 }}
+                animate={{ opacity: 1, y: -60 }}
+                exit={{ opacity: 0, y: 0 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                className="fixed bottom-24 right-4 w-48 p-3 rounded-lg bg-[#6c5ce7]/20 backdrop-blur-sm border border-[#6c5ce7]/30 flex items-center gap-2 shadow-lg z-40"
+                onClick={() => {
+                  setShowSuggestDialog(true);
+                  setIsOpen(false);
+                }}
+              >
+                <Film size={20} />
+                Suggest Movie
+              </motion.button>
 
-            <div className="space-y-4">
-              {suggestedMovies.map((suggestion) => (
-                <motion.div
-                  key={suggestion.movsug_id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-[#292938] rounded-lg overflow-hidden"
-                >
-                  <div className="flex p-3">
-                    <div className="relative w-20 h-28 rounded-lg overflow-hidden flex-shrink-0">
-                      <Image
-                        src={`https://suggesto.xyz/App/${suggestion.poster_path}`}
-                        alt={suggestion.title}
-                        fill
-                        className="object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement
-                          target.src = "/api/placeholder/80/112"
-                        }}
-                      />
-                    </div>
-                    <div className="ml-3 flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs text-gray-400">You suggested</span>
-                        <span className="text-xs text-gray-500">• {formatDate(suggestion.added_date)}</span>
-                      </div>
-                      <h3 className="font-medium mb-1">{suggestion.title}</h3>
-                      {suggestion.note && (
-                        <p className="text-xs text-gray-400 bg-[#181826] p-2 rounded-lg mb-2">
-                          {suggestion.note}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-2 mt-1 mb-2">
-                        <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 bg-[#181826] ${getStatusClass(suggestion.status)}`}>
-                          {getStatusIcon(suggestion.status)}
-                          {getStatusText(suggestion.status)}
-                        </span>
-                        <span className="text-xs text-gray-400">
-                          Rating: {suggestion.rating}/10
-                        </span>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button 
-                          size="sm" 
-                          className="rounded-full text-xs h-8 px-3 bg-[#6c5ce7] hover:bg-[#6c5ce7]/80"
-                          onClick={() => router.push(`/movie-detail-page?movie_id=${suggestion.movie_id}`)}
-                        >
-                          View Details
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="rounded-full text-xs h-8 px-3 bg-transparent border-gray-600 hover:bg-[#6c5ce7]/20 hover:text-white"
-                        >
-                          Suggest Again
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="rounded-full text-xs h-8 w-8 p-0 bg-transparent border-gray-600 hover:bg-[#6c5ce7]/20 hover:text-white ml-auto"
-                        >
-                          <Share2 className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </TabsContent>
-      </Tabs>
+              <motion.button
+                initial={{ opacity: 0, y: 0 }}
+                animate={{ opacity: 1, y: -120 }}
+                exit={{ opacity: 0, y: 0 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                className="fixed bottom-24 right-4 w-48 p-3 rounded-lg bg-[#6c5ce7]/20 backdrop-blur-sm border border-[#6c5ce7]/30 flex items-center gap-2 shadow-lg z-40"
+                onClick={() => {
+                  router.push("/request-suggestion");
+                }}
+              >
+                <Send size={20} />
+                Request Movie
+              </motion.button>
+            </>
+          )}
+        </AnimatePresence>
 
-      {/* Floating Action Button */}
-      <motion.button
-        className="fixed bottom-24 right-4 w-14 h-14 rounded-full bg-[#6c5ce7] flex items-center justify-center shadow-lg"
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => setShowSuggestDialog(true)}
-      >
-        <Plus className="w-6 h-6" />
-      </motion.button>
+        {/* Suggest Dialog */}
+        <SuggestDialog
+          isOpen={showSuggestDialog}
+          onClose={() => setShowSuggestDialog(false)}
+          onSuggest={handleSuggest}
+        />
 
-      {/* Suggest Dialog */}
-      <SuggestDialog
-        isOpen={showSuggestDialog}
-        onClose={() => setShowSuggestDialog(false)}
-        onSuggest={handleSuggest}
-      />
+        <BottomNavigation currentPath="/suggest" />
+      </div>
+    // </PageTransitionWrapper>
 
-      <BottomNavigation currentPath="/suggest" />
-    </div>
+
   )
 }

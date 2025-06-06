@@ -24,10 +24,10 @@ export default function InterestsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectionError, setSelectionError] = useState<string>("")
   const [isEditMode, setIsEditMode] = useState(false)
 
   useEffect(() => {
-    // Fetch genres from the API
     const fetchGenres = async () => {
       try {
         setIsLoading(true)
@@ -39,42 +39,43 @@ export default function InterestsPage() {
 
         const data: Genre[] = await response.json()
         setGenres(data)
-        
-        // Get user ID from cookies
-        const userId = Cookies.get('userID')
-        
+
+        const userId = Cookies.get("userID")
+
         if (userId) {
-          // Check if user already has saved interests
-          const userInterestsResponse = await fetch(`https://suggesto.xyz/App/api.php?gofor=userintlist&user_id=${userId}`)
-          
+          const userInterestsResponse = await fetch(
+            `https://suggesto.xyz/App/api.php?gofor=userintlist&user_id=${userId}`
+          )
+
           if (userInterestsResponse.ok) {
             const userInterestsData = await userInterestsResponse.json()
-            
-            if (userInterestsData && Array.isArray(userInterestsData) && userInterestsData.length > 0) {
-              // User has existing interests, set edit mode
+
+            if (
+              userInterestsData &&
+              Array.isArray(userInterestsData) &&
+              userInterestsData.length > 0
+            ) {
               setIsEditMode(true)
-              
-              // Extract genre IDs from user interests
-              const userGenreIds = userInterestsData.map(interest => interest.genre_id)
+              const userGenreIds = userInterestsData.map(
+                (interest) => interest.genre_id
+              )
               setSelectedGenreIds(userGenreIds)
-              
-              // Set selected interests names based on genre IDs
-              const userGenreNames = userGenreIds.map(id => {
-                const genre = data.find(g => g.genre_id === id)
-                return genre ? genre.name : ""
-              }).filter(name => name !== "")
-              
+
+              const userGenreNames = userGenreIds
+                .map((id) => {
+                  const genre = data.find((g) => g.genre_id === id)
+                  return genre ? genre.name : ""
+                })
+                .filter((name) => name !== "")
+
               setSelectedInterests(userGenreNames)
             } else {
-              // No existing interests, set defaults
               setDefaultInterests(data)
             }
           } else {
-            // Failed to fetch user interests, set defaults
             setDefaultInterests(data)
           }
         } else {
-          // No user ID, set defaults
           setDefaultInterests(data)
         }
       } catch (err) {
@@ -88,52 +89,65 @@ export default function InterestsPage() {
     fetchGenres()
   }, [])
 
+  // Clear selection error after 2 seconds
+  useEffect(() => {
+    if (selectionError) {
+      const timer = setTimeout(() => setSelectionError(""), 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [selectionError])
+
   const setDefaultInterests = (data: Genre[]) => {
-    // Set default selected genres (optional)
     if (data.length > 0) {
       const defaultGenres = data
-        .filter(genre => ["Action", "Sci-Fi"].includes(genre.name))
-        .map(genre => genre.name)
+        .filter((genre) => ["Action", "Sci-Fi"].includes(genre.name))
+        .map((genre) => genre.name)
 
       setSelectedInterests(defaultGenres)
 
-      // Also set the corresponding genre IDs
       const defaultGenreIds = data
-        .filter(genre => ["Action", "Sci-Fi"].includes(genre.name))
-        .map(genre => genre.genre_id)
+        .filter((genre) => ["Action", "Sci-Fi"].includes(genre.name))
+        .map((genre) => genre.genre_id)
 
       setSelectedGenreIds(defaultGenreIds)
     }
   }
 
   const toggleInterest = (genre: Genre) => {
-    if (selectedInterests.includes(genre.name)) {
-      setSelectedInterests(selectedInterests.filter(i => i !== genre.name))
-      setSelectedGenreIds(selectedGenreIds.filter(id => id !== genre.genre_id))
+    const isSelected = selectedInterests.includes(genre.name)
+
+    if (!isSelected && selectedInterests.length >= 5) {
+      setSelectionError("Select up to 5 genres.")
+      return
+    }
+
+    if (isSelected) {
+      setSelectedInterests((prev) => prev.filter((i) => i !== genre.name))
+      setSelectedGenreIds((prev) => prev.filter((id) => id !== genre.genre_id))
     } else {
-      setSelectedInterests([...selectedInterests, genre.name])
-      setSelectedGenreIds([...selectedGenreIds, genre.genre_id])
+      setSelectedInterests((prev) => [...prev, genre.name])
+      setSelectedGenreIds((prev) => [...prev, genre.genre_id])
     }
   }
 
   const handleContinue = async () => {
     try {
       setIsSubmitting(true)
-      const userId = Cookies.get('userID') || ''
+      const userId = Cookies.get("userID") || ""
 
       const endpoint = "https://suggesto.xyz/App/api.php"
       const payload = {
         gofor: isEditMode ? "edituserint" : "adduserint",
         user_id: userId,
-        genre_id: selectedGenreIds
+        genre_id: selectedGenreIds,
       }
 
       const response = await fetch(endpoint, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       })
 
       if (!response.ok) {
@@ -141,27 +155,28 @@ export default function InterestsPage() {
       }
 
       const data = await response.json()
-      console.log(`Interests ${isEditMode ? 'updated' : 'saved'} successfully:`, data)
+      console.log(
+        `Interests ${isEditMode ? "updated" : "saved"} successfully:`,
+        data
+      )
 
-      // Navigate to appropriate page after successful submission
       if (isEditMode) {
         router.push("/profile")
       } else {
         router.push("/language")
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : `Failed to ${isEditMode ? 'update' : 'save'} interests`)
-      console.error(`Error ${isEditMode ? 'updating' : 'saving'} interests:`, err)
+      setError(
+        err instanceof Error
+          ? err.message
+          : `Failed to ${isEditMode ? "update" : "save"} interests`
+      )
+      console.error(
+        `Error ${isEditMode ? "updating" : "saving"} interests:`,
+        err
+      )
     } finally {
       setIsSubmitting(false)
-    }
-  }
-
-  const handleSkip = () => {
-    if (isEditMode) {
-      router.push("/profile")
-    } else {
-      router.push("/language")
     }
   }
 
@@ -183,15 +198,30 @@ export default function InterestsPage() {
       {/* Description */}
       <div className="px-4 pb-6">
         <p className="text-gray-400">
-          {isEditMode 
-            ? "Update your interests to get better movie recommendations."
-            : "Choose your interests and get the best movie recommendations. Don't worry you can always change it later."
-          }
+          {isEditMode
+            ? "Update your interests for better movie recommendations."
+            : "Select your interests to get the best movie recommendations anytime."}
         </p>
+
+        <div className="flex justify-between items-center mt-2">
+          {selectionError ? (
+            <p className="text-red-500 text-sm">{selectionError}</p>
+          ) : (
+            <span /> 
+          )}
+          <p className="text-gray-400 text-sm">
+            Selected{" "}
+            <span className="px-4 py-1 rounded-3xl border-0 bg-primary text-white">
+              {selectedInterests.length}/5
+            </span>
+          </p>
+        </div>
       </div>
 
+
+
       {/* Interests Grid */}
-      <div className="px-4 pb-24">
+      <div className="px-4 pb-32">
         {isLoading ? (
           <div className="flex flex-wrap gap-3">
             {Array.from({ length: 10 }).map((_, index) => (
@@ -201,59 +231,47 @@ export default function InterestsPage() {
               />
             ))}
           </div>
-        ) : error ? (
-          <div className="text-red-500 py-4">
-            Error loading genres: {error}. Using fallback options.
-          </div>
         ) : (
-          <div className="flex flex-wrap gap-3">
-            {genres.map((genre) => (
-              <button
-                key={genre.genre_id}
-                className={`rounded-full px-4 py-2 text-sm ${selectedInterests.includes(genre.name)
+          <>
+            <div className="flex flex-wrap gap-5">
+              {genres.map((genre) => (
+                <button
+                  key={genre.genre_id}
+                  className={`rounded-full px-4 py-2 text-sm ${selectedInterests.includes(genre.name)
                     ? "bg-primary text-white"
                     : "bg-gray-800 text-white"
-                  }`}
-                onClick={() => toggleInterest(genre)}
-              >
-                {genre.name}
-              </button>
-            ))}
-          </div>
+                    }`}
+                  onClick={() => toggleInterest(genre)}
+                >
+                  {genre.name}
+                </button>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
       {/* Bottom Buttons */}
-      <div className="fixed bottom-[-8] left-0 right-0 flex p-4 bg-[#181826]">
-        {!isEditMode && (
-          <div className="w-1/2 pr-2">
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={handleSkip}
-              disabled={isSubmitting}
-            >
-              SKIP
-            </Button>
-          </div>
-        )}
-        <div className={isEditMode ? "w-full" : "w-1/2 pl-2"}>
-          <Button
-            variant="default"
-            className="w-full"
-            onClick={handleContinue}
-            disabled={isLoading || isSubmitting || selectedGenreIds.length === 0}
-          >
-            {isSubmitting ? (
-              <span className="flex items-center justify-center">
-                <span className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                {isEditMode ? "UPDATING..." : "SAVING..."}
-              </span>
-            ) : (
-              isEditMode ? "UPDATE" : "CONTINUE"
-            )}
-          </Button>
-        </div>
+      <div className="fixed -bottom-2 left-0 right-0 px-4 pt-4 pb-6 backdrop-blur-sm bg-gradient-to-t from-[#6c5ce7]/20 to-transparent border-b border-gray-700 space-y-2 z-50">
+        <Button
+          variant="default"
+          className="w-full"
+          onClick={handleContinue}
+          disabled={
+            isLoading || isSubmitting || selectedGenreIds.length === 0
+          }
+        >
+          {isSubmitting ? (
+            <span className="flex items-center justify-center">
+              <span className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              {isEditMode ? "UPDATING..." : "SAVING..."}
+            </span>
+          ) : isEditMode ? (
+            "UPDATE"
+          ) : (
+            "CONTINUE"
+          )}
+        </Button>
       </div>
     </div>
   )

@@ -1,16 +1,17 @@
 "use client"
 
-import { useState, useEffect, useRef, KeyboardEvent } from "react"
-import Image from "next/image"
+import { useState, useEffect, useRef } from "react"
+import { ArrowLeft, Smartphone, CheckCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
+import Cookies from "js-cookie"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ArrowLeft } from "lucide-react"
-import CinemaIcon from "@/assets/cinema-icon.png"
-import Cookies from "js-cookie"
+import mobileNumber from "@/assets/mobile-number-2.png"
+import OTP from "@/assets/OTP-ICON.png"
+import Image from "next/image"
+import { useUser } from "@/contexts/UserContext"
 
-
-export default function login() {
+export default function Login() {
   const router = useRouter()
   const [step, setStep] = useState("mobile")
   const [mockOTP, setMockOTP] = useState("")
@@ -21,6 +22,7 @@ export default function login() {
   const [successMessage, setSuccessMessage] = useState("")
   const [resendDisabled, setResendDisabled] = useState(false)
   const [countdown, setCountdown] = useState(30)
+  const { user, setUser } = useUser()
 
   const mobileInputRef = useRef<HTMLInputElement>(null)
   const inputRefs = [
@@ -34,15 +36,15 @@ export default function login() {
   useEffect(() => {
     // Focus the appropriate input on mount or step change
     if (step === "mobile") {
-      mobileInputRef.current?.focus()
+      setTimeout(() => mobileInputRef.current?.focus(), 100)
     } else if (step === "otp") {
-      inputRefs[0].current?.focus()
+      setTimeout(() => inputRefs[0].current?.focus(), 100)
     }
   }, [step])
 
   // Countdown timer for resend code
   useEffect(() => {
-    let timer: string | number | NodeJS.Timeout | undefined
+    let timer: NodeJS.Timeout | undefined
     if (resendDisabled && countdown > 0) {
       timer = setInterval(() => {
         setCountdown(prev => prev - 1)
@@ -54,6 +56,14 @@ export default function login() {
 
     return () => clearInterval(timer)
   }, [resendDisabled, countdown])
+
+  // Auto-fill OTP when mockOTP is set
+  useEffect(() => {
+    if (mockOTP && step === "otp") {
+      const otpArray = mockOTP.split("")
+      setOtp([otpArray[0] || "", otpArray[1] || "", otpArray[2] || "", otpArray[3] || ""])
+    }
+  }, [mockOTP, step])
 
   const handleMobileSubmit = async (e: { preventDefault: () => void }) => {
     e.preventDefault()
@@ -92,8 +102,10 @@ export default function login() {
     }
   }
 
+
+
   const handleInputChange = (index: number, value: string) => {
-    if (value.length <= 1) {
+    if (value.length <= 1 && /^\d*$/.test(value)) {
       const newOtp = [...otp]
       newOtp[index] = value
       setOtp(newOtp)
@@ -106,7 +118,7 @@ export default function login() {
     }
   }
 
-  const handleKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
     // Move to previous input on backspace if current input is empty
     if (e.key === "Backspace" && !otp[index] && index > 0) {
       inputRefs[index - 1].current?.focus()
@@ -137,6 +149,8 @@ export default function login() {
 
         // Set user_id cookie (expires in 7 days)
         Cookies.set("userID", data.user_id, { expires: 7 });
+        setUser(data);
+
 
         // Redirect based on register_level_status
         setTimeout(() => {
@@ -157,7 +171,6 @@ export default function login() {
     }
   };
 
-
   const handleResendCode = async () => {
     if (resendDisabled) return
 
@@ -172,6 +185,7 @@ export default function login() {
 
       if (data.user_id && data.otp) {
         setSuccessMessage("OTP Resent successfully!")
+
         // Reset OTP fields
         setOtp(["", "", "", ""])
         setActiveInput(0)
@@ -190,110 +204,165 @@ export default function login() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#1c1c28]">
+    <div className="flex flex-col bg-[#181826] min-h-screen fixed inset-0 ">
       {step === "mobile" ? (
-        <div className="flex-1 flex flex-col items-center px-6">
-          {/* Logo centered at top with proper spacing */}
-          <div className="w-full pt-12 pb-6 flex justify-center">
+        <div className="flex flex-col min-h-screen px-6 ">
+          {/* Back button and title */}
+          <div className="flex items-center pt-12 pb-4 ">
+            <button
+              onClick={() => router.push("/")}
+              className="w-10 h-10 rounded-full bg-[#292938] flex items-center justify-center mr-4"
+            >
+              <ArrowLeft className="h-5 w-5 text-white" />
+            </button>
+            <div className="flex-1 text-center">
+            </div>
+          </div>
+
+          {/* Icon */}
+          <div className="w-full flex justify-center">
             <Image
-              src={CinemaIcon}
-              alt="Logo"
-              width={160}
-              height={160}
-              className="mx-auto"
+              src={mobileNumber}
+              alt="Mobile Number"
+              width={192}
+              height={192}
+              className="w-40 h-40 text-primary"
             />
           </div>
 
-          {/* Form container with proper spacing below the image */}
-          <div className="w-full max-w-md rounded-2xl bg-transparent mt-18">
-            <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold text-white mb-1">Create account</h1>
-              <p className="text-white/70 text-sm">Quickly sign up to get started!</p>
-            </div>
-
-            <form onSubmit={handleMobileSubmit} className="space-y-6">
-              <div>
-                <label htmlFor="mobile" className="text-gray-400 text-sm mb-2 block">
-                  Mobile Number
-                </label>
-                <Input
-                  id="mobile"
-                  type="tel"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  placeholder="Enter your mobile number"
-                  className="bg-[#292938] border-gray-700 border h-12 rounded-xl w-full"
-                  value={mobile}
-                  onChange={(e) => setMobile(e.target.value.replace(/\D/g, ''))}
-                  ref={mobileInputRef}
-                  required
-                />
-                {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full text-white bg-[#6c5ce7] hover:bg-[#5b4dd1] h-12 rounded-xl font-medium"
-                disabled={loading}
-              >
-                {loading ? "Please wait..." : "Continue with Mobile"}
-              </Button>
-            </form>
+          {/* Title and Subtitle */}
+          <div className="text-center mb-8">
+            <h2 className="text-xl font-semibold text-white mb-2">Create Account </h2>
+            <p className="text-gray-400 text-sm">Enter your number to Continue </p>
           </div>
+
+          {/* Input */}
+          <div className="w-full max-w-md mx-auto mb-8">
+            <Input
+              ref={mobileInputRef}
+              type="tel"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              placeholder="Enter your mobile number"
+              className="bg-[#292938] border-gray-700 border h-12 rounded-xl w-full px-4 text-white placeholder-gray-400"
+              value={mobile}
+              onChange={(e) => {
+                const input = e.target.value.replace(/\D/g, '');
+                if (input.length <= 10) {
+                  setMobile(input);
+                }
+              }}
+              onKeyDown={(e) => {
+                const isDigit = /^[0-9]$/.test(e.key);
+                const isControlKey = ['Backspace', 'ArrowLeft', 'ArrowRight', 'Delete', 'Tab'].includes(e.key);
+                if (mobile.length >= 10 && isDigit && !isControlKey) {
+                  e.preventDefault(); // Block further digits
+                }
+                if (e.key === 'Enter') {
+                  handleMobileSubmit(e);
+                }
+              }}
+            />
+            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+          </div>
+
+          {/* Button */}
+          <Button
+            variant="default"
+            className="w-full"
+            onClick={handleMobileSubmit}
+            disabled={loading}
+          >
+            {loading ? "Please wait..." : "Send OTP"}
+          </Button>
+          <p className="text-gray-400 text-center text-sm mt-4">
+            We will send OTP to your mobile number
+
+          </p>
         </div>
       ) : (
-        <div className="flex flex-col min-h-screen px-6 py-8">
-          <button
-            onClick={() => setStep("mobile")}
-            className="w-10 h-10 rounded-full bg-[#292938] flex items-center justify-center mb-8"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
+        <div className="flex flex-col min-h-screen px-6 ">
+          {/* Back button and title */}
+          <div className="flex items-center pt-12 pb-4 mb-6">
+            <button
+              onClick={() => setStep("mobile")}
+              className="w-10 h-10 rounded-full bg-[#292938] flex items-center justify-center mr-4"
+            >
+              <ArrowLeft className="h-5 w-5 text-white" />
+            </button>
+            <div className="flex-1 text-center">
+            </div>
+          </div>
 
-          <h1 className="text-2xl font-bold text-center mb-2">Enter OTP</h1>
-          <p className="text-gray-400 text-center text-sm mb-8">
-            We have just sent you 4 digit code via your Mobile {mobile}
-          </p>
+          {/* Icon */}
+          <div className="w-full flex justify-center mb-8 w-30 h-30">
+            {/* Icon */}
+            <div className="flex items-center justify-center">
+              <Image
+                src={OTP}
+                alt="Mobile Number"
+                width={192}
+                height={192}
+                className="w-40 h-40 ml-4 text-primary"
+              />
 
+            </div>
+          </div>
+
+          {/* Enter OTP */}
+          <div className="text-center mb-2">
+            <h2 className="text-xl font-semibold text-white">Enter OTP</h2>
+          </div>
+
+          {/* We have sent OTP message */}
+          <div className="text-center mb-8">
+            <p className="text-gray-400 text-sm">
+              We have sent OTP on your {(mobile)}
+            </p>
+          </div>
+
+          {/* 4 Circles */}
           <div className="flex justify-center space-x-4 mb-8">
             {otp.map((digit, index) => (
-              <div key={index} className={`w-16 h-16 ${activeInput === index ? "otp-input-active" : ""}`}>
+              <div key={index}>
                 <input
                   ref={inputRefs[index]}
                   type="text"
                   inputMode="numeric"
-                  pattern="\d*"
+                  pattern="\\d*"
                   maxLength={1}
                   value={digit}
-                  autoFocus={index === 0}
                   onChange={(e) => handleInputChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
                   onFocus={() => setActiveInput(index)}
-                  className="w-full h-full bg-[#292938] text-center border-2 rounded-full focus:outline-none focus:border-[#6c5ce7] text-2xl text-white placeholder-gray-500"
+                  className={`w-16 h-16 bg-[#292938] text-center border-2 rounded-full focus:outline-none text-2xl text-white ${activeInput === index ? 'border-[#6c5ce7]' : 'border-gray-700'
+                    }`}
                 />
               </div>
             ))}
           </div>
-          <p className="mb-4">OTP: {mockOTP}</p>
+
           {error && <p className="text-red-500 text-sm text-center mb-4">{error}</p>}
           {successMessage && <p className="text-green-500 text-sm text-center mb-4">{successMessage}</p>}
 
+          {/* Verify OTP */}
           <Button
             onClick={handleVerifyOTP}
-            className="w-full text-white bg-[#6c5ce7] hover:bg-[#5b4dd1] h-12 rounded-xl font-medium mb-6"
+            className="w-full"
             disabled={!otp.every((digit) => digit) || loading}
           >
-            {loading ? "Verifying..." : "Continue"}
+            {loading ? "Verifying..." : "Verify OTP"}
           </Button>
 
-          <p className="text-gray-400 text-center text-sm">
-            Didn&apos;t receive code?{" "}
+          {/* Didn't receive Code? Resend Code */}
+          <p className="text-gray-400 text-center text-sm mt-4">
+            Didn't receive Code?{" "}
             <button
               onClick={handleResendCode}
               className={`${resendDisabled ? "text-gray-500" : "text-[#6c5ce7]"}`}
               disabled={resendDisabled}
             >
-              {resendDisabled ? `Resend in ${countdown}s` : "Resend Code"}
+              {resendDisabled ? `Resend Code (${countdown}s)` : "Resend Code"}
             </button>
           </p>
         </div>

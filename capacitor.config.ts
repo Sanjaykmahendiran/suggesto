@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.suggesto.app',
-  appName: 'suggesto',
+  appName: 'Suggesto',
   webDir: 'out',
  server: {
     androidScheme: 'https'

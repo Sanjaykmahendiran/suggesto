@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Skeleton } from "@/components/ui/skeleton"
 import AvatarImg from "@/assets/avatar.jpg"
+import { PageTransitionProvider, PageTransitionWrapper } from "@/components/PageTransition"
 
 interface Notification {
     id: number
@@ -47,6 +48,8 @@ export default function NotificationsPage() {
     const unreadCount = notificationsList.filter(n => n.is_read === 0).length
 
     return (
+         
+        // <PageTransitionWrapper>
         <div className="text-white min-h-screen pb-20">
             {/* Header */}
             <div className="sticky top-0 z-10 ">
@@ -132,5 +135,7 @@ export default function NotificationsPage() {
                 )}
             </div>
         </div>
+        // </PageTransitionWrapper>
+        
     )
 }

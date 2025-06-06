@@ -35,7 +35,7 @@ export const WatchlistSection: React.FC<WatchlistSectionProps> = ({
           <Sparkles className="w-5 h-5 text-primary" />
           <h2 className="text-lg font-semibold">{title}</h2>
         </div>
-        <a href="/watchlist" className="text-sm text-primary">
+        <a href="/watch-list" className="text-sm text-primary">
           See All
         </a>
       </div>

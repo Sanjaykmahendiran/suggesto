@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Cookies from 'js-cookie';
+import { useUser } from "@/contexts/UserContext"
 
-interface UserData {
+export interface UserData {
   user_id: number;
   name: string;
   location: string;
@@ -28,13 +29,12 @@ interface UseFetchUserDetailsReturn {
 }
 
 const useFetchUserDetails = (): UseFetchUserDetailsReturn => {
-  // Always declare ALL hooks at the top level - never conditional
-  const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPageValid, setIsPageValid] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false); // New state
+  const { user, setUser } = useUser()
   
   const router = useRouter();
   const pathname = usePathname();
@@ -76,9 +76,8 @@ const useFetchUserDetails = (): UseFetchUserDetailsReturn => {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred';
       setError(errorMessage);
       setUser(null);
-      return null;
-    } finally {
       setLoading(false);
+      return null;
     }
   }, []);
 
@@ -87,6 +86,8 @@ const useFetchUserDetails = (): UseFetchUserDetailsReturn => {
     if (hasInitialized) return;
 
     const userId = Cookies.get('userID');
+
+    setLoading(true);
     
     if (!userId) {
       // No user logged in
@@ -107,8 +108,6 @@ const useFetchUserDetails = (): UseFetchUserDetailsReturn => {
 
   // Handle routing logic after user data is loaded
   useEffect(() => {
-    if (!hasInitialized || loading) return;
-
     const userId = Cookies.get('userID');
 
     if (!userId) {
@@ -142,10 +141,6 @@ const useFetchUserDetails = (): UseFetchUserDetailsReturn => {
       }
     }
 
-    // Set page validity and clear redirecting state for valid pages
-    setIsPageValid(pageValid);
-    setIsRedirecting(false);
-
     // Handle other redirect scenarios
     if (!pageValid) {
       setIsRedirecting(true);
@@ -157,6 +152,11 @@ const useFetchUserDetails = (): UseFetchUserDetailsReturn => {
         router.push('/home');
       }
     }
+
+    // Set page validity and clear redirecting state for valid pages
+    setIsPageValid(pageValid);
+    setIsRedirecting(false);
+    setLoading(false);
   }, [hasInitialized, loading, user, pathname, router, getAccessiblePages]);
 
   // Reset initialization on pathname change to handle navigation

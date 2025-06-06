@@ -32,6 +32,9 @@ export const ClassicHitsSection = ({ movies, title = "Classic Hits" }: ClassicHi
           <Clock className="w-5 h-5 text-primary" />
           <h2 className="text-lg font-semibold">{title}</h2>
         </div>
+        <a href="/watch-list" className="text-sm text-primary">
+          See All
+        </a>
       </div>
 
       <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
@@ -43,7 +46,7 @@ export const ClassicHitsSection = ({ movies, title = "Classic Hits" }: ClassicHi
             transition={{ delay: index * 0.1 }}
             whileHover={{ scale: 1.05 }}
             className="relative min-w-[120px] h-[180px] rounded-lg overflow-hidden cursor-pointer"
-            onClick={() => router.push(`/movie-deatil-page?movie_id=${movie.movie_id}`)}
+            onClick={() => router.push(`/movie-detail-page?movie_id=${movie.movie_id}`)}
           >
             <img
               src={

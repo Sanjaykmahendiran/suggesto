@@ -11,7 +11,7 @@ export default function Pricing() {
     <div className="min-h-screen text-white flex flex-col items-center">
       {/* Header */}
       <div className="flex items-center justify-between p-4 w-full max-w-4xl">
-        <button className="mr-4 p-2 rounded-full bg-[#292938]" onClick={() => router.back()}>
+        <button className="mr-2 p-2 rounded-full bg-[#292938]" onClick={() => router.back()}>
           <ArrowLeft size={20} />
         </button>
         <h1 className="text-xl font-semibold">Select Your Plan</h1>

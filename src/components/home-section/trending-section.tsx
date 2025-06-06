@@ -36,6 +36,9 @@ export const TrendingSection: React.FC<TrendingSectionProps> = ({
           <TrendingUp className="w-5 h-5 text-primary" />
           <h2 className="text-lg font-semibold">{title}</h2>
         </div>
+        <a href="/watch-list" className="text-sm text-primary">
+          See All
+        </a>
       </div>
 
       <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">

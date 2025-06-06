@@ -37,6 +37,11 @@ interface Friend {
   genre: string
 }
 
+interface SuggestedMovie {
+  movie_id: string
+  suggested_to: string
+}
+
 interface SuggestDialogProps {
   isOpen: boolean
   onClose: () => void
@@ -68,14 +73,19 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
   const [suggestStep, setSuggestStep] = useState(1)
   const [movies, setMovies] = useState<Movie[]>([])
   const [friends, setFriends] = useState<Friend[]>([])
+  const [suggestedMovies, setSuggestedMovies] = useState<SuggestedMovie[]>([])
   const [loadingMovies, setLoadingMovies] = useState(false)
   const [loadingFriends, setLoadingFriends] = useState(false)
+  const [loadingSuggested, setLoadingSuggested] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
-  // Fetch movies when dialog opens
+  // Fetch movies and suggested movies when dialog opens
   useEffect(() => {
-    if (isOpen && movies.length === 0) {
-      fetchMovies()
+    if (isOpen) {
+      if (movies.length === 0) {
+        fetchMovies()
+      }
+      fetchSuggestedMovies()
     }
   }, [isOpen])
 
@@ -101,6 +111,28 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
     }
   }
 
+  const fetchSuggestedMovies = async () => {
+    setLoadingSuggested(true)
+    try {
+      const userId = Cookies.get('userID') || '1'
+      const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=suggestedmovies&user_id=${userId}`)
+      if (!response.ok) throw new Error('Failed to fetch suggested movies')
+      const data = await response.json()
+      
+      // Extract movie_id and suggested_to for filtering
+      const suggestedData: SuggestedMovie[] = data.map((item: any) => ({
+        movie_id: item.movie_id.toString(),
+        suggested_to: item.suggested_to_name || item.suggested_to
+      }))
+      
+      setSuggestedMovies(suggestedData)
+    } catch (error) {
+      console.error('Error fetching suggested movies:', error)
+    } finally {
+      setLoadingSuggested(false)
+    }
+  }
+
   const fetchFriends = async () => {
     setLoadingFriends(true)
     try {
@@ -116,9 +148,25 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
     }
   }
 
+  // Filter movies based on search query
   const filteredMovies = movies.filter(movie =>
     movie.title.toLowerCase().includes(searchQuery.toLowerCase())
   )
+
+  // Get available movies for the selected friend (not already suggested)
+  const getAvailableMoviesForFriend = () => {
+    if (!selectedFriend) return filteredMovies
+    
+    return filteredMovies.filter(movie => {
+      // Check if this movie has already been suggested to this friend
+      const alreadySuggested = suggestedMovies.some(suggested => 
+        suggested.movie_id === movie.movie_id.toString() && 
+        (suggested.suggested_to === selectedFriend.name || 
+         suggested.suggested_to === selectedFriend.friend_id.toString())
+      )
+      return !alreadySuggested
+    })
+  }
 
   const handleMovieSelect = (movie: Movie) => {
     setSelectedMovie(movie)
@@ -151,6 +199,12 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
 
         if (!response.ok) throw new Error('Failed to suggest movie')
 
+        // Update the suggested movies list to prevent re-suggesting
+        setSuggestedMovies(prev => [...prev, {
+          movie_id: selectedMovie.movie_id.toString(),
+          suggested_to: selectedFriend.name
+        }])
+
         onSuggest(selectedMovie, selectedFriend, note)
         resetSuggestFlow()
       } catch (error) {
@@ -173,6 +227,10 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
   const handleBack = () => {
     if (suggestStep > 1) {
       setSuggestStep(suggestStep - 1)
+      if (suggestStep === 3) {
+        // Going back from step 3 to step 2, clear the friend selection
+        setSelectedFriend(null)
+      }
     } else {
       onClose()
       setTimeout(resetSuggestFlow, 200)
@@ -186,9 +244,12 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
     }
   }
 
+  // Get the movies to display based on current step
+  const moviesToDisplay = suggestStep === 1 ? filteredMovies : getAvailableMoviesForFriend()
+
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="bg-[#292938] border-gray-700 text-white p-0 max-w-md">
+      <DialogContent className="bg-[#292938] max-h-[700px] border-gray-700 text-white p-0 max-w-md">
         <div className="sticky top-0 z-10 bg-[#292938] p-4 border-b border-gray-700">
           <div className="flex items-center justify-between">
             <DialogTitle>
@@ -224,12 +285,12 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
         <div className="p-4 max-h-[60vh] overflow-y-auto">
           {suggestStep === 1 && (
             <div className="space-y-3">
-              {loadingMovies ? (
+              {(loadingMovies || loadingSuggested) ? (
                 Array(5).fill(0).map((_, index) => (
                   <MovieSkeleton key={index} />
                 ))
               ) : (
-                filteredMovies.map((movie) => (
+                moviesToDisplay.map((movie) => (
                   <motion.div
                     key={movie.watchlist_id}
                     initial={{ opacity: 0, y: 10 }}
@@ -257,7 +318,7 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
                   </motion.div>
                 ))
               )}
-              {!loadingMovies && filteredMovies.length === 0 && (
+              {!(loadingMovies || loadingSuggested) && moviesToDisplay.length === 0 && (
                 <div className="text-center text-gray-400 py-8">
                   {searchQuery ? 'No movies found matching your search.' : 'No movies available.'}
                 </div>
@@ -295,27 +356,46 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
                 </div>
               ) : (
                 <div className="grid grid-cols-3 gap-4">
-                  {friends.map((friend) => (
-                    <motion.button
-                      key={friend.friend_id}
-                      className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-[#181826]"
-                      whileHover={{ scale: 1.05 }}
-                      onClick={() => handleFriendSelect(friend)}
-                    >
-                      <Avatar className="w-14 h-14">
-                        <AvatarImage
-                          src={`https://suggesto.xyz/App/${friend.profile_pic}`}
-                          alt={friend.name}
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement
-                            target.src = "/api/placeholder/56/56"
-                          }}
-                        />
-                        <AvatarFallback>{friend.name[0]}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm text-center">{friend.name}</span>
-                    </motion.button>
-                  ))}
+                  {friends.map((friend) => {
+                    const alreadySuggested = selectedMovie && suggestedMovies.some(suggested => 
+                      suggested.movie_id === selectedMovie.movie_id.toString() && 
+                      (suggested.suggested_to === friend.name || 
+                       suggested.suggested_to === friend.friend_id.toString())
+                    )
+
+                    return (
+                      <motion.button
+                        key={friend.friend_id}
+                        className={`flex flex-col items-center gap-2 p-3 rounded-lg relative ${
+                          alreadySuggested 
+                            ? 'opacity-50 cursor-not-allowed' 
+                            : 'hover:bg-[#181826] cursor-pointer'
+                        }`}
+                        whileHover={!alreadySuggested ? { scale: 1.05 } : {}}
+                        onClick={() => !alreadySuggested && handleFriendSelect(friend)}
+                        disabled={!!alreadySuggested}
+                      >
+                        <Avatar className="w-14 h-14">
+                          <AvatarImage
+                            src={friend.profile_pic}
+                            alt={friend.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.src = "/api/placeholder/56/56"
+                            }}
+                          />
+                          <AvatarFallback>{friend.name[0]}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm text-center">{friend.name}</span>
+                        {alreadySuggested && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg">
+                            <span className="text-xs text-center px-2">Already Suggested</span>
+                          </div>
+                        )}
+                      </motion.button>
+                    )
+                  })}
                 </div>
               )}
               {!loadingFriends && friends.length === 0 && (
@@ -347,8 +427,9 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
                     <span className="text-xs text-gray-400">To:</span>
                     <Avatar className="w-5 h-5">
                       <AvatarImage
-                        src={`https://suggesto.xyz/App/${selectedFriend?.profile_pic}`}
+                        src={selectedFriend?.profile_pic}
                         alt={selectedFriend?.name}
+                        className="w-full h-full object-cover"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement
                           target.src = "/api/placeholder/20/20"

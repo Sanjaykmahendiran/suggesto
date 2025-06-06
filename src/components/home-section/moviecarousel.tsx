@@ -8,7 +8,6 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 
-// Import Swiper styles
 import "swiper/css"
 
 type Banner = {
@@ -18,6 +17,7 @@ type Banner = {
   imageSrc: string
   alt: string
   targetUrl?: string
+  movie_id: string
 }
 
 
@@ -47,7 +47,8 @@ export const MovieCarousel = () => {
           subtitle: banner.subtitle,
           imageSrc: banner.image_url,
           alt: banner.title,
-          targetUrl: banner.target_url
+          targetUrl: banner.target_url,
+          movie_id: banner.movie_id || "", 
         }))
 
         setBanners(formattedBanners)
@@ -102,7 +103,7 @@ export const MovieCarousel = () => {
                 }}
                 transition={{ duration: 0.3 }}
                 className={`relative w-full h-full rounded-lg overflow-hidden ${activeIndex === index ? "shadow-xl" : ""}`}
-                onClick={() => router.push(banner.targetUrl || `/movie-detail-page?movie_id=${banner.id}`)}
+                onClick={() => router.push( `/movie-detail-page?movie_id=${banner.movie_id}`)}
               >
                 <img 
                   src={banner.imageSrc || "/placeholder.svg?height=500&width=320"} 

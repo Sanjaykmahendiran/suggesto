@@ -3,39 +3,104 @@
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { ChevronRight } from "lucide-react"
-import { useEffect, useState, useRef } from "react"
-import image from "@/assets/startup-bg.png"
+import { useEffect, useState, useRef, useCallback } from "react"
+import image from "@/assets/startup-Screen-1.png"
+import logo from "@/assets/suggesto-logo.png"
+import nameLogo from "@/assets/suggesto-name-logo.png"
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion"
-import useFetchUserDetails from "@/hooks/useFetchUserDetails";
-import { App } from '@capacitor/app'
-import type { PluginListenerHandle } from '@capacitor/core';
+import useFetchUserDetails from "@/hooks/useFetchUserDetails"
+import { App } from "@capacitor/app"
+import type { PluginListenerHandle } from "@capacitor/core"
+import Cookies from "js-cookie"
+import { Skeleton } from "@/components/ui/skeleton"
 
-const carouselTexts = [
-  ["Lorem ipsum", "dolor sit amet,", "consectetur"],
-  ["Welcome to", "Your Next", "Big Opportunity"],
-  ["Innovate.", "Grow.", "Succeed."]
+const carouselData = [
+  {
+    title: "Get Personalized Movie Suggestions",
+    lines: [
+      "Discover movies picked just for you —",
+      "from your friends and Suggesto AI.",
+      "Smart, social, and always on point."
+    ]
+  },
+  {
+    title: "Build Your Smart Watchlist",
+    lines: [
+      "Save movies you love or plan to watch.",
+      "Track everything, filter by genre, OTT,",
+      "and never miss a great film again."
+    ]
+  },
+  {
+    title: "Watch Movies With Friends",
+    lines: [
+      "Create watchrooms with your crew.",
+      "Find movies you all like,",
+      "and plan the perfect movie night."
+    ]
+  }
 ]
 
-// Redirect Loading Component
+
 const RedirectLoading = () => (
-  <motion.div 
-    className="flex items-center justify-center min-h-screen bg-[#181826]"
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    exit={{ opacity: 0 }}
-    transition={{ duration: 0.3 }}
-  />
-)
+  <div className="px-4">
+    {/* Movie Carousel Skeleton */}
+    <div className="h-[400px] w-full flex bg-[#292938] items-center justify-center mb-8">
+      <Skeleton className="h-[400px] rounded-lg bg-[#292938]" />
+    </div>
+
+    {/* Section Skeletons */}
+    {[1, 2, 3].map((section) => (
+      <div key={section} className="mb-8">
+        <div className="flex justify-between items-center mb-4">
+          <Skeleton className="h-6 w-40 bg-[#292938]" />
+          <Skeleton className="h-4 w-16 bg-[#292938]" />
+        </div>
+
+        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+          {[1, 2, 3, 4].map((item) => (
+            <Skeleton key={item} className="min-w-[120px] h-[180px] rounded-lg bg-[#292938]" />
+          ))}
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+
 
 export default function RootPage() {
-  const { user, loading, isPageValid, isRedirecting } = useFetchUserDetails();
+  const { user, loading, isPageValid, isRedirecting } = useFetchUserDetails()
   const [index, setIndex] = useState(0)
   const router = useRouter()
   const containerRef = useRef<HTMLDivElement>(null)
+  const [sliderWidth, setSliderWidth] = useState(320) // Set a default width
+  const [userId, setUserId] = useState<string | undefined>()
+
+  // Fetch cookie only on client
+  useEffect(() => {
+    setUserId(Cookies.get("userID"))
+  }, [])
+
+  const debounce = (func: Function, wait: number) => {
+    let timeout: NodeJS.Timeout
+    return (...args: any[]) => {
+      clearTimeout(timeout)
+      timeout = setTimeout(() => func.apply(null, args), wait)
+    }
+  }
+
+  const updateSliderWidth = useCallback(() => {
+    if (containerRef.current) {
+      const width = containerRef.current.offsetWidth
+      setSliderWidth(width > 0 ? width : 320) // Fallback to 320px if width is 0
+    }
+  }, [])
+
+  const debouncedResize = useCallback(debounce(updateSliderWidth, 150), [updateSliderWidth])
 
   useEffect(() => {
     let backHandler: PluginListenerHandle
-
     const setupBackButton = async () => {
       backHandler = await App.addListener("backButton", () => {
         if (window.history.length > 1) {
@@ -45,205 +110,186 @@ export default function RootPage() {
         }
       })
     }
-
     setupBackButton()
-
     return () => {
-      if (backHandler) {
-        backHandler.remove()
-      }
+      if (backHandler) backHandler.remove()
     }
   }, [router])
 
-  // Track the slider width to make calculations easier
-  const [sliderWidth, setSliderWidth] = useState(0)
-
-  // Get the width of the container on mount
   useEffect(() => {
-    if (containerRef.current) {
-      setSliderWidth(containerRef.current.offsetWidth)
+    // Add a small delay to ensure the container is rendered
+    const timer = setTimeout(updateSliderWidth, 100)
+    window.addEventListener("resize", debouncedResize)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener("resize", debouncedResize)
     }
+  }, [debouncedResize, updateSliderWidth])
 
-    // Handle window resize
-    const handleResize = () => {
-      if (containerRef.current) {
-        setSliderWidth(containerRef.current.offsetWidth)
-      }
-    }
+  // Fixed slider calculations
+  const sliderButtonWidth = Math.max(140, sliderWidth * 0.5)
+  const maxDragDistance = sliderWidth - sliderButtonWidth - 8
 
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
-
-  // Calculate threshold based on container width
-  const slideThreshold = sliderWidth * 0.6
-
-  // Motion values for the slider
   const x = useMotionValue(0)
-
-  // Add spring physics for smoother return animation
   const springX = useSpring(x, { stiffness: 500, damping: 30 })
-
-  // Dynamic background gradient based on slide position
-  const progress = useTransform(x, [0, slideThreshold], [0, 1])
-  const background = useTransform(
-    progress,
-    [0, 1],
-    ["linear-gradient(90deg, #6c5ce7 0%, #8c7ae6 100%)",
-      "linear-gradient(90deg, #00b894 0%, #00cec9 100%)"]
-  )
-
-  // Dynamic opacity for chevron icons
+  const progress = useTransform(x, [0, maxDragDistance], [0, 1])
+  const background = useTransform(progress, [0, 1], ["#6c5ce7", "#00cec9"])
   const arrowOpacity = useTransform(progress, [0, 0.8], [1, 0])
 
-  // Text for slider changes based on progress
-  const sliderText = useTransform(
-    progress,
-    [0, 0.8, 1],
-    ["Slide to Get Started", "Get Started...", "Welcome!"]
-  )
-
-  // Carousel text rotation
   useEffect(() => {
     const interval = setInterval(() => {
-      setIndex((prev) => (prev + 1) % carouselTexts.length)
+      setIndex((prev) => (prev + 1) % carouselData.length)
     }, 3000)
     return () => clearInterval(interval)
   }, [])
 
-  // Show redirect loading if redirecting
-  if (isRedirecting) {
-    return <RedirectLoading />
-  }
+  const handleSlideComplete = useCallback(() => {
+    router.push("/auth/create-account")
+  }, [router])
 
-  // // Show regular loading if still loading user data
-  // if (loading) {
-  //   return (
-  //     <div className="flex flex-col items-center justify-center min-h-screen bg-[#181826] text-white">
-  //       <motion.div
-  //         className="w-12 h-12 border-3 border-white/20 border-t-white rounded-full"
-  //         animate={{ rotate: 360 }}
-  //         transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-  //       />
-  //     </div>
-  //   )
-  // }
+  if (!userId && !loading) {
+    return (
+      <div className="fixed inset-0 flex flex-col text-white bg-[#181826] overflow-hidden">
+        <div className="w-full max-w-md mx-auto flex flex-col h-full relative">
+          <div className="absolute top-0 left-0 right-0 h-25 bg-gradient-to-b from-[#181826] to-transparent z-20 pointer-events-none" />
 
-  // Don't render the page content if not valid (safety check)
-  if (!isPageValid) {
-    return null
-  }
+          <div className="h-[60vh] relative ">
+            <style jsx>{`
+                @keyframes bounceSlow {
+                  0%, 100% {
+                    transform: translateY(0);
+                  }
+                  50% {
+                    transform: translateY(-20px);
+                  }
+                }
 
-  return (
-    <div className="flex flex-col items-center min-h-screen bg-[#181826] text-white">
-      <div className="w-full max-w-md flex flex-col items-center relative">
-
-        {/* Image with gradient overlay */}
-        <div className="w-full flex justify-center items-center mb-10 relative">
-          <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-[#181826] to-transparent z-20 pointer-events-none" />
-          <div className="rounded-3xl overflow-hidden relative z-10">
+                .bounce-slow {
+                  animation: bounceSlow 2s infinite;
+                }
+              `}</style>
             <Image
               src={image}
-              alt="Movie Poster Collage"
-              width={500}
-              height={600}
-              className="object-cover max-h-[80%]"
+              alt="Welcome to Suggesto - Movie recommendation app"
+              fill
+              className="object-cover"
+              priority
+              sizes="(max-width: 768px) 100vw, 50vw"
             />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#181826] to-transparent" />
+
+            <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 translate-y-1/2 z-30 bounce-slow">
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+              >
+                <Image src={logo} alt="Suggesto Logo" width={80} height={80} className="object-contain" />
+              </motion.div>
+            </div>
           </div>
 
-          {/* Gradient overlay */}
-          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#181826] to-transparent z-20 pointer-events-none" />
-        </div>
-
-        {/* Carousel Text with smooth transitions */}
-        <motion.div
-          className="text-center mb-4 relative z-30 h-40"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          key={index}
-          transition={{ duration: 0.5 }}
-        >
-          {carouselTexts[index].map((line, i) => (
-            <motion.h1
-              key={i}
-              className="text-4xl font-bold mb-1"
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
-            >
-              {line}
-            </motion.h1>
-          ))}
-        </motion.div>
-
-        {/* Pagination dots */}
-        <div className="flex gap-2 items-center justify-center mb-8 relative z-30">
-          {carouselTexts.map((_, i) => (
+          <div className="flex-1 flex flex-col items-center px-4 relative z-30">
             <motion.div
-              key={i}
-              className="rounded-full bg-white"
-              animate={{
-                width: index === i ? 24 : 12,
-                height: 12,
-                opacity: index === i ? 1 : 0.3
-              }}
-              transition={{ duration: 0.3 }}
-            />
-          ))}
-        </div>
-
-        {/* Improved slider */}
-        <div
-          ref={containerRef}
-          className="flex w-full max-w-sm mx-auto relative px-6 z-30 rounded-full overflow-hidden mb-"
-        >
-          <div className="relative w-full h-16 bg-white/10 backdrop-blur-sm rounded-full">
-            <motion.div
-              className="absolute h-16  rounded-full flex items-center justify-center cursor-grab active:cursor-grabbing z-10"
-              style={{
-                width: sliderWidth * 0.6,
-                background,
-                x: springX
-              }}
-              drag="x"
-              dragConstraints={{ left: 0, right: slideThreshold }}
-              dragElastic={0.1}
-              dragMomentum={false}
-              onDragEnd={(_, info) => {
-                if (info.offset.x > slideThreshold * 0.8) {
-                  // Animate to the end before redirecting
-                  x.set(slideThreshold)
-                  setTimeout(() => {
-                    router.push("/auth/create-account")
-                  }, 300)
-                } else {
-                  // Spring back to start
-                  x.set(0)
-                }
-              }}
+              className="text-center mb-8"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              key={index}
+              transition={{ duration: 0.6 }}
             >
-              <motion.span
-                className="font-medium text-white "
-                style={{ opacity: useTransform(progress, [0.9, 1], [1, 0]) }}
-              >
-                {sliderText}
-              </motion.span>
-            </motion.div>
-
-            {/* Arrow indicators */}
-            <motion.div
-              className="absolute inset-0 flex items-center justify-end px-4 text-white/60 pointer-events-none"
-              style={{ opacity: arrowOpacity }}
-            >
-              <div className="flex -space-x-1">
-                <ChevronRight className="w-6 h-6 text-white animate-pulse" />
-                <ChevronRight className="w-6 h-6 text-white animate-pulse" style={{ animationDelay: "0.1s" }} />
-                <ChevronRight className="w-6 h-6 text-white animate-pulse" style={{ animationDelay: "0.2s" }} />
+              <h2 className="text-3xl font-bold text-white mb-4">
+                {carouselData[index].title}
+              </h2>
+              <div className="space-y-0">
+                {carouselData[index].lines.map((line, i) => (
+                  <p key={i} className="text-sm text-white/70">
+                    {line}
+                  </p>
+                ))}
               </div>
             </motion.div>
+
+            <div className="absolute bottom-8 left-0 right-0 px-6">
+              <div className="flex gap-2 items-center justify-center mb-5">
+                {carouselData.map((_, i) => (
+                  <motion.button
+                    key={i}
+                    className="rounded-full bg-white focus:outline-none focus:ring-2 focus:ring-white/50"
+                    animate={{
+                      width: index === i ? 20 : 10,
+                      height: 10,
+                      opacity: index === i ? 1 : 0.3
+                    }}
+                    transition={{ duration: 0.3 }}
+                    onClick={() => setIndex(i)}
+                    aria-label={`Go to slide ${i + 1}`}
+                  />
+                ))}
+              </div>
+              <div
+                ref={containerRef}
+                className="flex w-full max-w-sm mx-auto relative rounded-full overflow-hidden"
+              >
+                <div className="relative w-full h-14 bg-white/10 backdrop-blur-sm rounded-full border border-white/20">
+                  <motion.div
+                    className="absolute h-14 rounded-full flex items-center justify-center cursor-grab active:cursor-grabbing z-10 px-6 shadow-lg"
+                    style={{
+                      width: sliderButtonWidth,
+                      background,
+                      x: springX
+                    }}
+                    drag="x"
+                    dragConstraints={{ left: 0, right: maxDragDistance }}
+                    dragElastic={0.1}
+                    dragMomentum={false}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onDragEnd={(_, info) => {
+                      if (info.offset.x > maxDragDistance * 0.7) {
+                        x.set(maxDragDistance)
+                        setTimeout(handleSlideComplete, 300)
+                      } else {
+                        x.set(0)
+                      }
+                    }}
+                    role="button"
+                    aria-label="Slide to continue to account creation"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault()
+                        x.set(maxDragDistance)
+                        setTimeout(handleSlideComplete, 300)
+                      }
+                    }}
+                  >
+                    <span className="text-white font-semibold text-lg select-none whitespace-nowrap">
+                      Let's Go
+                    </span>
+                  </motion.div>
+
+                  <motion.div
+                    className="absolute inset-0 flex items-center justify-end px-4 text-white/60 pointer-events-none"
+                    style={{ opacity: arrowOpacity }}
+                  >
+                    {[0, 100, 200].map((delay, i) => (
+                      <ChevronRight
+                        key={i}
+                        className="w-5 h-5 animate-pulse"
+                        style={{ animationDelay: `${delay}ms` }}
+                      />
+                    ))}
+                  </motion.div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    )
+  }
+
+  return (
+    <RedirectLoading />
   )
 }
