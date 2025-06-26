@@ -15,18 +15,21 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import Cookies from "js-cookie"
 import { useRouter } from "next/navigation"
 import NotFound from "@/components/notfound"
+import WatchRoomNotFound from "@/assets/not-found-watchroom.png"
 import Link from "next/link"
 import { useUser } from "@/contexts/UserContext"
 import { PageTransitionProvider, PageTransitionWrapper } from "@/components/PageTransition"
-import { WatchRoomAPIResponse, Room, Friend, CreateRoomPayload } from "@/app/watch-room/type"
+import { WatchRoomAPIResponse, Room, Friend, CreateRoomPayload, FriendsAPIResponse } from "@/app/watch-room/type"
+import toast from "react-hot-toast"
+import DefaultImage from "@/assets/default-user.webp"
 
 // Loading Skeleton Component
 const LoadingSkeleton = () => (
     <div className="px-4">
-        <Skeleton className="h-12 w-full rounded-lg bg-[#292938] mb-6" />
+        <Skeleton className="h-12 w-full rounded-lg bg-[#2b2b2b] mb-6" />
 
         {[1, 2, 3].map((item) => (
-            <Skeleton key={item} className="h-24 w-full rounded-lg bg-[#292938] mb-4" />
+            <Skeleton key={item} className="h-24 w-full rounded-lg bg-[#2b2b2b] mb-4" />
         ))}
     </div>
 )
@@ -38,31 +41,11 @@ export default function WatchRoomPage() {
     const [friends, setFriends] = useState<Friend[]>([])
     const [newRoomName, setNewRoomName] = useState("")
     const [selectedFriends, setSelectedFriends] = useState<Friend[]>([])
-    const [error, setError] = useState<string | null>(null)
     const [isCreatingRoom, setIsCreatingRoom] = useState(false)
     const [showCreateDialog, setShowCreateDialog] = useState(false)
     const { user, setUser } = useUser()
 
-    const userId = Cookies.get('userID') || '1'
-
-    // useEffect(() => {
-    //     const fetchUserData = async () => {
-    //         const user_id = Cookies.get("userID")
-    //         if (!user_id) return
-
-    //         try {
-    //             const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=userget&user_id=${user_id}`)
-    //             const data = await response.json()
-    //             if (data && data.user_id) {
-    //                 setUser(data)
-    //             }
-    //         } catch (error) {
-    //             console.error("Error fetching user data:", error)
-    //         }
-    //     }
-
-    //     fetchUserData()
-    // }, [])
+    const userId = Cookies.get('userID') || ''
 
     // Fetch watch rooms list
     const fetchWatchRooms = async () => {
@@ -73,31 +56,41 @@ export default function WatchRoomPage() {
             const roomsData: WatchRoomAPIResponse[] = await response.json()
 
             // Transform API response to match our Room type
-            const transformedRooms: Room[] = roomsData.map(room => ({
-                id: room.room_id.toString(),
-                name: room.room_name,
-                is_creator: room.is_creator,
-                members: room.members.map(member => member.user_id.toString()),
-                friends: room.members
-                    .filter(member => member.user_id.toString() !== userId) // Exclude current user from friends list
-                    .map(member => ({
-                        image: member.image,
-                        friend_id: member.user_id.toString(),
-                        name: member.name,
-                        profile_pic: member.image,
-                        joined_date: room.created_date,
-                        genre: "" // API doesn't provide genre, you might need to fetch this separately
-                    })),
-                suggestedMovies: [],
-                created_date: room.created_date,
-                member_count: room.members.length,
-                movie_count: 0 // Not provided in API, could be fetched separately
-            }))
+            const transformedRooms: Room[] = roomsData.map(room => {
+                // Find if current user is creator
+                const currentUserMember = room.members.find(member => member.user_id.toString() === userId);
+                const isCreator = currentUserMember ? currentUserMember.is_creator : false;
+
+                return {
+                    id: room.room_id.toString(),
+                    name: room.room_name,
+                    is_creator: isCreator,
+                    members: room.members.map(member => member.user_id.toString()),
+                    friends: room.members
+                        .filter(member => member.user_id.toString() !== userId)
+                        .map(member => ({
+                            image: member.image,
+                            friend_id: Number(member.user_id),
+                            name: member.name,
+                            profile_pic: member.image,
+                            joined_date: room.created_date,
+                            genre: "",
+                            friends_count: 0,
+                            watchlist_count: 0,
+                            is_starred: 0,
+                            is_creator: member.is_creator
+                        })),
+                    suggestedMovies: [],
+                    created_date: room.created_date,
+                    member_count: room.members.length,
+                    movie_count: room.movie_count
+                }
+            })
 
             setRooms(transformedRooms)
         } catch (error) {
             console.error('Error fetching watch rooms:', error)
-            setError('Failed to load watch rooms')
+            toast.error('Failed to load watch rooms')
         }
     }
 
@@ -106,11 +99,11 @@ export default function WatchRoomPage() {
         try {
             const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=friendslist&user_id=${userId}`)
             if (!response.ok) throw new Error('Failed to fetch friends')
-            const friendsData: Friend[] = await response.json()
-            setFriends(friendsData)
+            const friendsResponse: FriendsAPIResponse = await response.json() // Changed this line
+            setFriends(friendsResponse.data) // Changed this line - use .data property
         } catch (error) {
             console.error('Error fetching friends:', error)
-            setError('Failed to load friends list')
+            toast.error('Failed to load friends list')
         }
     }
 
@@ -157,7 +150,7 @@ export default function WatchRoomPage() {
                     setIsLoading(false)
                 }
             } else {
-                setError('User not logged in')
+                toast.error('User not logged in')
                 setIsLoading(false)
             }
         }
@@ -167,27 +160,27 @@ export default function WatchRoomPage() {
 
     const handleCreateRoom = async () => {
         if (rooms.length >= 5) {
-            setError("You can only create up to 5 rooms")
+            toast.error("You can only create up to 5 rooms")
             return
         }
 
         if (!newRoomName.trim()) {
-            setError("Please enter a room name")
+            toast.error("Please enter a room name")
             return
         }
 
         if (selectedFriends.length === 0) {
-            setError("Please select at least one friend")
+            toast.error("Please select at least one friend")
             return
         }
 
         if (selectedFriends.length > 5) {
-            setError("You can only invite up to 5 friends")
+            toast.error("You can only invite up to 5 friends")
             return
         }
 
         try {
-            const memberIds = selectedFriends.map(friend => parseInt(friend.friend_id))
+            const memberIds = selectedFriends.map(friend => parseInt(friend.friend_id.toString()))
             memberIds.push(parseInt(userId)) // Add current user to members
 
             const payload: CreateRoomPayload = {
@@ -202,10 +195,9 @@ export default function WatchRoomPage() {
             // Reset form
             setNewRoomName("")
             setSelectedFriends([])
-            setError(null)
             setShowCreateDialog(false)
         } catch (error) {
-            setError("Failed to create room. Please try again.")
+            toast.error("Failed to create room. Please try again.")
         }
     }
 
@@ -216,7 +208,7 @@ export default function WatchRoomPage() {
             if (selectedFriends.length < 10) {
                 setSelectedFriends([...selectedFriends, friend])
             } else {
-                setError("You can only select up to 10 friends")
+                toast.error("You can only select up to 10 friends")
             }
         }
     }
@@ -242,27 +234,29 @@ export default function WatchRoomPage() {
         <div className="text-white min-h-screen mb-22">
 
             {/* Header */}
-            <header className="p-4 flex items-center justify-between">
+            <header className="p-4 flex items-center justify-between pt-8">
                 <div className="flex items-center gap-2">
-                    <button className="mr-2 p-2 rounded-full bg-[#292938]" onClick={() => router.back()}>
+                    <button className="mr-2 p-2 rounded-full bg-[#2b2b2b]" onClick={() => router.back()}>
                         <ArrowLeft size={20} />
                     </button>
                     <div>
-                        <h1 className="text-2xl font-bold text-white">Watch Room</h1>
+                        <h1 className="text-xl font-bold text-white">Watch Room</h1>
                         <p className="text-xs text-gray-400">
                             Watch movies with friends
                         </p>
                     </div>
                 </div>
                 <Link href="/profile">
-                    <div className="w-10 h-10 rounded-full border-2 border-primary overflow-hidden">
-                        <Image
-                            src={user?.imgname || "/placeholder.svg"}
-                            alt="Profile"
-                            width={40}
-                            height={40}
-                            className="w-full h-full object-cover"
-                        />
+                    <div className="h-10 w-10 rounded-full p-[2px] bg-gradient-to-tr from-[#15F5FD] to-[#036CDA]">
+                        <div className="h-full w-full rounded-full overflow-hidden bg-black">
+                            <Image
+                                src={user?.imgname || DefaultImage }
+                                alt="Profile"
+                                width={40}
+                                height={40}
+                                className="w-full h-full object-cover"
+                            />
+                        </div>
                     </div>
                 </Link>
             </header>
@@ -274,6 +268,7 @@ export default function WatchRoomPage() {
                     {/* Room List */}
                     {rooms.length === 0 ? (
                         <NotFound
+                            imageSrc={WatchRoomNotFound}
                             title="No Watch Rooms"
                             description="You haven't created any watch rooms yet. Start by creating a new room to invite friends and suggest movies."
                         />
@@ -283,8 +278,8 @@ export default function WatchRoomPage() {
                                 <div
                                     key={room.id}
                                     className={`rounded-lg p-4 cursor-pointer transition-colors relative ${isRoomOwner(room)
-                                        ? "bg-[#292938] hover:bg-[#32324A]"
-                                        : "bg-[#292938] hover:bg-[#32324A]"
+                                        ? "bg-[#2b2b2b]"
+                                        : "bg-[#2b2b2b]"
                                         }`}
                                     onClick={() => handleRoomClick(room)}
                                 >
@@ -297,9 +292,9 @@ export default function WatchRoomPage() {
                                         <div className="flex items-center gap-2">
                                             {/* Owner badge */}
                                             {isRoomOwner(room) && (
-                                                <Badge className="bg-primary text-white text-xs">
+                                                <span className="bg-gradient-to-r from-[#15F5FD] to-[#036CDA] text-white text-xs rounded-lg px-2 py-1">
                                                     Owner
-                                                </Badge>
+                                                </span>
                                             )}
                                             <ChevronRight size={18} className="text-gray-400" />
                                         </div>
@@ -309,12 +304,13 @@ export default function WatchRoomPage() {
                                         <div className="flex items-center gap-1">
                                             <div className="flex -space-x-2">
                                                 {room.friends.slice(0, 3).map((friend, index) => (
-                                                    <Avatar key={friend.friend_id} className="h-6 w-6 border border-[#1E1E2E]">
+                                                    <Avatar key={friend.friend_id} className="h-8 w-8 border border-[#1E1E2E]">
                                                         <AvatarImage
-                                                            src={formatImageUrl(friend.profile_pic || "/placeholder.svg")}
+                                                            src={formatImageUrl(friend.profile_pic || DefaultImage)}
                                                             alt={friend.name}
+                                                            className="object-cover"
                                                         />
-                                                        <AvatarFallback>{friend.name[0]}</AvatarFallback>
+                                                        <AvatarFallback className="bg-gradient-to-r from-[#15F5FD] to-[#036CDA]">{friend.name[0]}</AvatarFallback>
                                                     </Avatar>
                                                 ))}
                                             </div>
@@ -329,7 +325,7 @@ export default function WatchRoomPage() {
                                             </div>
                                             <div className="flex items-center gap-1">
                                                 <Film size={12} />
-                                                <span>{room.movie_count || room.suggestedMovies.length}</span>
+                                                <span>{room.movie_count}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -342,7 +338,7 @@ export default function WatchRoomPage() {
 
             {/* Floating Plus Button */}
             <motion.button
-                className="fixed bottom-24 right-4 w-14 h-14 rounded-full bg-[#6c5ce7] flex items-center justify-center shadow-lg z-50"
+                className="fixed bottom-24 right-4 w-14 h-14 rounded-full bg-gradient-to-r from-[#15F5FD] to-[#036CDA] flex items-center justify-center shadow-lg z-50"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setShowCreateDialog(true)}
@@ -355,7 +351,7 @@ export default function WatchRoomPage() {
 
             {/* Create Room Dialog */}
             <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-                <DialogContent className="bg-[#1E1E2E] border-[#292938] text-white max-w-md mx-auto">
+                <DialogContent className="bg-[#1f1f21] border-[#121212] text-white max-w-md mx-auto">
                     <DialogHeader>
                         <DialogTitle>Create a Watch Room</DialogTitle>
                     </DialogHeader>
@@ -366,7 +362,7 @@ export default function WatchRoomPage() {
                                 value={newRoomName}
                                 onChange={(e) => setNewRoomName(e.target.value)}
                                 placeholder="Enter room name"
-                                className="bg-[#292938] border-[#3E3E4E]"
+                                className="bg-[#2b2b2b] border-[#3E3E4E]"
                                 disabled={isCreatingRoom}
                             />
                         </div>
@@ -383,7 +379,7 @@ export default function WatchRoomPage() {
                                             You need friends to create a watch room
                                         </p>
                                         <Link href="/friends">
-                                            <Button className="bg-primary hover:bg-primary/90">
+                                            <Button variant="default">
                                                 Add Friends First
                                             </Button>
                                         </Link>
@@ -396,15 +392,15 @@ export default function WatchRoomPage() {
                                             <div
                                                 key={friend.friend_id}
                                                 className={`flex items-center justify-between p-2 rounded-md cursor-pointer ${selectedFriends.some((f) => f.friend_id === friend.friend_id)
-                                                    ? "bg-primary/20 border border-primary/50"
-                                                    : "hover:bg-[#292938]"
+                                                    ? "bg-[2dffeb] border border-[9bffb7]"
+                                                    : "hover:bg-[#2b2b2b]"
                                                     }`}
                                                 onClick={() => !isCreatingRoom && toggleFriendSelection(friend)}
                                             >
                                                 <div className="flex items-center gap-2">
                                                     <Avatar className="h-8 w-8">
                                                         <AvatarImage
-                                                            src={formatImageUrl(friend.profile_pic || "/placeholder.svg")}
+                                                            src={formatImageUrl(friend.profile_pic || DefaultImage)}
                                                             alt={friend.name}
                                                         />
                                                         <AvatarFallback>{friend.name[0]}</AvatarFallback>
@@ -415,7 +411,7 @@ export default function WatchRoomPage() {
                                                     </div>
                                                 </div>
                                                 {selectedFriends.some((f) => f.friend_id === friend.friend_id) && (
-                                                    <Badge variant="outline" className="bg-primary/20 text-primary border-primary/50">
+                                                    <Badge variant="outline" className="bg-gradient-to-r from-[#15F5FD] to-[#036CDA] text-white ">
                                                         Selected
                                                     </Badge>
                                                 )}
@@ -426,11 +422,11 @@ export default function WatchRoomPage() {
                             )}
                         </div>
 
-                        {error && <div className="text-red-400 text-sm">{error}</div>}
 
                         <Button
+                            variant="default"
                             onClick={handleCreateRoom}
-                            className="w-full bg-primary hover:bg-primary/90"
+                            className="w-full"
                             disabled={isCreatingRoom || friends.length === 0}
                         >
                             {isCreatingRoom ? "Creating..." : "Create Room"}
@@ -440,7 +436,7 @@ export default function WatchRoomPage() {
             </Dialog>
             <BottomNavigation currentPath="/watch-room" />
         </div >
-           
+
         // {/* </PageTransitionWrapper> */ }
 
 

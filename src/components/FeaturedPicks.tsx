@@ -20,9 +20,9 @@ type FeaturedPicksProps = {
 
   const SkeletonMovie = () => (
     <div className="relative min-w-[120px] h-[180px] rounded-lg overflow-hidden">
-      <Skeleton className="h-full w-full bg-[#292938]" />
+      <Skeleton className="h-full w-full bg-[#2b2b2b]" />
       <div className="absolute bottom-2 left-2 right-2">
-        <Skeleton className="h-4 w-24 bg-[#292938]/80 mb-1" />
+        <Skeleton className="h-4 w-24 bg-[#2b2b2b]/80 mb-1" />
       </div>
     </div>
   )

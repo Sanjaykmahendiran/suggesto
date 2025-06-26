@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { Skeleton } from "@/components/ui/skeleton"
 import { BottomNavigation } from "@/components/bottom-navigation"
 import { MovieCarousel } from "@/components/home-section/moviecarousel"
 import { SuggestionsSection } from "@/components/home-section/suggestions-section"
@@ -20,19 +19,23 @@ import premiumImage from "@/assets/Premium-content.png"
 import { useRouter } from "next/navigation"
 import { PageTransitionWrapper } from "@/components/PageTransition"
 import React from "react"
+import GenresSection from "@/components/home-section/genres-section"
+import toast from "react-hot-toast"
+import LoadingSkeleton from "./_components/loadingskeleton"
+import MoodsSection from "@/components/home-section/moods-section"
+import PollCard from "@/components/home-section/poll-section"
+import Top10Wall from "@/components/home-section/top10wall-section"
 
 type HomeData = {
   recentSuggestions?: any[];
   longtimeWatchlist?: any[];
   trendingThisWeek?: any[];
-  // classicHits?: any[];
   popularAmongFriends?: any[];
   aiRandomizer?: any[];
   mysteryweekendpick?: any[];
   [key: string]: any;
 };
 
-// Function to convert camelCase to Title Case
 const camelCaseToTitle = (str: string): string => {
   return str
     .replace(/([A-Z])/g, ' $1')
@@ -40,32 +43,19 @@ const camelCaseToTitle = (str: string): string => {
     .trim();
 };
 
-// Function to determine section type from key name
 const getSectionType = (key: string): string => {
   if (key.toLowerCase().includes('watchlist')) return 'watchlist';
   if (key.toLowerCase().includes('trending')) return 'trending';
-  // if (key.toLowerCase().includes('classic')) return 'classic';
   if (key.toLowerCase().includes('popular')) return 'popular';
   if (key.toLowerCase().includes('ai') || key.toLowerCase().includes('recommend')) return 'ai';
   if (key.toLowerCase().includes('mystery')) return 'mystery';
   return 'default';
 };
 
-// Function to shuffle array
-const shuffleArray = (array: any[]) => {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
-};
-
 export default function HomePage() {
   const router = useRouter()
   const [userData, setUserData] = useState<HomeData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const { user, setUser } = useUser()
 
   // Pull-to-refresh states
@@ -74,12 +64,27 @@ export default function HomePage() {
   const [pullDistance, setPullDistance] = useState(0)
 
   const containerRef = useRef<HTMLDivElement>(null)
+  const headerRef = useRef<HTMLDivElement>(null)
+  const movieCarouselRef = useRef<HTMLDivElement>(null)
   const startY = useRef(0)
   const currentY = useRef(0)
   const isDragging = useRef(false)
+  const isAtTop = useRef(true)
+  const hasStartedPull = useRef(false)
+  const isInPullZone = useRef(true)
 
-  const PULL_THRESHOLD = 80 // Distance needed to trigger refresh
-  const MAX_PULL = 120 // Maximum pull distance
+  // Long press specific refs
+  const touchStartTime = useRef(0)
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null)
+  const hasLongPressed = useRef(false)
+  const isLongPressActive = useRef(false)
+  const touchStartPosition = useRef({ x: 0, y: 0 })
+  const isTouchingPullZone = useRef(false)
+
+  const PULL_THRESHOLD = 80
+  const MAX_PULL = 120
+  const LONG_PRESS_DURATION = 10 // 100ms for long press
+  const LONG_PRESS_MOVEMENT_THRESHOLD = 15 // Allow small movement during long press
 
   const fetchUserData = useCallback(async () => {
     const user_id = Cookies.get('userID');
@@ -99,7 +104,6 @@ export default function HomePage() {
   const fetchHomeData = useCallback(async () => {
     try {
       setIsLoading(true)
-      setError(null)
       const user_id = Cookies.get("userID")
 
       const response = await fetch("https://suggesto.xyz/App/api.php", {
@@ -122,7 +126,7 @@ export default function HomePage() {
       setUserData(data)
     } catch (err) {
       console.error("Error fetching homepage data:", err)
-      setError(err instanceof Error ? err.message : String(err))
+      toast.error(err instanceof Error ? err.message : String(err))
     } finally {
       setIsLoading(false)
     }
@@ -134,52 +138,259 @@ export default function HomePage() {
     setIsRefreshing(false)
   }, [fetchUserData, fetchHomeData])
 
-  // Touch event handlers for pull-to-refresh
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (containerRef.current && containerRef.current.scrollTop === 0) {
-      startY.current = e.touches[0].clientY
-      isDragging.current = true
+  const checkIfAtTop = useCallback(() => {
+    if (containerRef.current) {
+      const scrollTop = containerRef.current.scrollTop
+      isAtTop.current = scrollTop <= 0
+      return isAtTop.current
+    }
+    return false
+  }, [])
+
+  const checkPullZoneVisibility = useCallback(() => {
+    if (!headerRef.current || !movieCarouselRef.current || !containerRef.current) return false
+
+    const headerRect = headerRef.current.getBoundingClientRect()
+    const carouselRect = movieCarouselRef.current.getBoundingClientRect()
+    const containerRect = containerRef.current.getBoundingClientRect()
+
+    // Calculate the midpoint of the MovieCarousel
+    const carouselMidpoint = carouselRect.top + (carouselRect.height / 2)
+
+    // Pull zone is from top of header to midpoint of carousel
+    const pullZoneTop = headerRect.top
+    const pullZoneBottom = carouselMidpoint
+
+    // Check if pull zone is visible
+    const pullZoneVisible = pullZoneTop >= containerRect.top && pullZoneBottom <= containerRect.bottom
+
+    isInPullZone.current = pullZoneVisible
+    return pullZoneVisible
+  }, [])
+
+  const resetPullStates = useCallback(() => {
+    setPullDistance(0)
+    setIsPulling(false)
+    isDragging.current = false
+    hasStartedPull.current = false
+    hasLongPressed.current = false
+    isLongPressActive.current = false
+    isTouchingPullZone.current = false
+    touchStartTime.current = 0
+
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
     }
   }, [])
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isDragging.current || containerRef.current?.scrollTop !== 0) return
+  const shouldAllowPullToRefresh = useCallback(() => {
+    const atTop = checkIfAtTop()
+    const pullZoneVisible = checkPullZoneVisibility()
 
-    currentY.current = e.touches[0].clientY
+    // Allow if at top AND pull zone is visible
+    return atTop && pullZoneVisible
+  }, [checkIfAtTop, checkPullZoneVisibility])
+
+  // Check if touch is within pull zone (header + half of carousel)
+  const isTouchInPullZone = useCallback((clientY: number) => {
+    if (!headerRef.current || !movieCarouselRef.current) return false
+
+    const headerRect = headerRef.current.getBoundingClientRect()
+    const carouselRect = movieCarouselRef.current.getBoundingClientRect()
+    const containerRect = containerRef.current?.getBoundingClientRect()
+
+    if (!containerRect) return false
+
+    // Calculate pull zone bounds
+    const pullZoneTop = headerRect.top
+    const carouselMidpoint = carouselRect.top + (carouselRect.height / 2)
+    const pullZoneBottom = carouselMidpoint
+
+    // Check if touch is within pull zone AND zone is visible
+    const touchInPullZone = clientY >= pullZoneTop && clientY <= pullZoneBottom
+    const pullZoneVisible = pullZoneTop >= containerRect.top && pullZoneBottom <= containerRect.bottom
+
+    return touchInPullZone && pullZoneVisible
+  }, [])
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    // Reset states first
+    resetPullStates()
+
+    const canPullToRefresh = shouldAllowPullToRefresh()
+
+    if (!canPullToRefresh || isRefreshing) {
+      return
+    }
+
+    const touch = e.touches[0]
+    const touchInPullZone = isTouchInPullZone(touch.clientY)
+
+    // ONLY proceed if touch is specifically in pull zone area
+    if (touchInPullZone) {
+      isTouchingPullZone.current = true
+      startY.current = touch.clientY
+      touchStartPosition.current = { x: touch.clientX, y: touch.clientY }
+      touchStartTime.current = Date.now()
+      hasLongPressed.current = false
+      isLongPressActive.current = false
+
+      // Start long press timer
+      longPressTimer.current = setTimeout(() => {
+        if (isTouchingPullZone.current && !isDragging.current) {
+          hasLongPressed.current = true
+          isLongPressActive.current = true
+          // Optional: Add haptic feedback or visual indication
+          if (navigator.vibrate) {
+            navigator.vibrate(50)
+          }
+        }
+      }, LONG_PRESS_DURATION)
+    }
+  }, [isRefreshing, shouldAllowPullToRefresh, isTouchInPullZone, resetPullStates])
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    // If not touching pull zone, immediately reset and return
+    if (!isTouchingPullZone.current) {
+      resetPullStates()
+      return
+    }
+
+    const canStillPullToRefresh = shouldAllowPullToRefresh()
+    if (!canStillPullToRefresh || isRefreshing) {
+      resetPullStates()
+      return
+    }
+
+    const touch = e.touches[0]
+    currentY.current = touch.clientY
+
+    // Check if moved too much during long press detection
+    const deltaX = Math.abs(touch.clientX - touchStartPosition.current.x)
+    const deltaY = Math.abs(touch.clientY - touchStartPosition.current.y)
+    const totalMovement = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+
+    // If moved too much before long press completes, cancel long press
+    if (!hasLongPressed.current && totalMovement > LONG_PRESS_MOVEMENT_THRESHOLD) {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current)
+        longPressTimer.current = null
+      }
+      resetPullStates()
+      return
+    }
+
+    // Only proceed with pull-to-refresh if long press was completed
+    if (!hasLongPressed.current || !isLongPressActive.current) {
+      return
+    }
+
     const diff = currentY.current - startY.current
 
     if (diff > 0) {
+      // Pulling down after long press
+      if (!isDragging.current) {
+        isDragging.current = true
+        hasStartedPull.current = true
+      }
+
       e.preventDefault()
       const distance = Math.min(diff * 0.5, MAX_PULL)
       setPullDistance(distance)
       setIsPulling(distance > 20)
+    } else {
+      // Pulling up - reset states
+      resetPullStates()
     }
-  }, [])
+  }, [isRefreshing, shouldAllowPullToRefresh, resetPullStates])
 
   const handleTouchEnd = useCallback(() => {
-    if (!isDragging.current) return
+    // Clear long press timer
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
 
-    isDragging.current = false
+    if (!isDragging.current || !hasStartedPull.current || !hasLongPressed.current || !isTouchingPullZone.current) {
+      resetPullStates()
+      return
+    }
 
-    if (pullDistance >= PULL_THRESHOLD && !isRefreshing) {
+    const canTriggerRefresh = shouldAllowPullToRefresh()
+    if (pullDistance >= PULL_THRESHOLD && !isRefreshing && canTriggerRefresh && hasStartedPull.current) {
       handleRefresh()
     }
 
-    // Reset pull state
-    setPullDistance(0)
-    setIsPulling(false)
-  }, [pullDistance, isRefreshing, handleRefresh])
+    setTimeout(() => {
+      resetPullStates()
+    }, 100)
+  }, [pullDistance, isRefreshing, handleRefresh, resetPullStates, shouldAllowPullToRefresh])
 
-  // Mouse event handlers (for desktop testing)
+  // Mouse event handlers for desktop testing
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (containerRef.current && containerRef.current.scrollTop === 0) {
-      startY.current = e.clientY
-      isDragging.current = true
+    resetPullStates()
+
+    const canPullToRefresh = shouldAllowPullToRefresh()
+
+    if (!canPullToRefresh || isRefreshing) {
+      return
     }
-  }, [])
+
+    const mouseInPullZone = isTouchInPullZone(e.clientY)
+
+    if (mouseInPullZone) {
+      isTouchingPullZone.current = true
+      startY.current = e.clientY
+      touchStartPosition.current = { x: e.clientX, y: e.clientY }
+      touchStartTime.current = Date.now()
+      hasLongPressed.current = false
+      isLongPressActive.current = false
+
+      // Start long press timer for mouse
+      longPressTimer.current = setTimeout(() => {
+        if (isTouchingPullZone.current && !isDragging.current) {
+          hasLongPressed.current = true
+          isLongPressActive.current = true
+        }
+      }, LONG_PRESS_DURATION)
+    }
+  }, [isRefreshing, shouldAllowPullToRefresh, isTouchInPullZone, resetPullStates])
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragging.current || containerRef.current?.scrollTop !== 0) return
+    if (!isTouchingPullZone.current || isRefreshing) {
+      return
+    }
+
+    const canStillPullToRefresh = shouldAllowPullToRefresh()
+    if (!canStillPullToRefresh) {
+      resetPullStates()
+      return
+    }
+
+    // Check movement during long press detection
+    const deltaX = Math.abs(e.clientX - touchStartPosition.current.x)
+    const deltaY = Math.abs(e.clientY - touchStartPosition.current.y)
+    const totalMovement = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+
+    if (!hasLongPressed.current && totalMovement > LONG_PRESS_MOVEMENT_THRESHOLD) {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current)
+        longPressTimer.current = null
+      }
+      resetPullStates()
+      return
+    }
+
+    if (!hasLongPressed.current || !isLongPressActive.current) {
+      return
+    }
+
+    // Only allow dragging if we started in pull zone
+    if (!isDragging.current && hasLongPressed.current) {
+      isDragging.current = true
+      hasStartedPull.current = true
+    }
 
     currentY.current = e.clientY
     const diff = currentY.current - startY.current
@@ -189,87 +400,160 @@ export default function HomePage() {
       const distance = Math.min(diff * 0.5, MAX_PULL)
       setPullDistance(distance)
       setIsPulling(distance > 20)
+    } else {
+      resetPullStates()
     }
-  }, [])
+  }, [isRefreshing, shouldAllowPullToRefresh, resetPullStates])
 
   const handleMouseUp = useCallback(() => {
-    if (!isDragging.current) return
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
 
-    isDragging.current = false
+    if (!isDragging.current || !hasStartedPull.current || !hasLongPressed.current || !isTouchingPullZone.current) {
+      resetPullStates()
+      return
+    }
 
-    if (pullDistance >= PULL_THRESHOLD && !isRefreshing) {
+    const canTriggerRefresh = shouldAllowPullToRefresh()
+    if (pullDistance >= PULL_THRESHOLD && !isRefreshing && canTriggerRefresh && hasStartedPull.current) {
       handleRefresh()
     }
 
-    setPullDistance(0)
-    setIsPulling(false)
-  }, [pullDistance, isRefreshing, handleRefresh])
+    setTimeout(() => {
+      resetPullStates()
+    }, 100)
+  }, [pullDistance, isRefreshing, handleRefresh, resetPullStates, shouldAllowPullToRefresh])
+
+  const handleScroll = useCallback(() => {
+    checkIfAtTop()
+    checkPullZoneVisibility()
+
+    // If not at top or pull zone not visible, cancel any ongoing pull
+    const canContinuePull = shouldAllowPullToRefresh()
+    if (!canContinuePull && (isPulling || isDragging.current)) {
+      resetPullStates()
+    }
+  }, [checkIfAtTop, checkPullZoneVisibility, shouldAllowPullToRefresh, isPulling, resetPullStates])
 
   useEffect(() => {
     fetchHomeData()
     fetchUserData()
   }, [fetchHomeData])
 
-  // Add mouse event listeners for desktop
+  useEffect(() => {
+    const container = containerRef.current
+    if (container) {
+      container.addEventListener('scroll', handleScroll, { passive: true })
+      return () => container.removeEventListener('scroll', handleScroll)
+    }
+  }, [handleScroll])
+
+  // Global mouse event listeners
   useEffect(() => {
     const handleGlobalMouseMove = (e: MouseEvent) => {
-      if (!isDragging.current) return
+      if (!isTouchingPullZone.current || isRefreshing) return
+
+      const canStillPullToRefresh = shouldAllowPullToRefresh()
+      if (!canStillPullToRefresh) {
+        resetPullStates()
+        return
+      }
+
+      const deltaX = Math.abs(e.clientX - touchStartPosition.current.x)
+      const deltaY = Math.abs(e.clientY - touchStartPosition.current.y)
+      const totalMovement = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+
+      if (!hasLongPressed.current && totalMovement > LONG_PRESS_MOVEMENT_THRESHOLD) {
+        if (longPressTimer.current) {
+          clearTimeout(longPressTimer.current)
+          longPressTimer.current = null
+        }
+        resetPullStates()
+        return
+      }
+
+      if (!hasLongPressed.current || !isLongPressActive.current) {
+        return
+      }
+
+      if (!isDragging.current && hasLongPressed.current) {
+        isDragging.current = true
+        hasStartedPull.current = true
+      }
 
       currentY.current = e.clientY
       const diff = currentY.current - startY.current
 
-      if (diff > 0 && containerRef.current?.scrollTop === 0) {
+      if (diff > 0) {
         const distance = Math.min(diff * 0.5, MAX_PULL)
         setPullDistance(distance)
         setIsPulling(distance > 20)
+      } else {
+        resetPullStates()
       }
     }
 
     const handleGlobalMouseUp = () => {
-      if (!isDragging.current) return
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current)
+        longPressTimer.current = null
+      }
 
-      isDragging.current = false
+      if (!isDragging.current || !hasStartedPull.current || !hasLongPressed.current || !isTouchingPullZone.current) {
+        resetPullStates()
+        return
+      }
 
-      if (pullDistance >= PULL_THRESHOLD && !isRefreshing) {
+      const canTriggerRefresh = shouldAllowPullToRefresh()
+      if (pullDistance >= PULL_THRESHOLD && !isRefreshing && canTriggerRefresh && hasStartedPull.current) {
         handleRefresh()
       }
 
-      setPullDistance(0)
-      setIsPulling(false)
+      setTimeout(() => {
+        resetPullStates()
+      }, 100)
     }
 
-    document.addEventListener('mousemove', handleGlobalMouseMove)
-    document.addEventListener('mouseup', handleGlobalMouseUp)
+    if (isTouchingPullZone.current) {
+      document.addEventListener('mousemove', handleGlobalMouseMove)
+      document.addEventListener('mouseup', handleGlobalMouseUp)
+    }
 
     return () => {
       document.removeEventListener('mousemove', handleGlobalMouseMove)
       document.removeEventListener('mouseup', handleGlobalMouseUp)
     }
-  }, [pullDistance, isRefreshing, handleRefresh])
+  }, [pullDistance, isRefreshing, handleRefresh, resetPullStates, shouldAllowPullToRefresh])
 
-  // Function to render all sections with special sections in specific positions
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current)
+      }
+    }
+  }, [])
+
   const renderAllSections = () => {
     if (!userData) return null;
 
     const allSections: React.ReactNode[] = [];
     let mysteryWeekendData: any[] | undefined;
 
-    // First pass: collect all sections except mysteryweekendpick
     Object.keys(userData).forEach((key) => {
       const sectionData = userData[key];
 
-      // Skip if not an array or empty
       if (!Array.isArray(sectionData) || sectionData.length === 0) {
         return;
       }
 
-      // Store mystery weekend data for later positioning but don't add it to sections yet
       if (key === 'mysteryweekendpick') {
         mysteryWeekendData = sectionData;
         return;
       }
 
-      // Handle standard sections with their specific components
       if (key === 'recentSuggestions') {
         allSections.push(
           <SuggestionsSection
@@ -279,7 +563,6 @@ export default function HomePage() {
           />
         );
       } else if (key === 'popularAmongFriends') {
-        // Add premium section before PopularWithFriendsSection
         allSections.push(
           <div
             key="premium"
@@ -304,7 +587,6 @@ export default function HomePage() {
           />
         );
       } else if (key === 'aiRandomizer') {
-        // Add ShareSuggestionCard before AiRandomizerSection
         allSections.push(<ShareSuggestionCard key="share" />);
 
         allSections.push(
@@ -312,10 +594,9 @@ export default function HomePage() {
             key={key}
             movies={sectionData}
             title="AI Recommendations"
-          />
+            sectionKey={key} />
         );
       } else {
-        // All other sections are rendered as dynamic movie sections
         const title = camelCaseToTitle(key);
         const sectionType = getSectionType(key);
 
@@ -325,20 +606,49 @@ export default function HomePage() {
             movies={sectionData}
             title={title}
             sectionType={sectionType}
+            sectionKey={key}
           />
         );
       }
     });
 
-    // Insert NotificationsCard after the first section
+    const finalSections: React.ReactNode[] = [];
+
+    finalSections.push(
+      <NotificationsCard
+        notificationCount={user?.not_count ?? 0}
+        key="notifications"
+      />
+    );
+
+    finalSections.push(<MoodsSection key="moods" />);
+
     if (allSections.length > 0) {
-      allSections.splice(1, 0, <NotificationsCard key="notifications" />);
+      finalSections.push(allSections[0]);
     }
 
-    // Insert MysteryWeekendPicks in the center of all sections
+    finalSections.push(<GenresSection key="genres" />);
+
+    if (allSections.length > 1) {
+      finalSections.push(allSections[1]);
+    }
+
+    finalSections.push(<PollCard key="poll" />);
+
+    if (allSections.length > 2) {
+      for (let i = 2; i < allSections.length - 1; i++) {
+        finalSections.push(allSections[i]);
+      }
+
+      finalSections.push(<Top10Wall key="top10wall" />);
+      finalSections.push(allSections[allSections.length - 1]);
+    } else {
+      finalSections.push(<Top10Wall key="top10wall" />);
+    }
+
     if (mysteryWeekendData && mysteryWeekendData.length > 0) {
-      const centerIndex = Math.floor(allSections.length / 2);
-      allSections.splice(centerIndex, 0,
+      const centerIndex = Math.floor(finalSections.length / 2);
+      finalSections.splice(centerIndex, 0,
         <MysteryWeekendPicks
           key="mysteryweekendpick"
           movies={mysteryWeekendData}
@@ -347,16 +657,14 @@ export default function HomePage() {
       );
     }
 
-    return allSections;
+    return finalSections;
   };
 
   return (
-    // <PageTransitionWrapper>
     <>
-      {/* // <PageTransitionWrapper> */}
       <div
         ref={containerRef}
-        className="text-white min-h-screen mb-22"
+        className="text-white min-h-screen mb-22 overflow-y-auto"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -365,76 +673,33 @@ export default function HomePage() {
         onMouseUp={handleMouseUp}
         style={{
           transform: `translateY(${pullDistance}px)`,
-          transition: isDragging.current ? 'none' : 'transform 0.3s ease-out'
+          transition: isDragging.current ? 'none' : 'transform 0.3s ease-out',
+          touchAction: shouldAllowPullToRefresh() && isDragging.current ? 'none' : 'auto'
         }}
       >
-        {/* Header */}
         <PullToRefreshIndicator
           pullDistance={pullDistance}
           isRefreshing={isRefreshing}
           isDragging={isDragging.current}
-          pullThreshold={PULL_THRESHOLD} />
+          pullThreshold={PULL_THRESHOLD}
+        />
 
-        <Header />
+        <div ref={headerRef}>
+          <Header />
+        </div>
 
         {isLoading ? (
           <LoadingSkeleton />
-        ) : error ? (
-          <ErrorDisplay error={error} onRetry={handleRefresh} />
         ) : (
           <>
-            {/* Movie Carousel - Always show with banners */}
-            <MovieCarousel />
-
-            {/* All Sections - Dynamically rendered with positioned special sections */}
+            <div ref={movieCarouselRef}>
+              <MovieCarousel />
+            </div>
             {renderAllSections()}
           </>
         )}
-
-      </div><BottomNavigation currentPath="/home" />
-      </>
-    // </PageTransitionWrapper>
+      </div>
+      <BottomNavigation currentPath="/home" />
+    </>
   )
 }
-
-// Loading Skeleton Component
-const LoadingSkeleton = () => (
-  <div className="px-4">
-    {/* Movie Carousel Skeleton */}
-    <div className="h-[400px] w-full flex items-center justify-center mb-8">
-      <Skeleton className="h-[400px] rounded-lg bg-[#292938]" />
-    </div>
-
-    {/* Section Skeletons */}
-    {[1, 2, 3].map((section) => (
-      <div key={section} className="mb-8">
-        <div className="flex justify-between items-center mb-4">
-          <Skeleton className="h-6 w-40 bg-[#292938]" />
-          <Skeleton className="h-4 w-16 bg-[#292938]" />
-        </div>
-
-        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-          {[1, 2, 3, 4].map((item) => (
-            <Skeleton key={item} className="min-w-[120px] h-[180px] rounded-lg bg-[#292938]" />
-          ))}
-        </div>
-      </div>
-    ))}
-  </div>
-)
-
-// Error Display Component
-const ErrorDisplay = ({ error, onRetry }: { error: string; onRetry: () => void }) => (
-  <div className="px-4 py-8">
-    <div className="bg-[#292938] rounded-lg p-6 text-center">
-      <h3 className="text-lg font-semibold text-red-400 mb-2">Error Loading Content</h3>
-      <p className="text-sm text-gray-300 mb-4">{error}</p>
-      <button
-        onClick={onRetry}
-        className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium"
-      >
-        Retry
-      </button>
-    </div>
-  </div>
-)

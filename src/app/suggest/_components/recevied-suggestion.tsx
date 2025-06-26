@@ -1,146 +1,175 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
-    User,
     Calendar,
-    MessageSquare,
     ArrowRight,
-    ArrowLeft,
     Inbox,
+    X,
+    Check,
+    Search,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie"
+import toast from 'react-hot-toast';
 import { Button } from "@/components/ui/button";
 import NotFound from "@/components/notfound";
+import SuggestNotFound from "@/assets/not-found-suggest.png"
+import { RequestCardSkeleton, MovieCardSkeleton } from "@/app/suggest/_components/loading"
+import { Movie, SuggestionRequestType } from "@/app/suggest/type"
+import DefaultImage from "@/assets/default-user.webp"
 
-type UserType = {
-    name: string;
-    location: string;
-    imgname?: string;
-};
-
-type SuggestionRequestType = {
-    request_id: string | number;
-    from_user: UserType;
-    genre: string;
-    status: string;
-    request_text: string;
-    num_of_items: number;
-    created_date: string;
-};
-
-type Movie = {
-    poster_path: any;
-    movie_id: string;
-    title: string;
-    poster: string;
-};
-
-// Skeleton Components
-const RequestCardSkeleton = () => (
-    <div className="rounded-xl bg-white/5 border border-white/10 animate-pulse">
-        <div className="p-4 space-y-3">
-            <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 rounded-full bg-gray-600/50"></div>
-                    <div className="space-y-2">
-                        <div className="h-4 w-24 bg-gray-600/50 rounded"></div>
-                        <div className="h-3 w-20 bg-gray-600/50 rounded"></div>
-                    </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                    <div className="h-4 w-4 bg-gray-600/50 rounded"></div>
-                    <div className="h-4 w-16 bg-gray-600/50 rounded"></div>
-                </div>
-            </div>
-            <div className="space-y-2">
-                <div className="h-4 w-full bg-gray-600/50 rounded"></div>
-                <div className="h-4 w-3/4 bg-gray-600/50 rounded"></div>
-            </div>
-            <div className="flex items-center gap-2">
-                <div className="h-6 w-16 bg-gray-600/50 rounded-full"></div>
-            </div>
-            <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                    <div className="h-4 w-4 bg-gray-600/50 rounded"></div>
-                    <div className="h-4 w-20 bg-gray-600/50 rounded"></div>
-                </div>
-                <div className="w-10 h-10 bg-gray-600/50 rounded-full"></div>
-            </div>
+// Movie Card Skeleton Component
+const MovieSkeleton = () => (
+    <div className="relative aspect-[2/3] rounded-md overflow-hidden bg-[#2b2b2b] animate-pulse">
+        <div className="w-full h-full bg-[#2b2b2b]"></div>
+        <div className="absolute bottom-0.5 left-0.5 right-0.5">
+            <div className="h-3 bg-[#2b2b2b] rounded mb-1"></div>
         </div>
     </div>
 );
 
-const MovieCardSkeleton = () => (
-    <div className="min-w-[90px] h-[150px] rounded-lg bg-gray-600/50 animate-pulse">
-        <div className="w-full h-full rounded-lg bg-gradient-to-t from-gray-700/80 to-gray-600/50"></div>
-    </div>
-);
+// Updated Movie interface to match your API response
+interface MovieResponse {
+    total_count: number;
+    data: Movie[];
+}
 
-const ReceviedSuggestion = () => {
-    const router = useRouter();
-    const [movies, setMovies] = useState<Movie[]>([]);
-    const [requests, setRequests] = useState<SuggestionRequestType[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [moviesLoading, setMoviesLoading] = useState(true);
-    const [selectedRequest, setSelectedRequest] = useState<SuggestionRequestType | null>(null);
+// Suggestion Form Popup Component with Pagination
+const SuggestionFormPopup = ({
+    selectedRequest,
+    onClose,
+    userId
+}: {
+    selectedRequest: SuggestionRequestType;
+    onClose: () => void;
+    userId: string | undefined;
+}) => {
     const [selectedMovies, setSelectedMovies] = useState<string[]>([]);
     const [responseNote, setResponseNote] = useState("");
     const [submitting, setSubmitting] = useState(false);
-    const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
 
-    const userId = Cookies.get("userID")
+    // Pagination states
+    const [movies, setMovies] = useState<Movie[]>([]);
+    const [moviesLoading, setMoviesLoading] = useState(false);
+    const [hasMore, setHasMore] = useState(true);
+    const [offset, setOffset] = useState(0);
+    const [initialLoad, setInitialLoad] = useState(true);
+    const [totalCount, setTotalCount] = useState(0);
+    const observerRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        fetchSuggestionRequests();
+    // Fetch movies with pagination
+    const fetchMovies = useCallback(async (currentOffset: number = 0, isLoadMore: boolean = false) => {
+        try {
+            if (!isLoadMore) {
+                setMoviesLoading(true);
+            }
+
+            const response = await fetch(
+                `https://suggesto.xyz/App/api.php?gofor=movieslist&limit=20&offset=${currentOffset}`
+            );
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch movies');
+            }
+
+            const data: MovieResponse = await response.json();
+            const fetchedMovies = data?.data || [];
+
+            // Set total count from API response
+            if (data?.total_count !== undefined) {
+                setTotalCount(data.total_count);
+            }
+
+            if (isLoadMore) {
+                setMovies(prev => [...prev, ...fetchedMovies]);
+            } else {
+                setMovies(fetchedMovies);
+            }
+
+            // Check if there are more movies to load
+            if (fetchedMovies.length < 20) {
+                setHasMore(false);
+            }
+
+            if (fetchedMovies.length > 0) {
+                setOffset(currentOffset + fetchedMovies.length);
+            }
+
+        } catch (error) {
+            console.error("Failed to fetch movie list", error);
+            toast.error("Failed to load movies");
+        } finally {
+            setMoviesLoading(false);
+            setInitialLoad(false);
+        }
     }, []);
 
-    const fetchSuggestionRequests = async () => {
-        try {
-            const response = await fetch(
-                `https://suggesto.xyz/App/api.php?gofor=getSuggestionRequests&user_id=${2}`,
-            );
-            const data = await response.json();
-            setRequests(data);
-        } catch (error) {
-            console.error("Error fetching requests:", error);
-        } finally {
-            setLoading(false);
+    // Load initial movies when popup opens
+    useEffect(() => {
+        if (selectedRequest) {
+            fetchMovies(0, false);
+            // Disable body scroll when popup is open
+            document.body.style.overflow = 'hidden';
+        } else {
+            // Re-enable body scroll when popup is closed
+            document.body.style.overflow = 'unset';
         }
+
+        // Cleanup function to ensure scroll is re-enabled
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [selectedRequest, fetchMovies]);
+
+    // Intersection Observer for infinite scrolling
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                const target = entries[0];
+                if (target.isIntersecting && !moviesLoading && hasMore && !initialLoad && searchQuery === '') {
+                    fetchMovies(offset, true);
+                }
+            },
+            {
+                threshold: 0.1,
+                rootMargin: '50px'
+            }
+        );
+
+        if (observerRef.current) {
+            observer.observe(observerRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [moviesLoading, hasMore, offset, fetchMovies, initialLoad, searchQuery]);
+
+    const getFilteredMovies = () => {
+        if (!searchQuery) return movies;
+        return movies.filter(movie =>
+            movie.title.toLowerCase().includes(searchQuery.toLowerCase())
+        );
     };
 
-    useEffect(() => {
-        const fetchMovies = async () => {
-            try {
-                const res = await fetch("https://suggesto.xyz/App/api.php?gofor=movieslist");
-                const data = await res.json();
-                if (Array.isArray(data)) {
-                    setMovies(data);
-                }
-            } catch (error) {
-                console.error("Failed to fetch movie list", error);
-            } finally {
-                setMoviesLoading(false);
-            }
-        };
-
-        if (selectedRequest) {
-            fetchMovies();
-        }
-    }, [selectedRequest]);
-
     const toggleMovieSelection = (movieId: string) => {
-        setSelectedMovies(prev =>
-            prev.includes(movieId)
-                ? prev.filter(id => id !== movieId)
-                : [...prev, movieId]
-        );
+        setSelectedMovies(prev => {
+            if (prev.includes(movieId)) {
+                return prev.filter(id => id !== movieId);
+            } else {
+                const maxItems = 5;
+                if (prev.length >= maxItems) {
+                    toast.error(`You can only select ${maxItems} movie(s).`);
+                    return prev;
+                }
+                return [...prev, movieId];
+            }
+        });
     };
 
     const handleSubmit = async () => {
         if (!userId || !selectedRequest || selectedMovies.length === 0) {
-            setMessage({ type: "error", text: "Please select at least one movie." });
+            toast.error("Please select at least one movie.");
             return;
         }
 
@@ -164,27 +193,207 @@ const ReceviedSuggestion = () => {
 
             const data = await res.json();
             if (data?.status === "success") {
-                setMessage({ type: "success", text: "Suggestion submitted successfully!" });
-                setSelectedRequest(null);
-                setSelectedMovies([]);
-                setResponseNote("");
+                toast.success("Suggestion submitted successfully!");
+                onClose();
             } else {
-                setMessage({ type: "error", text: "An error occurred while submitting." });
+                toast.error("An error occurred while submitting.");
             }
         } catch (error) {
             console.error("Submission error:", error);
-            setMessage({ type: "error", text: "An error occurred while submitting." });
+            toast.error("An error occurred while submitting.");
         } finally {
             setSubmitting(false);
         }
     };
 
+    const filteredMovies = getFilteredMovies();
+
+    return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <div className="bg-[#1f1f21] rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto my-auto">
+                {/* Header */}
+                <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
+                    <h2 className="text-lg font-semibold text-white">Respond to Request</h2>
+                    <button
+                        onClick={onClose}
+                        className="p-1 rounded-full transition-colors"
+                        aria-label="Close"
+                    >
+                        <X size={18} className="text-white" />
+                    </button>
+                </div>
+
+                {/* Content */}
+                <div className="px-3 pt-2 space-y-4">
+                    {/* Movie Selection */}
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-base font-semibold text-white">
+                                Select Movies
+                                {totalCount > 0 && (
+                                    <span className="text-xs text-gray-400 ml-2">
+                                        ({totalCount} total)
+                                    </span>
+                                )}
+                            </h3>
+                            <span className="text-xs text-gray-400">
+                                {selectedMovies.length} selected
+                            </span>
+                        </div>
+
+                        {/* Search Input */}
+                        <div className="relative">
+                            <input
+                                type="text"
+                                placeholder="Search movies..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full px-2 py-1.5 text-sm rounded-md bg-[#2b2b2b] border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#ff7db8]"
+                            />
+                            <Search className="absolute right-2 top-1.5 text-gray-400" size={16} />
+                        </div>
+
+                        {/* Movies Grid */}
+                        <div className="max-h-64 overflow-y-auto">
+                            {initialLoad ? (
+                                <div className="grid grid-cols-4 gap-3 p-4">
+                                    {[...Array(8)].map((_, index) => (
+                                        <MovieSkeleton key={index} />
+                                    ))}
+                                </div>
+                            ) : filteredMovies.length > 0 ? (
+                                <div className="grid grid-cols-4 gap-3 p-4">
+                                    {filteredMovies.map((movie) => (
+                                        <div
+                                            key={movie.movie_id}
+                                            className={`relative aspect-[2/3] rounded-md overflow-hidden cursor-pointer transition-transform border-2 ${selectedMovies.includes(String(movie.movie_id))
+                                                ? "border-[#ff7db8] scale-105"
+                                                : "border-transparent hover:scale-105"
+                                                }`}
+                                            onClick={() => toggleMovieSelection(String(movie.movie_id))}
+                                        >
+                                            <img
+                                                src={`https://suggesto.xyz/App/${movie.poster_path}`}
+                                                alt={movie.title}
+                                                className="w-full h-full object-cover"
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                                            <div className="absolute bottom-0.5 left-0.5 right-0.5">
+                                                <h4 className="text-xs font-medium text-white truncate">{movie.title}</h4>
+                                            </div>
+                                            {selectedMovies.includes(String(movie.movie_id)) && (
+                                                <div className="absolute top-0.5 right-0.5 w-4 h-4 bg-gradient-to-r from-[#ff7db8] to-[#ee2a7b] rounded-full flex items-center justify-center">
+                                                    <span className="text-white text-xs font-bold">
+                                                        {selectedMovies.indexOf(String(movie.movie_id)) + 1}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+
+                                    {/* Loading more movies */}
+                                    {moviesLoading && !initialLoad && searchQuery === '' && (
+                                        <>
+                                            {[...Array(4)].map((_, index) => (
+                                                <MovieSkeleton key={`loading-${index}`} />
+                                            ))}
+                                        </>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="text-white/60 text-center w-full py-8">
+                                    <Inbox className="mx-auto mb-2 w-8 h-8 text-white/70" />
+                                    <p className="text-sm">
+                                        {searchQuery ? "No movies found matching your search" : "No movies available"}
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Intersection observer target - only show when not searching */}
+                            {hasMore && !moviesLoading && searchQuery === '' && (
+                                <div ref={observerRef} className="h-4 w-full" />
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Response Note */}
+                    <div>
+                        <label className="block text-xs text-gray-400 mb-1">
+                            Why are you suggesting this? (optional)
+                        </label>
+                        <textarea
+                            placeholder="Add a personal note..."
+                            rows={2}
+                            value={responseNote}
+                            onChange={(e) => setResponseNote(e.target.value)}
+                            className="w-full px-2 py-1.5 text-sm rounded-md bg-white/10 border border-white/20 text-white placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-[#ff7db8]"
+                        />
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <div className="flex gap-2 p-3">
+                    <Button
+                        variant="outline"
+                        onClick={onClose}
+                        className="flex-1 text-sm py-1.5"
+                        disabled={submitting}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="default"
+                        onClick={handleSubmit}
+                        disabled={submitting || selectedMovies.length === 0}
+                        className="flex-1 text-sm py-1.5"
+                    >
+                        {submitting ? "Submitting..." : "Send Suggestion"}
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const ReceviedSuggestion = () => {
+    const router = useRouter();
+    const [requests, setRequests] = useState<SuggestionRequestType[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedRequest, setSelectedRequest] = useState<SuggestionRequestType | null>(null);
+
+    const userId = Cookies.get("userID")
+
     useEffect(() => {
-        if (message) {
-            const timer = setTimeout(() => setMessage(null), 4000);
-            return () => clearTimeout(timer);
+        fetchSuggestionRequests();
+    }, []);
+
+    const fetchSuggestionRequests = async () => {
+        try {
+            const response = await fetch(
+                `https://suggesto.xyz/App/api.php?gofor=getSuggestionRequests&user_id=${userId}`,
+            );
+            const data = await response.json();
+
+            setRequests(data.data || []);
+        } catch (error) {
+            console.error("Error fetching requests:", error);
+        } finally {
+            setLoading(false);
         }
-    }, [message]);
+    };
+
+    const handleRequestClick = (request: SuggestionRequestType) => {
+        if (request.is_suggested === 0) {
+            setSelectedRequest(request);
+        } else {
+            toast.error("You have already responded to this request.");
+        }
+    };
+
+    const handleClosePopup = () => {
+        setSelectedRequest(null);
+        fetchSuggestionRequests();
+    };
 
     const formatDate = (dateString: string): string => {
         const options: Intl.DateTimeFormatOptions = {
@@ -195,223 +404,91 @@ const ReceviedSuggestion = () => {
         return new Date(dateString).toLocaleDateString("en-US", options);
     };
 
-    const handleBack = () => {
-        if (selectedRequest) {
-            setSelectedRequest(null);
-        } else {
-            router.back();
-        }
-    };
-
-    // Step 1: List View
-    if (!selectedRequest) {
-        return (
-            // <div className="min-h-screen bg-[#181826] text-white">
-            //     <header className="flex items-center justify-between p-4">
-            //         <div className="flex items-center gap-3">
-            //             <button
-            //                 onClick={handleBack}
-            //                 className="p-2.5 rounded-full bg-[#292938] transition-colors"
-            //                 aria-label="Go back"
-            //             >
-            //                 <ArrowLeft size={20} className="text-white" />
-            //             </button>
-            //             <div>
-            //                 <h1 className="text-xl font-bold">Suggestion Requests</h1>
-            //                 <p className="text-gray-400 text-sm">respond to user suggestions</p>
-            //             </div>
-            //         </div>
-            //     </header>
-
-            <div className="max-w-4xl mx-auto px-4">
-                {loading ? (
-                    <div className="space-y-6">
-                        {[...Array(3)].map((_, index) => (
-                            <RequestCardSkeleton key={index} />
-                        ))}
-                    </div>
-                ) : requests.length === 0 ? (
-                    <NotFound
-                        title="No suggestion requests found"
-                    />
-                    // <div className="text-center py-16">
-                    //     <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    //     <p className="text-gray-500">No suggestion requests found</p>
-                    // </div>
-                ) : (
-                    <div className="space-y-6">
-                        {requests.map((request) => (
-                            <div
-                                key={request.request_id}
-                                onClick={() => setSelectedRequest(request)}
-                                className="rounded-xl bg-white/5 border border-white/10 hover:shadow-xl transition-shadow cursor-pointer"
-                            >
-                                <div className="p-4 space-y-3">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-center space-x-4">
-                                            <img
-                                                src={request.from_user.imgname || "/api/placeholder/40/40"}
-                                                alt={request.from_user.name}
-                                                className="w-10 h-10 rounded-full object-cover"
-                                                onError={(e) => {
-                                                    (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                                                        request.from_user.name
-                                                    )}&background=6c5ce7&color=fff`;
-                                                }}
-                                            />
-                                            <div>
-                                                <h3 className="font-semibold">{request.from_user.name}</h3>
-                                                <p className="text-sm text-gray-400">{request.from_user.location}</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center space-x-2 text-gray-400 text-sm">
-                                            <Calendar className="h-4 w-4" />
-                                            <span>{formatDate(request.created_date)}</span>
+    return (
+        <div className="max-w-2xl mx-auto px-4">
+            {loading ? (
+                <div className="space-y-3">
+                    {[...Array(3)].map((_, index) => (
+                        <RequestCardSkeleton key={index} />
+                    ))}
+                </div>
+            ) : requests.length === 0 ? (
+                <NotFound
+                    imageSrc={SuggestNotFound}
+                    title="No suggestion requests found"
+                />
+            ) : (
+                <div className="space-y-3">
+                    {requests.map((request) => (
+                        <div
+                            key={request.request_id}
+                            onClick={() => handleRequestClick(request)}
+                            className={`rounded-lg bg-[#2b2b2b] border border-white/10 transition-shadow ${request.is_suggested === 0
+                                ? "hover:shadow-lg cursor-pointer"
+                                : "opacity-70 cursor-not-allowed"
+                                }`}
+                        >
+                            <div className="p-3 space-y-2">
+                                <div className="flex items-start justify-between">
+                                    <div className="flex items-center space-x-3">
+                                        <img
+                                            src={request.from_user.profile_pic || (typeof DefaultImage === "string" ? DefaultImage : DefaultImage.src)}
+                                            alt={request.from_user.name}
+                                            className="w-8 h-8 rounded-full object-cover"
+                                            onError={(e) => {
+                                                (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                                    request.from_user.name
+                                                )}&background=ff7db8&color=fff`;
+                                            }}
+                                        />
+                                        <div>
+                                            <h3 className="font-medium text-sm">{request.from_user.name}</h3>
                                         </div>
                                     </div>
-                                    <p className="text-sm text-gray-100">{request.request_text}</p>
+                                    <div className="flex items-center space-x-1 text-gray-400 text-xs">
+                                        <Calendar className="h-3 w-3" />
+                                        <span>{formatDate(request.created_date)}</span>
+                                    </div>
+                                </div>
+                                <p className="text-xs text-gray-100">{request.request_text || "No question provided"}</p>
+                                <div className="flex items-center justify-between text-xs text-gray-400">
                                     <div className="flex items-center gap-2">
-                                        <span className="px-3 py-1 bg-[#6c5ce7]/20 text-[#6c5ce7] border border-[#6c5ce7]/40 rounded-full text-xs font-medium">
-                                            {request.genre}
+                                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${request.is_suggested === 1
+                                            ? "bg-gradient-to-r from-[#ff7db8] to-[#ee2a7b] text-white"
+                                            : "bg-gradient-to-r from-[#ff7db8] to-[#ee2a7b] text-white"
+                                            }`}>
+                                            {request.is_suggested === 1 ? "Responded" : "Suggestion Request"}
                                         </span>
                                     </div>
-                                    <div className="flex items-center justify-between text-sm text-gray-400">
-                                        <div className="flex items-center space-x-2">
-                                            <MessageSquare className="h-4 w-4" />
-                                            <span>{request.num_of_items} items requested</span>
-                                        </div>
-                                        <div className="flex items-center justify-center w-10 h-10 bg-[#6c5ce7] hover:bg-[#5d4fd7] rounded-full transition-colors"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setSelectedRequest(request);
-                                            }}>
-                                            <ArrowRight className="text-white" size={16} />
-                                        </div>
+                                    <div className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors ${request.is_suggested === 0
+                                        ? "bg-gradient-to-r from-[#ff7db8] to-[#ee2a7b] cursor-pointer"
+                                        : "bg-gradient-to-r from-[#ff7db8] to-[#ee2a7b] cursor-not-allowed"
+                                        }`}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleRequestClick(request);
+                                        }}>
+                                        {request.is_suggested === 1 ? (
+                                            <Check className="text-white" size={14} />
+                                        ) : (
+                                            <ArrowRight className="text-white" size={14} />
+                                        )}
                                     </div>
                                 </div>
                             </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-            // </div>
-        );
-    }
-
-    // Step 2: Suggestion Form
-    return (
-        <div className="text-white">
-            <header className="flex items-center gap-3 px-4 ">
-                <button
-                    onClick={handleBack}
-                    className="p-2.5 "
-                    aria-label="Go back"
-                >
-                    <ArrowLeft size={20} className="text-white" />
-                </button>
-                <h2 className="text-lg font-semibold">Respond suggestion Request</h2>
-            </header>
-
-            <div className="max-w-xl mx-auto p-6 space-y-6">
-                {/* From */}
-                <div>
-                    <p className="text-sm text-gray-400 mb-2">From:</p>
-                    <div className="flex items-center space-x-2">
-                        <img
-                            src={selectedRequest.from_user.imgname || "/api/placeholder/32/32"}
-                            alt={selectedRequest.from_user.name}
-                            className="w-10 h-10 rounded-full object-cover border border-white/10"
-                            onError={(e) => {
-                                (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                                    selectedRequest.from_user.name
-                                )}&background=6c5ce7&color=fff`;
-                            }}
-                        />
-                        <span className="text-lg font-medium">{selectedRequest.from_user.name}</span>
-                    </div>
-                </div>
-
-                {/* Request text */}
-                <div>
-                    <p className="text-sm text-gray-400 mb-1">Request:</p>
-                    <p className="text-white/90">{selectedRequest.request_text}</p>
-                </div>
-
-                {/* Genre */}
-                <div>
-                    <p className="text-sm text-gray-400 mb-1">Genre:</p>
-                    <span className="inline-block bg-[#6c5ce7]/20 text-[#6c5ce7] px-3 py-1 rounded-full text-sm font-medium">
-                        {selectedRequest.genre}
-                    </span>
-                </div>
-
-                {/* Form */}
-                <div className="space-y-4">
-                    <div className="flex flex-col gap-4">
-                        <h2 className="text-lg font-semibold text-white">Suggest by Movie</h2>
-
-                        {moviesLoading ? (
-                            <div className="flex gap-4 overflow-x-auto no-scrollbar p-2">
-                                {[...Array(5)].map((_, index) => (
-                                    <MovieCardSkeleton key={index} />
-                                ))}
-                            </div>
-                        ) : movies.length > 0 ? (
-                            <div className="flex gap-4 overflow-x-auto no-scrollbar p-2 ">
-                                {movies.map((movie) => (
-                                    <div
-                                        key={movie.movie_id}
-                                        className={`relative min-w-[90px] h-[150px] rounded-lg overflow-hidden cursor-pointer transition-transform border-2 ${selectedMovies.includes(movie.movie_id)
-                                            ? "border-[#6c5ce7] scale-105"
-                                            : "border-transparent hover:scale-105"
-                                            }`}
-                                        onClick={() => toggleMovieSelection(movie.movie_id)}
-                                    >
-                                        <img
-                                            src={`https://suggesto.xyz/App/${movie.poster_path}`}
-                                            alt={movie.title}
-                                            className="w-full h-full object-cover"
-                                        />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
-                                        <div className="absolute bottom-2 left-2">
-                                            <h3 className="text-sm font-medium text-white">{movie.title}</h3>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="text-white/60 text-center w-full py-8">
-                                <Inbox className="mx-auto mb-2 w-8 h-8 text-white/70" />
-                                No movies found
-                            </div>
-                        )}
-                    </div>
-
-                    <textarea
-                        placeholder="Why are you suggesting this? (optional)"
-                        rows={3}
-                        value={responseNote}
-                        onChange={(e) => setResponseNote(e.target.value)}
-                        className="w-full px-3 py-2 rounded-md bg-white/10 border border-white/20 text-white placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-[#6c5ce7]"
-                    />
-
-                    <Button
-                        variant="default"
-                        onClick={handleSubmit}
-                        disabled={submitting}
-                        className="w-full  text-lg">
-                        {submitting ? "Submitting..." : "Send Suggestion"}
-                    </Button>
-                    {message && (
-                        <div
-                            className={`mt-3 text-sm font-medium p-2 rounded-md ${message.type === "success" ? "text-green-400 bg-green-900/30" : "text-red-400 bg-red-900/30"
-                                }`}
-                        >
-                            {message.text}
                         </div>
-                    )}
+                    ))}
                 </div>
-            </div>
+            )}
+
+            {/* Suggestion Form Popup with Pagination */}
+            {selectedRequest && (
+                <SuggestionFormPopup
+                    selectedRequest={selectedRequest}
+                    onClose={handleClosePopup}
+                    userId={userId}
+                />
+            )}
         </div>
     );
 };

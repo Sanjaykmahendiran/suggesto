@@ -13,21 +13,22 @@ export default function LoginSuccess() {
     const router = useRouter()
 
     useEffect(() => {
-        // Fire confetti with primary color
+        // Fire confetti with gradient-matching colors
         confetti({
             particleCount: 100,
             spread: 70,
             origin: { y: 0.6 },
-            colors: ['#6c5ce7'], 
-        })
+            colors: ['#b56bbc', '#7a71c4'],
+        });
 
-        // Redirect after 10 seconds
+        // Redirect after 3 seconds
         const timer = setTimeout(() => {
-            router.push("/genres-interests")
-        }, 3000)
+            router.push("/genres-interests");
+        }, 3000);
 
-        return () => clearTimeout(timer)
-    }, [router])
+        return () => clearTimeout(timer);
+    }, [router]);
+
 
 
     return (
@@ -37,7 +38,7 @@ export default function LoginSuccess() {
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.6, ease: "easeOut" }}
             >
-                <Card className="w-full max-w-md bg-slate-800 text-white border-slate-700 shadow-2xl">
+                <Card className="w-full max-w-md bg-[#1f1f21] text-white border-slate-700 shadow-2xl">
                     <CardHeader className="space-y-1 flex flex-col items-center pt-8">
                         <motion.div
                             initial={{ scale: 0 }}
@@ -51,7 +52,7 @@ export default function LoginSuccess() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-6 pt-4">
-                        <p className="text-center text-slate-400">
+                        <p className="text-center bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text text-transparent">
                             Congratulations! You have successfully logged into your account.
                         </p>
 

@@ -27,7 +27,7 @@ export default function PullToRefreshIndicator({
         transition: isDragging ? "none" : "all 0.3s ease-out",
       }}
     >
-      <div className="flex items-center gap-2 bg-[#292938] px-4 py-2 rounded-full">
+      <div className="flex items-center gap-2 bg-[#2b2b2b] px-4 py-2 rounded-full">
         {isRefreshing ? (
           <>
             <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>

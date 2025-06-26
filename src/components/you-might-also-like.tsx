@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { TrendingUp } from "lucide-react"
 import { motion } from "framer-motion"
 import { Skeleton } from "@/components/ui/skeleton" // Make sure this path is correct
+import toast from "react-hot-toast"
 
 type Movie = {
     movie_id: string | number
@@ -25,7 +26,6 @@ export const YouMightAlsoLike: React.FC<Props> = ({ movie_id, user_id }) => {
 
     const [movies, setMovies] = useState<Movie[]>([])
     const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
         const fetchRelatedMovies = async () => {
@@ -43,7 +43,7 @@ export const YouMightAlsoLike: React.FC<Props> = ({ movie_id, user_id }) => {
                 const data = await response.json()
                 setMovies(data)
             } catch (err) {
-                setError("Failed to load related movies.")
+                toast.error("Failed to load related movies.")
             } finally {
                 setLoading(false)
             }
@@ -59,6 +59,7 @@ export const YouMightAlsoLike: React.FC<Props> = ({ movie_id, user_id }) => {
     if (!loading && (!movies || movies.length === 0)) return null
 
     return (
+        !loading && movies.length === 0 ? (
         <div className="w-full mb-16 mt-6">
             <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-2">
@@ -70,7 +71,7 @@ export const YouMightAlsoLike: React.FC<Props> = ({ movie_id, user_id }) => {
                 </a>
             </div>
 
-            <div className="flex gap-4 border-0 overflow-x-auto overflow-y-hidden no-scrollbar pb-2">
+            <div className="flex gap-4 overflow-x-auto overflow-y-hidden no-scrollbar pb-2">
                 {(loading ? placeholders : movies).map((movie, index) => (
                     <motion.div
                         key={movie?.movie_id || index}
@@ -78,7 +79,7 @@ export const YouMightAlsoLike: React.FC<Props> = ({ movie_id, user_id }) => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.1 }}
                         whileHover={{ scale: loading ? 1 : 1.05 }}
-                        className="relative min-w-[120px] h-[180px] border-0 rounded-lg overflow-hidden cursor-pointer bg-muted"
+                        className="relative min-w-[120px] h-[180px] border-0 rounded-lg overflow-hidden cursor-pointer"
                         onClick={() =>
                             !loading && router.push(`/movie-detail-page?movie_id=${movie.movie_id}`)
                         }
@@ -118,5 +119,6 @@ export const YouMightAlsoLike: React.FC<Props> = ({ movie_id, user_id }) => {
                 ))}
             </div>
         </div>
+    ) : null
     )
 }

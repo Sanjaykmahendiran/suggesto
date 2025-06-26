@@ -1,29 +1,41 @@
 "use client"
 
-import { Bell, ArrowLeft, Users, Music, Globe, Crown, Phone, Calendar, Settings, Venus, Mars, User, Bookmark, Eye, TrendingUp, Trophy, ArrowRight, Film, VenusAndMars, CalendarDays, Languages, Drama, Clapperboard, X, Inbox, Lightbulb } from "lucide-react"
+import { Bell, ArrowLeft, Users, Crown, Trophy, ArrowRight, Languages, Drama, Clapperboard, X, Inbox, Lightbulb, MonitorPlay, Heart } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import Cookies from "js-cookie"
 import { UserData } from "../type"
-import FloatingDots from "@/components/flotingdots"
-import { Card } from "@/components/ui/card"
 import { PageTransitionProvider, PageTransitionWrapper } from "@/components/PageTransition"
+import toast from 'react-hot-toast';
+import { motion } from "framer-motion"
+import Image from "next/image";
+import BackgroundImage from "@/assets/profile-banner.jpg"
+import genderIcon from "@/assets/male.png";
+import dobIcon from "@/assets/birthday.png";
+import locationIcon from "@/assets/location1.png";
+import { useUser } from "@/contexts/UserContext"
+import Bookmark from "@/assets/bookmark.png";
+import Eye from "@/assets/eye.png";
+import User from "@/assets/users.png";
+import DefaultImage from "@/assets/default-user.webp"
 
 export default function ProfileDetailPage() {
+    const { user, setUser } = useUser()
     const [userData, setUserData] = useState<UserData | null>(null)
-    const [notificationCount, setNotificationCount] = useState(3)
     const [loading, setLoading] = useState<boolean>(true)
-    const [error, setError] = useState<string | null>(null)
     const [sendingRequest, setSendingRequest] = useState<boolean>(false)
     const [requestSent, setRequestSent] = useState<boolean>(false)
     const [unfriending, setUnfriending] = useState<boolean>(false)
     const router = useRouter()
+    const [isAccepted, setIsAccepted] = useState(false);
     const searchParams = useSearchParams()
+    const friendType = searchParams.get("type");
     const [actionLoading, setActionLoading] = useState<number | null>(null)
     const [showSuggestionsPopup, setShowSuggestionsPopup] = useState(false)
     const [activeTab, setActiveTab] = useState<'received' | 'sent'>('received')
-    const friendType = searchParams.get("type");
+    const [acceptLoading, setAcceptLoading] = useState<boolean>(false)
+    const [rejectLoading, setRejectLoading] = useState<boolean>(false)
 
     const defaultBadges = ["Cine Seed", "Newcomer", "Suggesto Starter", "Fresh Reeler"];
     const fallbackBadge = defaultBadges[(userData?.user_id ?? 0) % defaultBadges.length] || defaultBadges[0];
@@ -37,7 +49,8 @@ export default function ProfileDetailPage() {
         setShowSuggestionsPopup(false)
     }
 
-    useEffect(() => {
+    // Move fetchUserProfile to component scope so it can be used elsewhere
+    const fetchUserProfile = () => {
         const profileId = searchParams.get("profile_id");
         const userId = Cookies.get("userID");
 
@@ -51,27 +64,32 @@ export default function ProfileDetailPage() {
                 })
                 .then((data: UserData) => {
                     setUserData(data);
-                    setError(null);
                 })
                 .catch((err) => {
                     console.error("Failed to fetch user data:", err);
-                    setError("Failed to load user profile");
+                    toast.error("Failed to load user profile");
                 })
                 .finally(() => {
                     setLoading(false);
                 });
         } else {
-            setError("User ID not provided");
+            toast.error("User ID not provided");
             setLoading(false);
         }
+    };
+
+    useEffect(() => {
+        fetchUserProfile();
     }, [searchParams]);
+
+
 
     const handleSendFriendRequest = async () => {
         const senderId = Cookies.get("userID");
         const receiverId = userData?.user_id;
 
         if (!senderId || !receiverId) {
-            alert("Unable to send friend request. Please try again.");
+            toast.error("Unable to send friend request. Please try again.");
             return;
         }
 
@@ -99,7 +117,7 @@ export default function ProfileDetailPage() {
 
         } catch (error) {
             console.error("Failed to send friend request:", error);
-            alert("Failed to send friend request. Please try again.");
+            toast.error("Failed to send friend request. Please try again.");
         } finally {
             setSendingRequest(false);
         }
@@ -110,16 +128,25 @@ export default function ProfileDetailPage() {
         const receiverId = userData?.user_id;
 
         if (!senderId || !receiverId) {
-            alert("Unable to unfriend. Please try again.");
+            toast.error("Unable to unfriend. Please try again.");
             return;
         }
 
         setUnfriending(true);
 
         try {
-            const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=unfriend&sender_id=${senderId}&receiver_id=${receiverId}`, {
-                method: 'GET',
-            });
+
+            const response = await fetch("https://suggesto.xyz/App/api.php", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    gofor: "unfriend",
+                    friend_id: receiverId,
+                    user_id: senderId,
+                }),
+            })
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -127,27 +154,26 @@ export default function ProfileDetailPage() {
 
             const result = await response.json();
 
-            if (result.success || result.status === 'success') {
-                // Update the user data to reflect unfriend status
-                setUserData(prev => prev ? { ...prev, is_friend: false } : null);
-                alert("Successfully unfriended!");
+            if (result.status === 'Friend Removed Successfully') {
+                toast.success("Successfully unfriended!");
+                router.back()
             } else {
                 throw new Error(result.message || "Failed to unfriend");
             }
 
         } catch (error) {
             console.error("Failed to unfriend:", error);
-            alert("Failed to unfriend. Please try again.");
+            toast.error("Failed to unfriend. Please try again.");
         } finally {
             setUnfriending(false);
         }
     }
 
     const handleAcceptRequest = async (friendId: number) => {
-        const userId = Cookies.get("userID")
-        if (!userId) return
+        const userId = Cookies.get("userID");
+        if (!userId) return;
 
-        setActionLoading(friendId)
+        setAcceptLoading(true);
         try {
             const response = await fetch("https://suggesto.xyz/App/api.php", {
                 method: "POST",
@@ -156,33 +182,35 @@ export default function ProfileDetailPage() {
                 },
                 body: JSON.stringify({
                     gofor: "acceptrequest",
-                    sender_id: friendId.toString(),
-                    receiver_id: userId,
+                    friend_id: friendId.toString(),
+                    user_id: userId,
                 }),
-            })
+            });
 
-            const result = await response.json()
+            const result = await response.json();
             if (result.status === "Friend Request Accepted" || response.ok) {
-                // Update user data to reflect accepted status
-                setUserData(prev => prev ? { ...prev, is_friend: true } : null);
-                alert("Friend request accepted!");
+                toast.success("Friend request accepted!");
+                setIsAccepted(true); // <-- update state
+                // Optional: router.refresh(); // if you want full re-render
             } else {
-                console.error("Failed to accept request")
-                alert("Failed to accept request. Please try again.");
+                console.error("Failed to accept request");
+                toast.error("Failed to accept request. Please try again.");
             }
         } catch (error) {
-            console.error("Error accepting request:", error)
-            alert("Failed to accept request. Please try again.");
+            console.error("Error accepting request:", error);
+            toast.error("Failed to accept request. Please try again.");
         } finally {
-            setActionLoading(null)
+            setAcceptLoading(false);
         }
-    }
+    };
 
+
+    // Update handleRejectRequest function
     const handleRejectRequest = async (friendId: number) => {
         const userId = Cookies.get("userID")
         if (!userId) return
 
-        setActionLoading(friendId)
+        setRejectLoading(true)
         try {
             const response = await fetch("https://suggesto.xyz/App/api.php", {
                 method: "POST",
@@ -191,24 +219,24 @@ export default function ProfileDetailPage() {
                 },
                 body: JSON.stringify({
                     gofor: "rejectrequest",
-                    sender_id: friendId.toString(),
-                    receiver_id: userId,
+                    friend_id: friendId.toString(),
+                    user_id: userId,
                 }),
             })
 
             const result = await response.json()
             if (result.status === "Friend Request Rejected" || response.ok) {
-                alert("Friend request rejected.");
+                toast.success("Friend request rejected.");
                 router.back();
             } else {
                 console.error("Failed to reject request")
-                alert("Failed to reject request. Please try again.");
+                toast.error("Failed to reject request. Please try again.");
             }
         } catch (error) {
             console.error("Error rejecting request:", error)
-            alert("Failed to reject request. Please try again.");
+            toast.error("Failed to reject request. Please try again.");
         } finally {
-            setActionLoading(null)
+            setRejectLoading(false)
         }
     }
 
@@ -239,14 +267,14 @@ export default function ProfileDetailPage() {
 
             if (result.status === "Friend Request Sent!" || response.ok) {
                 setRequestSent(true);
-                alert("Friend request sent successfully!");
+                toast.success("Friend request sent successfully!");
             } else {
                 console.error("Failed to send request - API response:", result)
-                alert("Failed to send request. Please try again.");
+                toast.error("Failed to send request. Please try again.");
             }
         } catch (error) {
             console.error("Error sending request:", error)
-            alert("Failed to send request. Please try again.");
+            toast.error("Failed to send request. Please try again.");
         } finally {
             setActionLoading(null)
         }
@@ -257,69 +285,85 @@ export default function ProfileDetailPage() {
 
         // For friend requests - show Accept/Reject buttons
         if (friendType === "requests") {
+            if (isAccepted) {
+                return (
+                    <div className="text-green-500 text-center font-bold text-lg">Accepted</div>
+                );
+            }
+
             return (
-                <div className="flex gap-3 mt-6">
+                <div className="flex gap-3">
                     <Button
                         onClick={() => handleAcceptRequest(userData?.user_id || 0)}
-                        disabled={actionLoading === userData?.user_id}
-                        className="flex-1 bg-[#292938] rounded-2xl py-2 border-1 border-green-600  text-lg font-bold text-green-600 flex items-center justify-center gap-3 "
+                        disabled={acceptLoading}
+                        className="flex-1 bg-[#2b2b2b] rounded-2xl py-2 border border-green-600 text-lg font-bold text-green-600 flex items-center justify-center gap-3 shadow-[0_4px_10px_rgba(34,197,94,0.4)] hover:shadow-[0_6px_14px_rgba(34,197,94,0.5)] transition-shadow"
                     >
                         <Users className="h-6 w-6" />
-                        {actionLoading === userData?.user_id ? "Accepting..." : "Accept"}
+                        {acceptLoading ? "Accepting..." : "Accept"}
                     </Button>
+
                     <Button
                         onClick={() => handleRejectRequest(userData?.user_id || 0)}
-                        disabled={actionLoading === userData?.user_id}
-                        className="flex-1 bg-[#292938] rounded-2xl py-2 border-1 border-red-600  text-lg font-bold text-red-600  flex items-center justify-center gap-3 "
+                        disabled={rejectLoading}
+                        className="flex-1 bg-[#2b2b2b] rounded-2xl py-2 border border-red-600 text-lg font-bold text-red-600 flex items-center justify-center gap-3 shadow-[0_4px_10px_rgba(239,68,68,0.4)] hover:shadow-[0_6px_14px_rgba(239,68,68,0.5)] transition-shadow"
                     >
                         <Users className="h-6 w-6" />
-                        {actionLoading === userData?.user_id ? "Rejecting..." : "Reject"}
+                        {rejectLoading ? "Rejecting..." : "Reject"}
                     </Button>
+
                 </div>
             );
         }
 
         // For suggested friends - show Add button
         if (friendType === "suggested") {
+            const isSending = actionLoading === userData?.user_id;
+
             return (
-                <Button
+                <button
                     onClick={() => handleSendRequestSuggested(userData?.user_id || 0)}
-                    disabled={actionLoading === userData?.user_id || requestSent}
-                    className="mt-6 w-full rounded-2xl p-4 text-lg font-bold text-white flex items-center justify-center gap-3 shadow-2xl border border-[#6c5ce7]/20 backdrop-blur-sm transition-all duration-300 "
+                    disabled={isSending || requestSent}
+                    className="flex py-2 bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] rounded-2xl p-4 text-lg font-bold text-white flex items-center justify-center gap-3 shadow-2xl border border-[#2b2b2b]/20 backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 >
                     <Users className="h-6 w-6" />
-                    {actionLoading === userData?.user_id
+                    {isSending
                         ? "Sending..."
                         : requestSent
                             ? "Request Sent"
                             : "Add Friend"}
+                </button>
+            );
+        }
+
+        // For existing friends - show Unfriend button
+        if (userData?.is_friend) {
+            return (
+                <Button
+                    onClick={handleUnfriend}
+                    variant="outline"
+                    disabled={unfriending}
+                    className="rounded-2xl py-2 text-lg font-bold text-red-500 border-red-500 flex items-center justify-center gap-3 shadow-2xl backdrop-blur-sm transition-all duration-300"
+                >
+                    <Users className="h-6 w-6" />
+                    {unfriending ? "Unfriending..." : "Unfriend"}
                 </Button>
             );
         }
 
-        // Default behavior for existing friends or regular profile view
-        if (userData?.is_friend) {
-            return (
-                <div className="flex flex-col items-center">
-                    <Button
-                        onClick={handleUnfriend}
-                        variant="outline"
-                        disabled={unfriending}
-                        className="mt-6  rounded-2xl px-4 text-lg font-bold text-red-500 border-red-500  flex items-center justify-center gap-3 shadow-2xl backdrop-blur-sm transition-all duration-300"
-                    >
-                        <Users className="h-6 w-6" />
-                        {unfriending ? "Unfriending..." : "Unfriend"}
-                    </Button>
-                </div>
-            );
-        }
-
         // Default send friend request button
-        return (
+        return userData?.is_pending ? (
+            <button
+                disabled
+                className="flex py-2 bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] rounded-2xl p-4 text-lg font-bold text-white flex items-center justify-center gap-3 shadow-2xl border border-[#2b2b2b]/20 backdrop-blur-sm opacity-50 cursor-not-allowed"
+            >
+                <Users className="h-6 w-6" />
+                Friend Request Sent
+            </button>
+        ) : (
             <button
                 onClick={handleSendFriendRequest}
                 disabled={sendingRequest || requestSent}
-                className="mt-6 w-full bg-gradient-to-r from-[#6c5ce7] to-[#5a4bd6] hover:from-[#5a4bd6] hover:to-[#4c42c7] rounded-2xl p-4 text-lg font-bold text-white flex items-center justify-center gap-3 shadow-2xl border border-[#6c5ce7]/20 backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                className="flex py-2 bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] rounded-2xl p-4 text-lg font-bold text-white flex items-center justify-center gap-3 shadow-2xl border border-[#2b2b2b]/20 backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
                 <Users className="h-6 w-6" />
                 {sendingRequest
@@ -332,340 +376,251 @@ export default function ProfileDetailPage() {
     };
 
 
-    const handleBack = () => {
-        router.back()
-    }
-
-    const handleNotifications = () => {
-        router.push("/notifications")
-    }
-
-    const handleViewProfile = (profileId: number) => {
-        router.push(`/friends/friend-profile-detail?profile_id=${profileId}`)
-    }
-
-    if (error) {
-        return (
-            <div className="bg-[#181826] min-h-screen text-white flex items-center justify-center">
-                <div className="text-center p-6">
-                    <div className="text-red-400 text-lg mb-4">{error}</div>
-                    <button
-                        onClick={() => router.back()}
-                        className="px-6 py-3 bg-[#6c5ce7] hover:bg-[#5a4bd6] rounded-xl text-white font-semibold transition-all duration-300 shadow-lg"
-                    >
-                        Go Back
-                    </button>
-                </div>
-            </div>
-        )
-    }
+    const handleNotifications = () => router.push("/notifications")
+    const handleBack = () => { router.back() }
+    const handleViewProfile = (profileId: number) => { router.push(`/friends/friend-profile-detail?profile_id=${profileId}`) }
 
     return (
 
         // <PageTransitionWrapper>
-            <div className=" min-h-screen text-white">
-                {/* Header with ProfilePage styling */}
-                <div className="relative bg-primary backdrop-blur-sm border border-[#6c5ce7]/20 rounded-b-4xl pb-4">
-                    <header className="flex items-center justify-between p-2">
-                        <div className="flex items-center gap-3">
-                            <button onClick={handleBack} className="p-2.5" aria-label="Go back">
-                                <ArrowLeft size={20} className="text-white" />
-                            </button>
-                            <h1 className="text-xl font-bold">
-                                {loading ? "Profile" : userData?.name || "Profile"}
-                            </h1>
+        <div className=" min-h-screen text-white">
+            {/* Header with ProfilePage styling */}
+
+            <div className="relative h-100">
+                {/* Background Image */}
+                <div className="absolute inset-0 z-0">
+                    <Image
+                        src={BackgroundImage}
+                        alt="Profile Background"
+                        fill
+                        className="object-cover"
+                        priority
+                    />
+                </div>
+
+                {/* Content Container with relative positioning */}
+                <div className="relative z-20">
+                    {/* Header */}
+                    <header className="flex items-center justify-between pt-8 px-4">
+                        <div className="flex flex-col gap-1">
+                            <div className="flex items-start gap-3">
+                                <button onClick={handleBack} className="p-2.5" aria-label="Go back">
+                                    <ArrowLeft size={20} className="text-white" />
+                                </button>
+                            </div>
                         </div>
-                        {/* <div className="flex items-center gap-3">
-                            <button onClick={handleNotifications} className="relative p-2.5" aria-label="Notifications">
-                                <Bell className="w-5 h-5 text-white" />
-                                {notificationCount > 0 && (
-                                    <span className="absolute -top-1 -right-1 bg-white text-primary text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold shadow-lg">
-                                        {notificationCount}
-                                    </span>
-                                )}
+                        <div className="flex items-center gap-0">
+                            <button
+                                onClick={handleNotifications}
+                                className="relative p-2.5"
+                                aria-label="Notifications"
+                            >
+                                <Bell
+                                    className={`w-5 h-5 text-white ${(user?.not_count ?? 0) > 0 ? "shake" : ""}`}
+                                />
+                                <span className="absolute -top-1 -right-1 bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold shadow-lg">
+                                    {user?.not_count}
+                                </span>
                             </button>
-                        </div> */}
+                        </div>
                     </header>
 
-                    {/* Profile Card with ProfilePage styling */}
-                    <div className="px-4 pb-8">
-                        <div className="mt-6">
-                            <div className="flex flex-col sm:flex-row items-center gap-4 p-4">
-                                <div className="relative flex flex-col items-center">
-                                    <div className="flex items-center justify-center mb-3 ">
-                                        <div className="relative w-40 h-40">
-                                            {/* Floating Dots */}
-                                            <FloatingDots />
 
-                                            {/* Black background circle */}
-                                            <div className="absolute inset-0 rounded-full bg-black shadow-xl z-10" />
-
-                                            {/* Neon gradient ring */}
-                                            <svg className="absolute inset-0 w-full h-full z-20" viewBox="0 0 100 100">
-                                                <defs>
-                                                    <linearGradient id="gradRing" x1="0%" y1="0%" x2="100%" y2="0%">
-                                                        <stop offset="0%" stopColor="#ff00f7" />
-                                                        <stop offset="50%" stopColor="#a85aff" />
-                                                        <stop offset="100%" stopColor="#00e0ff" />
-                                                    </linearGradient>
-                                                </defs>
-                                                <circle
-                                                    cx="50"
-                                                    cy="50"
-                                                    r="45"
-                                                    fill="none"
-                                                    stroke="url(#gradRing)"
-                                                    strokeWidth="4"
-                                                    strokeDasharray="282.6"
-                                                    strokeDashoffset="56.5"
-                                                    strokeLinecap="round"
-                                                />
-                                            </svg>
-
-                                            {/* Profile Image */}
-                                            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full overflow-hidden border-4 border-black shadow-lg z-30">
-                                                {loading ? (
-                                                    <div className="w-full h-full bg-[#6c5ce7]/20 animate-pulse" />
-                                                ) : (
-                                                    <img
-                                                        src={userData?.imgname || "/api/placeholder/128/128"}
-                                                        alt="Profile"
-                                                        className="w-full h-full object-cover"
-                                                    />
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="text-center">
-                                        <h2 className="font-bold text-2xl text-white mb-2">{userData?.name}</h2>
-                                        <div className="inline-flex items-center gap-2  mb-2 text-sm bg-black/20 text-white px-3 py-1 rounded-full">
-                                            {/* <Phone className="w-4 h-4" /> */}
-                                            <span>{userData?.mobilenumber}</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* User Info Section with ProfilePage styling */}
-                                <div className="flex-1 mt-4">
-                                    {loading ? (
-                                        <div className="flex items-center justify-between gap-6 text-center">
-                                            {[...Array(3)].map((_, i) => (
-                                                <div key={i} className="space-y-1">
-                                                    <div className="h-7 w-10 bg-white/20 animate-pulse rounded-lg mx-auto" />
-                                                    <div className="h-4 w-10 bg-white/20 animate-pulse rounded-md mx-auto" />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="flex items-center justify-between gap-10 text-white/80 text-sm text-center">
-                                            <div className="flex flex-col items-center gap-3">
-                                                <VenusAndMars className="w-10 h-10 text-white/80" />
-                                                <span className="font-semibold  text-sm text-white">{userData?.gender}</span>
-                                            </div>
-
-                                            <div className="flex flex-col items-center gap-3">
-                                                <CalendarDays className="w-10 h-10 text-white/80" />
-                                                <span className="font-semibold  text-sm text-white">
-                                                    {new Date(userData?.dob ?? "").toLocaleDateString("en-GB", {
-                                                        day: "2-digit",
-                                                        month: "short",
-                                                        year: "numeric",
-                                                    })}
-                                                </span>
-                                            </div>
-
-                                            <div className="flex flex-col items-center gap-3">
-                                                <Globe className="w-10 h-10 text-white/80" />
-                                                <span className="font-semibold  text-sm text-white">{userData?.location}</span>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                            </div>
-
-                            {/* Stats Cards with ProfilePage styling */}
-                            <div className="grid grid-cols-3 gap-4  z-50">
-                                {loading ? (
-                                    Array.from({ length: 3 }).map((_, index) => (
-                                        <div key={index} className="h-28 bg-[#6c5ce7]/20 animate-pulse rounded-2xl" />
-                                    ))
-                                ) : (
-                                    <>
-                                        <div className="bg-[#181826] backdrop-blur-sm border-1 border-[#6c5ce7]/80 rounded-2xl p-4 text-center shadow-lg hover:scale-105 transition-all duration-300 flex flex-col items-center justify-center">
-                                            <Bookmark className="text-[#6c5ce7] mb-2" size={28} />
-                                            <div className="text-sm text-white/80 font-medium">Movies Matched</div>
-                                            <div className="text-2xl font-bold text-[#6c5ce7]">{(userData?.common_watchlist_count || 0).toString().padStart(2, '0')}</div>
-                                        </div>
-
-                                        <div className="bg-[#181826] backdrop-blur-sm border-1 border-[#6c5ce7]/80 rounded-2xl p-4 text-center shadow-lg hover:scale-105 transition-all duration-300 flex flex-col items-center justify-center">
-
-                                            <Eye className="text-[#6c5ce7] mb-2" size={28} />
-                                            <div className="text-sm text-white/80 font-medium">Common Interests</div>
-                                            <div className="text-2xl font-bold text-[#6c5ce7]">{(userData?.common_interests_count || 0).toString().padStart(2, '0')}</div>
-                                        </div>
-
-                                        <div className="bg-[#181826] backdrop-blur-sm border-1 border-[#6c5ce7]/80 rounded-2xl p-4 text-center shadow-lg hover:scale-105 transition-all duration-300 flex flex-col items-center justify-center">
-
-                                            <Users className="text-[#6c5ce7] mb-2" size={28} />
-                                            <div className="text-sm text-white/80 font-medium">Mutual Friends</div>
-                                            <div className="text-2xl font-bold text-[#6c5ce7]">{(userData?.mutual_friends_count || 0).toString().padStart(2, '0')}</div>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Badge with ProfilePage styling */}
-                    <div className="absolute bottom-[-24px] left-1/2 transform -translate-x-1/2 bg-white backdrop-blur-sm rounded-2xl px-4 py-2 flex items-center justify-center gap-3 border border-white/30 shadow-lg">
-                        <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center">
-                            <Crown className="w-5 h-5 text-white" />
-                        </div>
-                        <span className="text-primary font-bold text-sm">{badgeToDisplay}</span>
-                    </div>
-                </div>
-
-                <div className="max-w-4xl mx-auto p-4 text-center mt-10">
-                    <p className="text-xl font-bold">You & {userData?.name}</p>
-                </div>
-
-                <div className="p-4 ">
-                    {/* Compatibility Section */}
-                    {!loading && userData?.commonality_percent !== undefined && (
-                        <div className=" mb-10 p-4 bg-gradient-to-br from-[#6c5ce7]/15 to-[#6c5ce7]/5 backdrop-blur-sm border border-[#6c5ce7]/20 rounded-4xl shadow-lg">
-                            <h3 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
-                                <Crown className="w-7 h-7 text-white bg-primary border-1 border-white p-1 rounded-full" />
-                                Compatibility
-                            </h3>
-                            <div className="flex items-center gap-3">
-                                <div className="flex-1 bg-[#292938] rounded-full h-3">
-                                    <div
-                                        className="bg-gradient-to-r from-[#6c5ce7] to-[#5a4bd6] h-3 rounded-full transition-all duration-500"
-                                        style={{ width: `${userData.commonality_percent}%` }}
-                                    />
-                                </div>
-                                <span className="text-[#6c5ce7] font-bold text-lg">{userData.commonality_percent}%</span>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Common Languages with ProfilePage styling */}
-                    <div className="mb-10">
-                        <h3 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
-                            <Languages className="w-5 h-5 text-[#6c5ce7]" />
-                            Common Languages
-                        </h3>
-                        <div className="flex flex-wrap gap-2">
+                    {/* Profile Header */}
+                    <div className="flex items-center space-x-4 p-4 px-8 rounded-lg mt-2">
+                        {/* Profile Image */}
+                        <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white shadow-md">
                             {loading ? (
-                                Array.from({ length: 3 }).map((_, index) => (
-                                    <div key={index} className="h-8 w-20 bg-[#6c5ce7]/20 animate-pulse rounded-full" />
-                                ))
-                            ) : userData?.common_languages && userData.common_languages.length > 0 ? (
-                                userData.common_languages.map((language, index) => (
+                                <div className="w-full h-full bg-[#b56bbc]/20 animate-pulse" />
+                            ) : (
+                                <img
+                                    src={userData?.imgname || "/api/placeholder/128/128"}
+                                    alt="Profile"
+                                    className="w-full h-full object-cover"
+                                />
+                            )}
+                        </div>
+
+                        {/* Name & Info */}
+                        <div>
+                            <h2 className="text-white font-semibold text-lg drop-shadow-lg">{userData?.name}</h2>
+                            <p className="text-gray-300 text-sm drop-shadow-lg">{userData?.mobilenumber}</p>
+                        </div>
+                    </div>
+
+                    {/* Info Box with Gender, DOB, Location */}
+                    <div className="relative mt-6 mx-4 rounded-3xl border-2 border-primary bg-transparent">
+                        <div className="rounded-3xl bg-transparent p-6 py-10">
+                            <div className="flex justify-between text-white text-sm font-medium">
+                                <div className="flex flex-col items-center flex-1">
+                                    <Image src={genderIcon} alt="Gender" className="w-12 h-12" />
+                                    <span className="mt-2">{userData?.gender}</span>
+                                </div>
+                                <div className="flex flex-col items-center flex-1">
+                                    <Image src={dobIcon} alt="DOB" className="w-12 h-12" />
+                                    <span className="mt-2"> {new Date(userData?.dob ?? "").toLocaleDateString("en-GB", {
+                                        day: "2-digit",
+                                        month: "short",
+                                        year: "numeric",
+                                    })}</span>
+                                </div>
+                                <div className="flex flex-col items-center flex-1">
+                                    <Image src={locationIcon} alt="Location" className="w-12 h-12" />
+                                    <span className="mt-2">{userData?.location}</span>
+                                </div>
+                            </div>
+
+                            {/* Floating Badge */}
+                            <div className="absolute left-1/2 -bottom-5 transform -translate-x-1/2 bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] p-[1px] rounded-full">
+                                <div className="bg-white px-4 py-2 rounded-full flex items-center gap-2">
+                                    <div className="w-8 h-8 bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] rounded-xl flex items-center justify-center">
+                                        <Crown className="w-5 h-5 text-white" />
+                                    </div>
+                                    <span className="whitespace-nowrap text-transparent bg-clip-text bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] font-bold text-sm">
+                                        {badgeToDisplay}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+
+            {/* Stats Section */}
+            <div className="mt-12 flex  gap-4 px-4 overflow-x-auto no-scrollbar">
+                {loading ? (
+                    Array.from({ length: 3 }).map((_, index) => (
+                        <div key={index} className="h-28 bg-[#2b2b2b]/20 animate-pulse rounded-2xl" />
+                    ))
+                ) : (
+                    <>
+                        <div className="bg-[#2b2b2b]  rounded-[80px] px-2 py-3 gap-3  text-center shadow-lg hover:scale-105 transition-all duration-300 flex  items-center justify-center">
+                            <div className="p-3 rounded-full bg-white w-12 h-12">
+                                <Image src={Bookmark} alt="Bookmark" width={48} height={48} />
+                            </div>
+                            <div className="text-2xl font-semibold text-white">{(userData?.watchlist_count || 0).toString().padStart(2, '0')}</div>
+                            <div className="text-sm text-white font-medium mr-2">Watchlisted</div>
+                        </div>
+
+                        <div className="bg-[#2b2b2b]   rounded-[80px] px-2 py-3 gap-3 text-center shadow-lg hover:scale-105 transition-all duration-300 flex  items-center justify-center">
+                            <div className="p-3 rounded-full bg-white w-12 h-12">
+                                <Image src={Eye} alt="Watched" width={48} height={48} />
+                            </div>
+                            <div className="text-2xl font-semibold text-white">{(userData?.watched_count || 0).toString().padStart(2, '0')}</div>
+                            <div className="text-sm text-white font-medium mr-2">Watched</div>
+                        </div>
+
+                        <div className="bg-[#2b2b2b]  rounded-[80px] px-2 py-3 gap-3 text-center shadow-lg hover:scale-105 transition-all duration-300 flex  items-center justify-center">
+                            <div className="p-3 rounded-full bg-white w-12 h-12">
+                                <Image src={User} alt="Suggested" width={60} height={60} />
+                            </div>
+                            <div className="text-2xl font-semibold text-white">{(userData?.mutual_friends_count || 0).toString().padStart(2, '0')}</div>
+                            <div className="text-sm text-white font-medium mr-2">Friends</div>
+                        </div>
+                    </>
+                )}
+            </div>
+
+
+
+            <div className="mx-auto p-4">
+                {/* Languages */}
+                <div className=" mb-8 mt-10">
+                    <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-xl font-bold text-transparent bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text mb-3 flex items-center gap-2">
+                            <Languages className="text-xl  text-[#b56bbc]" />
+                            Favorite Languages
+                        </h3>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {loading ? (
+                            Array.from({ length: 3 }).map((_, index) => (
+                                <div key={index} className="h-8 w-20 bg-[#2b2b2b] animate-pulse rounded-full" />
+                            ))
+                        ) : userData?.user_languages && userData.user_languages.length > 0 ? (
+                            userData.user_languages.map((language: string, index: number) => (
+                                <span
+                                    key={index}
+                                    className="px-4 py-2 bg-[#2b2b2b]  rounded-full text-sm font-medium text-white"
+                                >
+                                    {language}
+                                </span>
+                            ))
+                        ) : (
+                            <p className="text-sm text-gray-400">No Languages </p>
+                        )}
+                    </div>
+                </div>
+
+                {/* Genre Interests */}
+                <div className="mb-8">
+                    <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-xl font-bold text-transparent bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text mb-3 flex items-center gap-2">
+                            <Drama className="text-xl  text-[#b56bbc]" />
+                            Favorite Genres
+                        </h3>
+
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {loading ? (
+                            Array.from({ length: 4 }).map((_, index) => (
+                                <div key={index} className="h-8 w-20 bg-[#2b2b2b] animate-pulse rounded-full" />
+                            ))
+                        ) : userData?.user_interests && userData.user_interests.length > 0 ? (
+                            <>
+                                {userData.user_interests.slice(0, 4).map((genre, index) => (
                                     <span
                                         key={index}
-                                        className="px-4 py-2 bg-[#6c5ce7]/20 backdrop-blur-sm border border-[#6c5ce7]/30 rounded-full text-sm font-medium text-white hover:bg-[#6c5ce7]/30 transition-all duration-300"
-                                    >
-                                        {language}
+                                        className="px-4 py-2 bg-[#2b2b2b]  rounded-full text-sm font-medium text-white"                                    >
+                                        {genre}
                                     </span>
-                                ))
-                            ) : (
-                                <span className="px-4 py-2 bg-gradient-to-r from-gray-400/20 to-gray-600/20 rounded-full text-sm font-medium text-white/60">
-                                    No common languages
-                                </span>
-                            )}
-                        </div>
+                                ))}
+                            </>
+                        ) : (
+                            <p className="text-sm text-gray-400">No Languages </p>
+                        )}
                     </div>
+                </div>
 
-                    {/* Common Interests with ProfilePage styling */}
+                {/* Friends */}
+                {(loading || (userData?.friends_count && userData.friends_count > 0)) && (
                     <div className="mb-10">
-                        <h3 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
-                            <Drama className="w-5 h-5 text-[#6c5ce7]" />
-                            Common Interests
-                        </h3>
-                        <div className="flex flex-wrap gap-2">
-                            {loading ? (
-                                Array.from({ length: 4 }).map((_, index) => (
-                                    <div key={index} className="h-8 w-20 bg-[#6c5ce7]/20 animate-pulse rounded-full" />
-                                ))
-                            ) : userData?.common_interests && userData.common_interests.length > 0 ? (
-                                <>
-                                    {userData.common_interests.slice(0, 4).map((interest, index) => (
-                                        <span
-                                            key={index}
-                                            className="px-4 py-2 bg-[#6c5ce7]/20 backdrop-blur-sm border border-[#6c5ce7]/30 rounded-full text-sm font-medium text-white hover:bg-[#6c5ce7]/30 transition-all duration-300"
-                                        >
-                                            {interest}
-                                        </span>
-                                    ))}
-                                    {userData.common_interests.length > 4 && (
-                                        <span className="px-4 py-2 bg-gradient-to-r from-[#6c5ce7] to-[#5a4bd6] rounded-full text-sm font-medium text-white shadow-lg">
-                                            +{userData.common_interests.length - 4} more
-                                        </span>
-                                    )}
-                                </>
-                            ) : (
-                                <span className="px-4 py-2 bg-gradient-to-r from-gray-400/20 to-gray-600/20 rounded-full text-sm font-medium text-white/60">
-                                    No common interests
-                                </span>
-                            )}
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-xl font-bold text-transparent bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text mb-3 flex items-center gap-2">
+                                <Users className="text-xl text-[#b56bbc]" />
+                                Friends
+                            </h3>
+
+                            <button
+                                onClick={() => userData && router.push(`/friends?type=profiledetailfriends&friend_id=${userData.user_id}`)}
+                                className="text-sm font-medium text-[#b56bbc] hover:underline"
+                            >
+                                See All
+                            </button>
                         </div>
-                    </div>
 
-                    <div className="grid grid-cols-2 gap-4 mt-8 mb-10">
-                        {/* Suggestions */}
-                        <Card
-                            onClick={handleSuggestionsClick}
-                            className="rounded-3xl bg-gradient-to-br from-[#6c5ce7] to-[#4834d4] text-white border-0 shadow-xl flex flex-col justify-between transition-transform hover:scale-105 duration-200 group cursor-pointer">
-                            <div className="text-center">
-                                <Clapperboard className="w-10 h-10 mx-auto mb-3 text-white/80" strokeWidth={2.5} />
-                                <div className="font-bold text-lg">Suggestions</div>
-                                <div className="text-sm text-white/80">by {userData?.name}</div>
-                                <div className="mt-2 flex justify-center items-center">
-                                    <ArrowRight className="bg-white text-[#6c5ce7] rounded-full p-1 w-7 h-7 shadow-md transition-transform group-hover:translate-x-1" />
-                                </div>
-                            </div>
-                        </Card>
-
-                        {/* Top 10 Movie Wall */}
-                        <Card
-                            onClick={() => router.push(`/movie-top-wall?friend_id=${userData?.user_id}`)}
-                            className="rounded-3xl bg-gradient-to-br from-[#a29bfe] to-[#6c5ce7] text-white border-0 shadow-xl flex flex-col justify-between transition-transform hover:scale-105 duration-200 group">
-                            <div className="text-center">
-                                <Trophy className="w-10 h-10 mx-auto mb-3 text-white/80" strokeWidth={2.5} />
-                                <div className="font-bold text-lg">Top 10</div>
-                                <div className="text-sm text-white/80">Movie Wall </div>
-                                <div className="mt-2 flex justify-center items-center">
-                                    <ArrowRight className="bg-white text-[#6c5ce7] rounded-full p-1 w-7 h-7 shadow-md transition-transform group-hover:translate-x-1" />
-                                </div>
-                            </div>
-                        </Card>
-                    </div>
-
-                    {/* Mutual Friends Section */}
-                    <div className="mb-10">
-                        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                            <Users className="w-5 h-5 text-[#6c5ce7]" />
-                            Mutual Friends
-                        </h3>
                         {loading ? (
                             <div className="flex gap-3">
                                 {Array.from({ length: 4 }).map((_, i) => (
-                                    <div key={i} className="w-16 h-16 bg-[#6c5ce7]/20 rounded-full animate-pulse" />
+                                    <div key={i} className="w-16 h-16 bg-[#2b2b2b] rounded-full animate-pulse" />
                                 ))}
                             </div>
-                        ) : userData?.mutual_friends_count && userData.mutual_friends_count > 0 ? (
-                            <div
-                                onClick={() => handleViewProfile(userData.mutual_friends[0]?.user_id)}
-                                className="flex items-center gap-4 overflow-x-auto pb-2">
-                                {(userData.mutual_friends || []).slice(0, 4).map((friend: any, index: number) => (
-                                    <div key={index} className="text-center min-w-16">
+                        ) : (
+                            <div className="flex items-center gap-4 overflow-x-auto no-scrollbar pb-2">
+                                {(userData?.friends || []).slice(0, 10).map((friend: any, index: number) => (
+                                    <div
+                                        key={index}
+                                        onClick={() =>
+                                            router.push(`/friends/friend-profile-detail?profile_id=${friend.user_id}`)
+                                        }
+                                        className="text-center min-w-16 cursor-pointer"
+                                    >
                                         <img
-                                            src={friend.profile_pic?.replace(/\\/g, "") || "/api/placeholder/64/64"}
+                                            src={friend.image?.replace(/\\/g, "") || "/api/placeholder/64/64"}
                                             alt={friend.name || "Friend"}
-                                            className="w-16 h-16 rounded-full object-cover border-2 border-[#6c5ce7]/40 shadow"
+                                            className="w-16 h-16 rounded-full object-cover border-2 border-[#b56bbc]/40 shadow"
                                         />
                                         {friend.name && (
                                             <div className="text-xs text-white/80 mt-1 truncate w-16">
@@ -675,126 +630,392 @@ export default function ProfileDetailPage() {
                                     </div>
                                 ))}
                             </div>
+                        )}
+                    </div>
+                )}
 
-                        ) : (
-                            <div className="text-center mt-4">
-                                <div className="text-white/60 text-sm mb-2">
-                                    No mutual friends yet.
+
+                <div className="grid grid-cols-2 gap-4 mt-8 mb-10">
+                    {/* Suggestions */}
+                    <div
+                        onClick={handleSuggestionsClick}
+                        className="flex items-center justify-between rounded-full px-5 py-3 bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] cursor-pointer shadow-md hover:scale-105 transition-transform duration-200"
+                    >
+                        <div className="flex items-center gap-2 text-white">
+                            <Clapperboard className="w-5 h-5" />
+                            <div>
+                                <div className="text-sm font-semibold leading-none">Suggestions</div>
+                                <div className="text-xs opacity-80 mt-1">by {userData?.name}</div>
+                            </div>
+                        </div>
+                        <ArrowRight className="w-5 h-5 text-white bg-white/20 rounded-full p-1" />
+                    </div>
+
+                    {/* Top 10 Movie Wall */}
+                    <div
+                        onClick={() => router.push(`/top-10-wall?friend_id=${userData?.user_id}`)}
+                        className="flex items-center justify-between rounded-full px-5 py-3 bg-white cursor-pointer shadow-md hover:scale-105 transition-transform duration-200"
+                    >
+                        <div className="flex items-center gap-2">
+                            <Trophy className="w-5 h-5 text-primary" />
+                            <div>
+                                <div className="text-sm font-semibold leading-none text-primary">Top 10</div>
+                                <div className="text-xs opacity-80 mt-1 text-black">Movie Wall</div>
+                            </div>
+                        </div>
+                        <ArrowRight className="w-5 h-5 text-[#7a71c4] bg-[#f2efff] rounded-full p-1" />
+                    </div>
+                </div>
+
+            </div>
+
+
+            <div className="p-4">
+                <div className="bg-white rounded-[60px] p-0 text-white max-w-md mx-auto">
+                    {/* You & Name */}
+                    <div className="text-center">
+                        <h2 className="text-2xl p-5 font-bold text-transparent bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text">
+                            You & {userData?.name}
+                        </h2>
+                    </div>
+
+                    <div className="bg-[#1f1f21] p-4 mb-8 rounded-[50px]">
+                        {/* Compatibility */}
+                        {!loading && userData?.commonality_percent !== undefined && (
+                            <div className="flex flex-col items-center mb-10">
+                                {/* Heart-shaped compatibility display */}
+                                <div className="relative mb-4">
+                                    <svg width="120" height="120" viewBox="0 0 200 200" className="w-[150px] h-[150px]">
+                                        <defs>
+                                            {/* Gradient for the heart fill */}
+                                            <linearGradient id="heartGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                                <stop offset="0%" stopColor="#b56bbc" />
+                                                <stop offset="100%" stopColor="#7a71c4" />
+                                            </linearGradient>
+
+
+                                            {/* Clip path for the filled portion with big wave animation */}
+                                            <clipPath id="fillClip">
+                                                <path d={`M0,${200 - (userData.commonality_percent * 200 / 100)} Q25,${200 - (userData.commonality_percent * 200 / 100) - 20} 50,${200 - (userData.commonality_percent * 200 / 100)} T100,${200 - (userData.commonality_percent * 200 / 100)} T150,${200 - (userData.commonality_percent * 200 / 100)} T200,${200 - (userData.commonality_percent * 200 / 100)} V200 H0 Z`}>
+                                                    <animateTransform
+                                                        attributeName="transform"
+                                                        type="translate"
+                                                        values="-50,0; 0,0; -50,0"
+                                                        dur="4s"
+                                                        repeatCount="indefinite"
+                                                    />
+                                                    <animate
+                                                        attributeName="d"
+                                                        values={`M0,${200 - (userData.commonality_percent * 200 / 100)} Q25,${200 - (userData.commonality_percent * 200 / 100) - 20} 50,${200 - (userData.commonality_percent * 200 / 100)} T100,${200 - (userData.commonality_percent * 200 / 100)} T150,${200 - (userData.commonality_percent * 200 / 100)} T200,${200 - (userData.commonality_percent * 200 / 100)} V200 H0 Z;
+                                                                 M0,${200 - (userData.commonality_percent * 200 / 100)} Q25,${200 - (userData.commonality_percent * 200 / 100) + 25} 50,${200 - (userData.commonality_percent * 200 / 100)} T100,${200 - (userData.commonality_percent * 200 / 100)} T150,${200 - (userData.commonality_percent * 200 / 100)} T200,${200 - (userData.commonality_percent * 200 / 100)} V200 H0 Z;
+                                                                 M0,${200 - (userData.commonality_percent * 200 / 100)} Q25,${200 - (userData.commonality_percent * 200 / 100) - 20} 50,${200 - (userData.commonality_percent * 200 / 100)} T100,${200 - (userData.commonality_percent * 200 / 100)} T150,${200 - (userData.commonality_percent * 200 / 100)} T200,${200 - (userData.commonality_percent * 200 / 100)} V200 H0 Z`}
+                                                        dur="3s"
+                                                        repeatCount="indefinite"
+                                                    />
+                                                </path>
+                                            </clipPath>
+
+                                            {/* Heart shape path */}
+                                            <path id="heartPath" d="M100,180 C100,180 30,120 30,85 C30,65 45,50 65,50 C80,50 95,60 100,75 C105,60 120,50 135,50 C155,50 170,65 170,85 C170,120 100,180 100,180 Z" />
+                                        </defs>
+
+                                        {/* Background heart (dark) */}
+                                        <use href="#heartPath" fill="#737373" />
+
+                                        {/* Filled heart portion with gradient and wave animation */}
+                                        <g clipPath="url(#fillClip)">
+                                            <use href="#heartPath" fill="url(#heartGradient)" />
+                                        </g>
+
+                                        {/* White percentage text */}
+                                        <text
+                                            x="100"
+                                            y="110"
+                                            textAnchor="middle"
+                                            dominantBaseline="middle"
+                                            fontFamily="Overpass, sans-serif"
+                                            fontWeight="600"
+                                            fontSize="35"
+                                            fill="white"
+                                        >
+                                            {userData.commonality_percent}%
+                                        </text>
+                                    </svg>
+                                </div>
+
+                                <p className="text-white font-semibold text-lg tracking-wide">Compatibility</p>
+                            </div>
+                        )}
+
+
+                        {/* Loading state */}
+                        {loading && (
+                            <div className="flex flex-col items-center mb-10">
+                                <div className="relative mb-4">
+                                    <Heart size={120} className="text-gray-600 fill-current " />
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full "></div>
+                                    </div>
+                                </div>
+                                <p className="text-gray-400 font-semibold text-lg">
+                                    Calculating...
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Common Languages */}
+                        <div className="mb-10">
+                            <h3 className="text-xl font-bold text-transparent bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text mb-3 flex items-center gap-2">
+                                <Languages className="text-xl text-[#b56bbc]" />
+                                Common Languages
+                            </h3>
+                            <div className="flex flex-wrap gap-2">
+                                {loading ? (
+                                    Array.from({ length: 3 }).map((_, index) => (
+                                        <div key={index} className="h-8 w-20 bg-[#2b2b2b] animate-pulse rounded-full" />
+                                    ))
+                                ) : userData?.common_languages && userData.common_languages.length > 0 ? (
+                                    userData.common_languages.map((language, index) => (
+                                        <span
+                                            key={index}
+                                            className="px-4 py-1 bg-[#a06bff]/20 border border-[#a06bff]/30 rounded-full text-sm font-medium text-white"
+                                        >
+                                            {language}
+                                        </span>
+                                    ))
+                                ) : (
+                                    <span className="px-4 py-2 bg-gray-600/20 rounded-full text-sm font-medium text-white/60">
+                                        No common languages
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Common Interests */}
+                        <div className="mb-10">
+                            <h3 className="text-xl font-bold text-transparent bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text mb-3 flex items-center gap-2">
+                                <Drama className="text-xl text-[#b56bbc]" />
+                                Common Interests
+                            </h3>
+                            <div className="flex flex-wrap gap-2">
+                                {loading ? (
+                                    Array.from({ length: 4 }).map((_, index) => (
+                                        <div key={index} className="h-8 w-20 bg-[#2b2b2b] animate-pulse rounded-full" />
+                                    ))
+                                ) : userData?.common_interests && userData.common_interests.length > 0 ? (
+                                    <>
+                                        {userData.common_interests.slice(0, 4).map((interest, index) => (
+                                            <span
+                                                key={index}
+                                                className="px-4 py-1 bg-[#a06bff]/20 border border-[#a06bff]/30 rounded-full text-sm font-medium text-white"
+                                            >
+                                                {interest}
+                                            </span>
+                                        ))}
+                                        {userData.common_interests.length > 4 && (
+                                            <span className="px-4 py-1 bg-gradient-to-r from-[#a06bff] to-[#7a71c4] rounded-full text-sm font-medium text-white shadow-lg">
+                                                +{userData.common_interests.length - 4} more
+                                            </span>
+                                        )}
+                                    </>
+                                ) : (
+                                    <span className="px-4 py-2 bg-gray-600/20 rounded-full text-sm font-medium text-white/60">
+                                        No common interests
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Mutual Friends Section */}
+                        <div className="mb-4">
+                            <h3 className="text-xl font-bold text-transparent bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text mb-3 flex items-center gap-2">
+                                <Users className="text-xl text-[#b56bbc]" />
+                                Mutual Friends
+                            </h3>
+
+                            {loading ? (
+                                <div className="flex gap-3">
+                                    {Array.from({ length: 4 }).map((_, i) => (
+                                        <div key={i} className="w-16 h-16 bg-[#2b2b2b] rounded-full animate-pulse" />
+                                    ))}
+                                </div>
+                            ) : userData?.mutual_friends_count && userData.mutual_friends_count > 0 ? (
+                                <div
+                                    onClick={() => handleViewProfile(userData.mutual_friends?.[0]?.user_id)}
+                                    className="flex items-center gap-4 overflow-x-auto pb-2">
+                                    {(userData.mutual_friends || []).slice(0, 4).map((friend: any, index: number) => (
+                                        <div key={index} className="text-center min-w-16">
+                                            <img
+                                                src={friend.profile_pic?.replace(/\\/g, "") || DefaultImage}
+                                                alt={friend.name || "Friend"}
+                                                className="w-16 h-16 rounded-full object-cover border-2 border-[#2b2b2b]/40 shadow"
+                                            />
+                                            {friend.name && (
+                                                <div className="text-xs text-white/80 mt-1 truncate w-16">
+                                                    {friend.name}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+
+                            ) : (
+
+                                <div className="flex flex-col items-center  mt-4 ">
+                                    <div className="flex flex-col items-center text-white/60 text-sm mb-2">
+                                        <div className=" text-center mb-1">
+                                            <Users className="w-10 h-10" />
+                                        </div>
+                                        <div>
+                                            No mutual friends yet.
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Watch & Match Better */}
+                        {userData?.improve_your_match_by_watching && userData.improve_your_match_by_watching.length > 0 && (
+                            <div className="mb-6">
+                                <h3 className="text-xl font-bold text-transparent bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text mb-3 flex items-center gap-2">
+                                    <MonitorPlay className="text-xl text-[#b56bbc]" />
+                                    Watch & Match Better
+                                </h3>
+                                <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
+                                    {userData.improve_your_match_by_watching.map((movie, index) => (
+                                        <motion.div
+                                            key={movie.movie_id}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: index * 0.1 }}
+                                            whileHover={{ scale: 1.05 }}
+                                            className="relative min-w-[100px] h-[150px] rounded-xl overflow-hidden shadow-md cursor-pointer"
+                                            onClick={() => router.push(`/movie-detail-page?movie_id=${movie.movie_id}`)}
+                                        >
+                                            <img
+                                                src={`https://suggesto.xyz/App/${movie.poster}`}
+                                                alt={movie.title}
+                                                className="w-full h-full object-cover"
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                                            <div className="absolute bottom-2 left-2">
+                                                <h3 className="text-sm font-medium text-white">{movie.title}</h3>
+                                            </div>
+                                        </motion.div>
+                                    ))}
                                 </div>
                             </div>
                         )}
                     </div>
-                    {/* Send Friend Request Button */}
-                    {renderActionButtons()}
-
                 </div>
 
-                {/* Suggestions Popup */}
-                {showSuggestionsPopup && (
-                    <div className="fixed inset-0  backdrop-blur-sm z-50 flex items-center justify-center ">
-                        <div className="bg-[#181826] p-1 rounded-3xl w-full max-w-md max-h-[80vh] overflow-hidden border border-[#6c5ce7]/20">
-                            {/* Header */}
-                            <div className="flex items-center justify-between p-4 border-b border-[#6c5ce7]/20">
-                                <h2 className="text-xl font-bold text-white">Suggestions</h2>
-                                <button
-                                    onClick={closeSuggestionsPopup}
-                                    className="p-2 hover:bg-[#6c5ce7]/20 rounded-full transition-colors"
-                                >
-                                    <X className="w-5 h-5 text-white" />
-                                </button>
-                            </div>
+                <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/100 to-black/0 z-50 h-18 flex items-center justify-center">
+                    {/* Send Friend Request Button */}
+                    {renderActionButtons()}
+                </div>
 
-                            {/* Tabs */}
-                            <div className="flex ">
-                                <button
-                                    onClick={() => setActiveTab('received')}
-                                    className={`px-4 py-2 w-full rounded-full text-sm font-medium transition-colors
-                                     ${activeTab === "received" ? "bg-primary text-white" : " text-white"
-                                        }`}
-                                >
-                                    Received
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('sent')}
-                                    className={`px-4 py-2 w-full rounded-full text-sm font-medium transition-colors 
-                                           ${activeTab === "sent" ? "bg-primary text-white" : " text-white"
-                                        }`}
-                                >
-                                    Sent
-                                </button>
-                            </div>
-
-                            {/* Content */}
-                            <div className="p-4 overflow-y-auto max-h-[50vh]">
-                                {activeTab === 'received' ? (
-                                    <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
-                                        {userData && (userData as any).suggested_to_you ? (
-                                            // Handle single object case
-                                            (() => {
-                                                const movie = (userData as any).suggested_to_you;
-                                                return (
-                                                    <div
-                                                        key={movie.movie_id}
-                                                        className="relative min-w-[120px] h-[180px] rounded-lg border-0 overflow-hidden cursor-pointer hover:scale-105 transition-transform"
-                                                        onClick={() => router.push(`/movie-detail-page?movie_id=${movie.movie_id}`)}
-                                                    >
-                                                        <img
-                                                            src={`https://suggesto.xyz/App/${movie.poster}`}
-                                                            alt={movie.title}
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
-                                                        <div className="absolute bottom-2 left-2">
-                                                            <h3 className="text-sm font-medium text-white">{movie.title}</h3>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })()
-                                        ) : (
-                                            <div className="text-white/60 text-center w-full py-8">
-                                                <Inbox className="mx-auto mb-2 w-8 h-8 text-white/70" />
-                                                No suggestions received
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
-                                        {userData && (userData as any).suggested_from_you ? (
-                                            // Handle single object case
-                                            (() => {
-                                                const movie = (userData as any).suggested_from_you;
-                                                return (
-                                                    <div
-                                                        key={movie.movie_id}
-                                                        className="relative min-w-[120px] h-[180px] rounded-lg border-0 overflow-hidden cursor-pointer hover:scale-105 transition-transform"
-                                                        onClick={() => router.push(`/movie-detail-page?movie_id=${movie.movie_id}`)}
-                                                    >
-                                                        <img
-                                                            src={`https://suggesto.xyz/App/${movie.poster}`}
-                                                            alt={movie.title}
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
-                                                        <div className="absolute bottom-2 left-2">
-                                                            <h3 className="text-sm font-medium text-white">{movie.title}</h3>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })()
-                                        ) : (
-                                            <div className="text-white/60 text-center w-full py-8">
-                                                <Lightbulb className="mx-auto mb-3 w-8 h-8 text-white/70" />
-                                                No suggestions sent
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )}
 
             </div>
+
+            {/* Suggestions Popup */}
+            {showSuggestionsPopup && (
+                <div className="fixed inset-0  backdrop-blur-sm z-50 flex items-center justify-center ">
+                    <div className="bg-[#181826] p-1 rounded-3xl w-full max-w-md max-h-[80vh] overflow-hidden border border-[#2b2b2b]/20">
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-4 border-b border-[#2b2b2b]/20">
+                            <h2 className="text-xl font-bold text-white">Suggestions</h2>
+                            <button
+                                onClick={closeSuggestionsPopup}
+                                className="p-2 hover:bg-[#2b2b2b]/20 rounded-full transition-colors"
+                            >
+                                <X className="w-5 h-5 text-white" />
+                            </button>
+                        </div>
+
+                        {/* Tabs */}
+                        <div className="flex ">
+                            <button
+                                onClick={() => setActiveTab('received')}
+                                className={`px-4 py-2 w-full rounded-full text-sm font-medium transition-colors
+                                     ${activeTab === "received" ? "bg-primary text-white" : " text-white"
+                                    }`}
+                            >
+                                Received
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('sent')}
+                                className={`px-4 py-2 w-full rounded-full text-sm font-medium transition-colors 
+                                           ${activeTab === "sent" ? "bg-primary text-white" : " text-white"
+                                    }`}
+                            >
+                                Sent
+                            </button>
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-4 overflow-y-auto max-h-[50vh]">
+                            {activeTab === 'received' ? (
+                                <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
+                                    {userData && (userData as any).suggested_to_you?.length > 0 ? (
+                                        (userData as any).suggested_to_you.map((movie: any) => (
+                                            <div
+                                                key={movie.movie_id}
+                                                className="relative min-w-[120px] h-[180px] rounded-lg border-0 overflow-hidden cursor-pointer hover:scale-105 transition-transform"
+                                                onClick={() => router.push(`/movie-detail-page?movie_id=${movie.movie_id}`)}
+                                            >
+                                                <img
+                                                    src={`https://suggesto.xyz/App/${movie.poster}`}
+                                                    alt={movie.title}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                                                <div className="absolute bottom-2 left-2">
+                                                    <h3 className="text-sm font-medium text-white">{movie.title}</h3>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="text-white/60 text-center w-full py-8">
+                                            <Inbox className="mx-auto mb-2 w-8 h-8 text-white/70" />
+                                            No suggestions received
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
+                                    {userData && (userData as any).suggested_from_you?.length > 0 ? (
+                                        (userData as any).suggested_from_you.map((movie: any) => (
+                                            <div
+                                                key={movie.movie_id}
+                                                className="relative min-w-[120px] h-[180px] rounded-lg border-0 overflow-hidden cursor-pointer hover:scale-105 transition-transform"
+                                                onClick={() => router.push(`/movie-detail-page?movie_id=${movie.movie_id}`)}
+                                            >
+                                                <img
+                                                    src={`https://suggesto.xyz/App/${movie.poster}`}
+                                                    alt={movie.title}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                                                <div className="absolute bottom-2 left-2">
+                                                    <h3 className="text-sm font-medium text-white">{movie.title}</h3>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="text-white/60 text-center w-full py-8">
+                                            <Lightbulb className="mx-auto mb-3 w-8 h-8 text-white/70" />
+                                            No suggestions sent
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                    </div>
+                </div>
+            )}
+
+        </div>
         // </PageTransitionWrapper>
 
     )

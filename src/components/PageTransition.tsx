@@ -26,7 +26,7 @@ const pageOrder = [
   '/watch-list', 
   '/watch-room',
   '/suggest',
-  '/movie-top-wall'
+  '/top-10-wall'
 ]
 
 export function PageTransitionProvider({ children }: PageTransitionProviderProps) {

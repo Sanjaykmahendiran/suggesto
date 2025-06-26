@@ -17,7 +17,7 @@ export default function Component() {
       {/* Header */}
       <header className="flex justify-between items-center p-4">
         <div className="flex items-center gap-2">
-          <button className="mr-2 p-2 rounded-full bg-[#292938]" onClick={() => router.back()}>
+          <button className="mr-2 p-2 rounded-full bg-[#2b2b2b]" onClick={() => router.back()}>
             <ArrowLeft size={20} />
           </button>
           <h1 className="text-xl font-bold">Pro</h1>

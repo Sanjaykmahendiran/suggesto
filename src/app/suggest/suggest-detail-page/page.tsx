@@ -5,10 +5,11 @@ import { Heart, ArrowLeft, Share2, Users, Check, X, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useRouter, useSearchParams } from "next/navigation"
-import MovieShareCard from "@/components/moviesharecard"
+import MovieShareCard from "@/app/movie-detail-page/_components/moviesharecard"
 import { Skeleton } from "@/components/ui/skeleton"
 import Cookies from "js-cookie"
 import { PageTransitionProvider, PageTransitionWrapper } from "@/components/PageTransition"
+import toast from "react-hot-toast"
 
 export default function MovieDetailPage() {
     const router = useRouter()
@@ -38,7 +39,6 @@ export default function MovieDetailPage() {
 
     const [movie, setMovie] = useState<SuggestedMovie | null>(null)
     const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
     const [processingAccept, setProcessingAccept] = useState(false)
     const [processingReject, setProcessingReject] = useState(false)
     const [actionSuccess, setActionSuccess] = useState<string | null>(null)
@@ -48,7 +48,6 @@ export default function MovieDetailPage() {
         const fetchSuggestedMovieDetails = async () => {
             try {
                 setLoading(true)
-                setError(null)
 
                 if (!movsug_id) {
                     throw new Error("No movie suggestion ID provided")
@@ -70,7 +69,7 @@ export default function MovieDetailPage() {
                 }
             } catch (err) {
                 console.error("Error fetching suggested movie details:", err)
-                setError(
+                toast.error(
                     typeof err === "object" && err !== null && "message" in err
                         ? (err as { message?: string }).message || "Failed to load movie details"
                         : "Failed to load movie details",
@@ -85,13 +84,13 @@ export default function MovieDetailPage() {
 
     const handleAcceptSuggestion = async () => {
         if (!userId || !movie) {
-            setActionError("Unable to accept suggestion")
+            toast.error("Unable to accept suggestion")
             return
         }
 
         try {
             setProcessingAccept(true)
-            setActionError(null)
+            
 
             // Create the request body for adding to watchlist
             const requestBody = {
@@ -115,17 +114,17 @@ export default function MovieDetailPage() {
             }
 
             const data = await response.json()
-            setActionSuccess("Movie accepted and added to your watchlist!")
+            toast.success("Movie accepted and added to your watchlist!")
 
             // Redirect after a short delay
             setTimeout(() => {
                 setActionSuccess(null)
                 router.push("/suggest")
-            }, 2000)
+            }, 3000)
 
         } catch (err) {
             console.error("Error accepting suggestion:", err)
-            setActionError(
+            toast.error(
                 typeof err === "object" && err !== null && "message" in err
                     ? (err as { message?: string }).message || "Failed to accept suggestion"
                     : "Failed to accept suggestion",
@@ -137,7 +136,7 @@ export default function MovieDetailPage() {
 
     const handleRejectSuggestion = async () => {
         if (!movsug_id) {
-            setActionError("Unable to reject suggestion")
+            toast.error("Unable to reject suggestion")
             return
         }
 
@@ -152,17 +151,16 @@ export default function MovieDetailPage() {
             }
 
             const data = await response.json()
-            setActionSuccess("Movie suggestion rejected")
+            toast.success("Movie suggestion rejected")
 
             // Redirect after a short delay
             setTimeout(() => {
-                setActionSuccess(null)
                 router.back()
-            }, 2000)
+            }, 3000)
 
         } catch (err) {
             console.error("Error rejecting suggestion:", err)
-            setActionError(
+            toast.error(
                 typeof err === "object" && err !== null && "message" in err
                     ? (err as { message?: string }).message || "Failed to reject suggestion"
                     : "Failed to reject suggestion",
@@ -185,10 +183,10 @@ export default function MovieDetailPage() {
             const data = await response.json();
 
             if (data.response === "Movie removed from Suggested List") {
-                console.log("Movie successfully removed from watchlist");
+               toast.success("Movie successfully removed from watchlist");
                 router.back();
             } else {
-                console.error("Failed to remove from watchlist:", data.message || data);
+                toast.error("Failed to remove from watchlist:", data.message || data);
             }
         } catch (error) {
             console.error("Error removing from watchlist:", error);
@@ -229,27 +227,6 @@ export default function MovieDetailPage() {
         )
     }
 
-    // Show error state
-    if (error) {
-        return (
-            <div className="flex flex-col min-h-screen text-white">
-                <div className="p-4">
-                    <button className="p-2" onClick={() => router.back()}>
-                        <ArrowLeft size={20} />
-                    </button>
-                </div>
-                <div className="flex flex-col items-center justify-center flex-1 px-4 text-center">
-                    <div className="bg-red-900/30 p-6 rounded-lg max-w-md">
-                        <h2 className="text-xl font-semibold mb-2">Error Loading Movie</h2>
-                        <p className="text-gray-300">{error}</p>
-                        <Button className="mt-4 bg-blue-600 hover:bg-blue-700" onClick={() => window.location.reload()}>
-                            Try Again
-                        </Button>
-                    </div>
-                </div>
-            </div>
-        )
-    }
 
     if (!movie) {
         return null
@@ -303,7 +280,7 @@ export default function MovieDetailPage() {
 
     return (
 
-//   <PageTransitionWrapper>
+        //   <PageTransitionWrapper>
         <div className="flex flex-col min-h-screen fixed inset-0">
             {/* Header with backdrop */}
             <div className="relative pt-6">
@@ -318,7 +295,7 @@ export default function MovieDetailPage() {
                         {/* Dark overlay for better text readability */}
                         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/90"></div>
                         {/* Bottom gradient for smooth transition */}
-                        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#181826] to-transparent"></div>
+                        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#121214] to-transparent"></div>
                     </div>
                 )}
 
@@ -356,8 +333,8 @@ export default function MovieDetailPage() {
                 ))}</p>
 
                 {/* Suggestion info */}
-                <div className="bg-blue-900/30 px-4 py-2 rounded-lg mb-4 text-center">
-                    <p className="text-sm text-blue-300">
+                <div className="bg-[#121214] px-4 py-2 rounded-lg mb-4 text-center">
+                    <p className="text-sm bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text text-transparent">
                         Suggested by <span className="font-semibold">{suggested_by_name}</span>
                     </p>
                     {suggestionDate && (
@@ -368,7 +345,7 @@ export default function MovieDetailPage() {
                 {/* Genre tags */}
                 <div className="flex flex-wrap justify-center gap-2 mb-4">
                     {genresArray.map((genre, index) => (
-                        <span key={index} className="px-3 py-1 text-sm bg-gray-800 rounded-full">
+                        <span key={index} className="px-3 py-1 text-sm bg-[#2b2b2b] rounded-full">
                             {genre}
                         </span>
                     ))}
@@ -380,7 +357,7 @@ export default function MovieDetailPage() {
                     <div className="mb-4 flex items-center justify-between">
                         <Button
                             disabled
-                            className="px-6 py-2 rounded-full font-semibold text-primary bg-[#292938] cursor-not-allowed"
+                            className="px-6 py-2 rounded-full font-semibold text-primary bg-[#2b2b2b] cursor-not-allowed"
                         >
                             Already in watchlist
                         </Button>
@@ -401,7 +378,7 @@ export default function MovieDetailPage() {
                                     onClick={handleAcceptSuggestion}
                                     disabled={processingAccept}
                                     className={cn(
-                                        "px-6 py-2 rounded-full border border-green-500 text-green-500 bg-[#292938] hover:bg-green-800/10 shadow-lg transition-transform transform hover:scale-105",
+                                        "px-6 py-2 rounded-full border border-green-500 text-green-500 bg-[#2b2b2b] hover:bg-green-800/10 shadow-lg transition-transform transform hover:scale-105",
                                         processingAccept && "opacity-70 cursor-not-allowed"
                                     )}
                                 >
@@ -413,7 +390,7 @@ export default function MovieDetailPage() {
                                     onClick={handleRejectSuggestion}
                                     disabled={processingReject}
                                     className={cn(
-                                        "px-6 py-2 rounded-full border border-red-500 text-red-500 bg-[#292938] hover:bg-red-800/10 shadow-lg transition-transform transform hover:scale-105",
+                                        "px-6 py-2 rounded-full border border-red-500 text-red-500 bg-[#2b2b2b] hover:bg-red-800/10 shadow-lg transition-transform transform hover:scale-105",
                                         processingReject && "opacity-70 cursor-not-allowed"
                                     )}
                                 >
@@ -467,12 +444,17 @@ export default function MovieDetailPage() {
             {showShareCard && (
                 <div className="fixed inset-0 z-50 backdrop-blur-sm bg-black/70 transition-all duration-300">
                     <div className="absolute bottom-0 w-full shadow-xl">
-                        <MovieShareCard onClick={() => setShowShareCard(false)} movieTitle={title} />
+                        <MovieShareCard onClick={() => setShowShareCard(false)}
+                            movieTitle={title}
+                            genresArray={genresArray}
+                            ratings={rating}
+                            releaseDate={release_date}
+                            movieImage={posterUrl} />
                     </div>
                 </div>
             )}
         </div>
         // {/* </PageTransitionWrapper> */}
-           
+
     )
 }

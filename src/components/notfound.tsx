@@ -1,17 +1,18 @@
-import Image from "next/image";
+import Image, { StaticImageData } from "next/image";
 import searchNotFound from "@/assets/not-found.png";
 
 type NotFoundProps = {
   title?: string;
   description?: string;
+  imageSrc?: StaticImageData | string; 
 };
 
-const NotFound = ({ title, description }: NotFoundProps) => {
+const NotFound = ({ title, description, imageSrc }: NotFoundProps) => {
   return (
     <div className="flex flex-col items-center justify-center">
       <div className="flex items-center justify-center mb-4 mt-16">
         <Image
-          src={searchNotFound}
+          src={imageSrc || searchNotFound}
           alt="No results found"
           width={320}
           height={180}

@@ -19,7 +19,7 @@ type CategoriesProps = {
 };
 
 const SkeletonCategory = () => (
-    <div className="bg-[#292938] rounded-xl p-4 flex items-center gap-3">
+    <div className="bg-[#2b2b2b] rounded-xl p-4 flex items-center gap-3">
         <Skeleton className="w-10 h-10 rounded-full bg-[#181826]" />
         <div>
             <Skeleton className="h-4 w-20 mb-1 bg-[#181826]" />
@@ -55,10 +55,10 @@ export default function Categories({ isLoading, categories }: CategoriesProps) {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.1 }}
                             whileHover={{ scale: 1.02 }}
-                            className="bg-[#292938] rounded-xl p-4 flex items-center gap-3 cursor-pointer"
+                            className="bg-[#2b2b2b] rounded-xl p-4 flex items-center gap-3 cursor-pointer"
                             onClick={() => router.push(`/category/${category.name.toLowerCase()}`)}
                         >
-                            <div className="w-10 h-10 bg-[#6c5ce7]/20 rounded-full flex items-center justify-center text-xl">
+                            <div className="w-10 h-10 bg-[#b56bbc]/20 rounded-full flex items-center justify-center text-xl">
                                 {category.icon}
                             </div>
                             <div>

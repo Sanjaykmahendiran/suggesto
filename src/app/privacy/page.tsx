@@ -8,9 +8,9 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import Image from "next/image"
-import NoBlockedUsers from "@/assets/no-blocked-users.png" 
+import NoBlockedUsers from "@/assets/no-blocked-users.png"
 import { PageTransitionProvider, PageTransitionWrapper } from "@/components/PageTransition"
-
+import DefaultImage from "@/assets/default-user.webp"
 
 export default function SettingsPage() {
     const router = useRouter()
@@ -58,7 +58,7 @@ export default function SettingsPage() {
             <div className="min-h-screen px-6 py-4 text-white">
                 <div className="flex items-center gap-4 mb-8">
                     <button
-                        className="p-2 rounded-full bg-[#292938] transition-colors"
+                        className="p-2 rounded-full bg-[#2b2b2b] transition-colors"
                         onClick={() => setShowBlockedUsers(false)}
                     >
                         <ArrowLeft size={20} />
@@ -69,15 +69,15 @@ export default function SettingsPage() {
                     {blockedUsers.length > 0 ? (
                         <div className="space-y-4">
                             {blockedUsers.map((user) => (
-                                <div key={user.friend_id} className="flex items-center justify-between p-4 bg-[#292938] rounded-xl">
+                                <div key={user.friend_id} className="flex items-center justify-between p-4 bg-[#2b2b2b] rounded-xl">
                                     <div className="flex items-center gap-3">
                                         <div className="relative w-12 h-12">
                                             <img
-                                                src={user.profile_pic || "/api/placeholder/48/48"}
+                                                src={user.profile_pic || (typeof DefaultImage === "string" ? DefaultImage : DefaultImage.src)}
                                                 alt={user.name}
                                                 className="w-full h-full rounded-full object-cover"
                                                 onError={(e) => {
-                                                    e.currentTarget.src = "/api/placeholder/48/48"
+                                                    e.currentTarget.src = typeof DefaultImage === "string" ? DefaultImage : DefaultImage.src
                                                 }}
                                             />
                                         </div>
@@ -87,7 +87,7 @@ export default function SettingsPage() {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <button className="flex items-center justify-center w-10 h-10 bg-[#6c5ce7] hover:bg-[#5d4fd7] rounded-full transition-colors">
+                                        <button className="flex items-center justify-center w-10 h-10 bg-[#b56bbc] hover:bg-[#5d4fd7] rounded-full transition-colors">
                                             <ArrowRight size={16} className="text-white" />
                                         </button>
                                     </div>
@@ -99,7 +99,7 @@ export default function SettingsPage() {
                             <div className="mb-6">
                                 <div className="w-40 h-40 rounded-full overflow-hidden mx-auto relative">
                                     <Image
-                                        src= {NoBlockedUsers}
+                                        src={NoBlockedUsers}
                                         alt="User"
                                         fill
                                         className="object-cover"
@@ -123,11 +123,11 @@ export default function SettingsPage() {
 
     return (
 
-//   <PageTransitionWrapper>
+        //   <PageTransitionWrapper>
         <div className="min-h-screen px-6 py-4 text-white">
             <div className="flex items-center gap-4 mb-8">
                 <button
-                    className="p-2 rounded-full bg-[#292938] transition-colors"
+                    className="p-2 rounded-full bg-[#2b2b2b] transition-colors"
                     onClick={() => router.back()}
                 >
                     <ArrowLeft size={20} />
@@ -245,6 +245,6 @@ export default function SettingsPage() {
             )}
         </div>
         // </PageTransitionWrapper>
-           
+
     )
 }

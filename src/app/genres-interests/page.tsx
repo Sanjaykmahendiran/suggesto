@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import Cookies from "js-cookie"
 import { Skeleton } from "@/components/ui/skeleton"
+import toast from "react-hot-toast"
 
 // Genre interface based on the API response
 interface Genre {
@@ -23,7 +24,6 @@ export default function InterestsPage() {
   const [genres, setGenres] = useState<Genre[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [selectionError, setSelectionError] = useState<string>("")
   const [isEditMode, setIsEditMode] = useState(false)
 
@@ -79,7 +79,7 @@ export default function InterestsPage() {
           setDefaultInterests(data)
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load genres")
+        toast.error(err instanceof Error ? err.message : "Failed to load genres")
         console.error("Error fetching genres:", err)
       } finally {
         setIsLoading(false)
@@ -166,7 +166,7 @@ export default function InterestsPage() {
         router.push("/language")
       }
     } catch (err) {
-      setError(
+      toast.error(
         err instanceof Error
           ? err.message
           : `Failed to ${isEditMode ? "update" : "save"} interests`
@@ -183,9 +183,9 @@ export default function InterestsPage() {
   return (
     <div className="min-h-screen text-white">
       {/* Header */}
-      <div className="flex items-center gap-3 p-4">
+      <div className="flex items-center gap-3 px-4 pt-8">
         <button
-          className="mr-2 p-2 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors"
+          className="mr-2 p-2 rounded-full bg-[#2b2b2b] transition-colors"
           onClick={() => router.back()}
         >
           <ArrowLeft size={20} />
@@ -207,11 +207,11 @@ export default function InterestsPage() {
           {selectionError ? (
             <p className="text-red-500 text-sm">{selectionError}</p>
           ) : (
-            <span /> 
+            <span />
           )}
           <p className="text-gray-400 text-sm">
             Selected{" "}
-            <span className="px-4 py-1 rounded-3xl border-0 bg-primary text-white">
+            <span className="px-4 py-1 rounded-3xl border-0 bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] text-white">
               {selectedInterests.length}/5
             </span>
           </p>
@@ -227,7 +227,7 @@ export default function InterestsPage() {
             {Array.from({ length: 10 }).map((_, index) => (
               <Skeleton
                 key={index}
-                className="h-8 w-24 rounded-full bg-[#292938]"
+                className="h-8 w-24 rounded-full bg-[#2b2b2b]"
               />
             ))}
           </div>
@@ -238,8 +238,8 @@ export default function InterestsPage() {
                 <button
                   key={genre.genre_id}
                   className={`rounded-full px-4 py-2 text-sm ${selectedInterests.includes(genre.name)
-                    ? "bg-primary text-white"
-                    : "bg-gray-800 text-white"
+                    ? "bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] text-white"
+                    : "bg-[#2b2b2b] text-white"
                     }`}
                   onClick={() => toggleInterest(genre)}
                 >
@@ -252,7 +252,7 @@ export default function InterestsPage() {
       </div>
 
       {/* Bottom Buttons */}
-      <div className="fixed -bottom-2 left-0 right-0 px-4 pt-4 pb-6 backdrop-blur-sm bg-gradient-to-t from-[#6c5ce7]/20 to-transparent border-b border-gray-700 space-y-2 z-50">
+      <div className="fixed px-2 bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/100 to-black/0 z-50 h-20 flex items-center justify-center">
         <Button
           variant="default"
           className="w-full"

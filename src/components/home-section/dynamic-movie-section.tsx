@@ -15,6 +15,7 @@ type Movie = {
 }
 
 interface DynamicMovieSectionProps {
+  sectionKey : string
   movies: Movie[]
   title: string
   sectionType?: string
@@ -23,17 +24,18 @@ interface DynamicMovieSectionProps {
 // Icon mapping for different section types
 const getIconForSection = (sectionType: string) => {
   const iconMap: { [key: string]: React.ReactNode } = {
-    watchlist: <Sparkles className="w-5 h-5 text-primary" />,
-    trending: <TrendingUp className="w-5 h-5 text-primary" />,
-    classic: <Clock className="w-5 h-5 text-primary" />,
-    popular: <Users className="w-5 h-5 text-primary" />,
-    ai: <Bot className="w-5 h-5 text-primary" />,
-    default: <Star className="w-5 h-5 text-primary" />
+    watchlist: <Sparkles className="w-5 h-5 text-gradient-to-r from-[#b56bbc] to-[#7a71c4]" />,
+    trending: <TrendingUp className="w-5 h-5 text-gradient-to-r from-[#b56bbc] to-[#7a71c4]" />,
+    classic: <Clock className="w-5 h-5 text-gradient-to-r from-[#b56bbc] to-[#7a71c4]" />,
+    popular: <Users className="w-5 h-5 text-gradient-to-r from-[#b56bbc] to-[#7a71c4]" />,
+    ai: <Bot className="w-5 h-5 text-gradient-to-r from-[#b56bbc] to-[#7a71c4]" />,
+    default: <Star className="w-5 h-5 text-gradient-to-r from-[#b56bbc] to-[#7a71c4]" />
   }
   return iconMap[sectionType] || iconMap.default
 }
 
 export const DynamicMovieSection: React.FC<DynamicMovieSectionProps> = ({
+  sectionKey,
   movies,
   title,
   sectionType = "default"
@@ -62,27 +64,25 @@ export const DynamicMovieSection: React.FC<DynamicMovieSectionProps> = ({
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className="text-sm text-primary hover:text-white transition-colors"
-          onClick={() => {
-            console.log(`See all for ${title}`)
-          }}
+          className="text-sm bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text text-transparent"
+          onClick={() => router.push(`/add-movie?keyword=${sectionKey}`)}
         >
           See All
         </motion.button>
-      </div>
+      </div> 
 
       {/* Movies Horizontal Scroll */}
       <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
         {movies.map((movie, index) => (
           <motion.div
             key={`${movie.movie_id}-${index}`}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3, delay: index * 0.1 }}
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.4, delay: index * 0.1 }}
             className="relative min-w-[120px] h-[180px] rounded-lg overflow-hidden cursor-pointer"
             onClick={() => router.push(`/movie-detail-page?movie_id=${movie.movie_id}`)}
           >
-            <div className="relative overflow-hidden rounded-lg aspect-[2/3] bg-[#292938]">
+            <div className="relative overflow-hidden rounded-lg aspect-[2/3] bg-[#2b2b2b]">
               {/* Rest of your existing movie card content remains the same */}
               <img
                 src={`https://suggesto.xyz/App/${movie.poster_path}`}

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import Cookies from "js-cookie"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useUser } from "@/contexts/UserContext"
+import toast from "react-hot-toast"
 
 // Define language type
 interface Language {
@@ -25,7 +26,6 @@ export default function LanguagePage() {
   const [otherLanguages, setOtherLanguages] = useState<Language[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [selectionError, setSelectionError] = useState("")
   const [userId, setUserId] = useState<string>("")
   const [isEditMode, setIsEditMode] = useState(false)
@@ -79,7 +79,7 @@ export default function LanguagePage() {
         setSuggestedLanguages(suggested)
         setOtherLanguages(others)
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error occurred")
+        toast.error(err instanceof Error ? err.message : "Unknown error occurred")
       } finally {
         setIsLoading(false)
       }
@@ -110,46 +110,46 @@ export default function LanguagePage() {
     })
   }
 
-const handleSubmit = async () => {
-  if (selectedLanguages.length === 0) return
+  const handleSubmit = async () => {
+    if (selectedLanguages.length === 0) return
 
-  try {
-    setIsSubmitting(true)
+    try {
+      setIsSubmitting(true)
 
-    const languageIds = selectedLanguages.map(lang => lang.language_id)
-    const apiEndpoint = isEditMode ? "edituserlan" : "adduserlan"
-    const redirectPath = isEditMode ? "/profile" : "/home"
+      const languageIds = selectedLanguages.map(lang => lang.language_id)
+      const apiEndpoint = isEditMode ? "edituserlan" : "adduserlan"
+      const redirectPath = isEditMode ? "/profile" : "/home"
 
-    const response = await fetch("https://suggesto.xyz/App/api.php", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        gofor: apiEndpoint,
-        user_id: userId,
-        language_id: languageIds
+      const response = await fetch("https://suggesto.xyz/App/api.php", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          gofor: apiEndpoint,
+          user_id: userId,
+          language_id: languageIds
+        })
       })
-    })
 
-    if (!response.ok) {
-      throw new Error(`Failed to ${isEditMode ? "update" : "save"} language preferences`)
+      if (!response.ok) {
+        throw new Error(`Failed to ${isEditMode ? "update" : "save"} language preferences`)
+      }
+
+      const data = await response.json()
+
+      if (data) {
+        setUser(data)
+        router.push(redirectPath)
+      } else {
+        throw new Error(data?.message || "Unexpected response from server")
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Unknown error occurred")
+    } finally {
+      setIsSubmitting(false)
     }
-
-    const data = await response.json()
-
-    if (data) {
-      setUser(data)
-      router.push(redirectPath)
-    } else {
-      throw new Error(data?.message || "Unexpected response from server")
-    }
-  } catch (err) {
-    setError(err instanceof Error ? err.message : "Unknown error occurred")
-  } finally {
-    setIsSubmitting(false)
   }
-}
 
 
   const handleBack = () => isEditMode ? router.push("/profile") : router.back()
@@ -161,7 +161,7 @@ const handleSubmit = async () => {
       <div key={language.language_id} className="flex items-center justify-between py-2">
         <span>{language.name}</span>
         <div
-          className={`h-5 w-5 flex items-center justify-center rounded-full border cursor-pointer ${isSelected ? "border-primary bg-primary text-white" : "border-gray-600"
+          className={`h-5 w-5 flex items-center justify-center rounded-full border cursor-pointer ${isSelected ? "border-primary bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] text-white" : "border-gray-600"
             }`}
           onClick={() => toggleLanguage(language)}
         >
@@ -171,21 +171,13 @@ const handleSubmit = async () => {
     )
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen text-white flex flex-col items-center justify-center p-4">
-        <p className="text-red-500 mb-4">Error: {error}</p>
-        <Button onClick={() => window.location.reload()}>Retry</Button>
-      </div>
-    )
-  }
 
   return (
     <div className="min-h-screen text-white">
       {/* Header */}
-      <div className="flex items-center gap-3 p-4">
+      <div className="flex items-center gap-3 px-4 pt-8">
         <button
-          className="mr-2 p-2 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors"
+          className="mr-2 p-2 rounded-full bg-[#2b2b2b] transition-colors"
           onClick={handleBack}
         >
           <ArrowLeft size={20} />
@@ -209,7 +201,7 @@ const handleSubmit = async () => {
           )}
           <p className="text-gray-400 text-sm">
             Selected{" "}
-            <span className="px-4 py-1 rounded-3xl border-0 bg-primary text-white">
+            <span className="px-4 py-1 rounded-3xl border-0 bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] text-white">
               {selectedLanguages.length}/5
             </span>
           </p>
@@ -224,7 +216,7 @@ const handleSubmit = async () => {
           <div className="space-y-1">
             {isLoading
               ? Array(1).fill(0).map((_, i) => (
-                <Skeleton key={i} className="h-6 w-full rounded bg-[#292938]" />
+                <Skeleton key={i} className="h-6 w-full rounded bg-[#2b2b2b]" />
               ))
               : suggestedLanguages.map(renderLanguageOption)}
           </div>
@@ -236,7 +228,7 @@ const handleSubmit = async () => {
           <div className="space-y-4">
             {isLoading
               ? Array(5).fill(0).map((_, i) => (
-                <Skeleton key={i} className="h-6 w-full rounded bg-[#292938]" />
+                <Skeleton key={i} className="h-6 w-full rounded bg-[#2b2b2b]" />
               ))
               : otherLanguages.map(renderLanguageOption)}
           </div>
@@ -244,7 +236,7 @@ const handleSubmit = async () => {
       </div>
 
       {/* Bottom Buttons */}
-      <div className="fixed -bottom-2 left-0  right-0 px-4 pt-4 pb-6 backdrop-blur-sm bg-gradient-to-t from-[#6c5ce7]/20 to-transparent border-b border-gray-700 space-y-2 z-50">
+      <div className="fixed px-2 bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/100 to-black/0 z-50 h-20 flex items-center justify-center">
         <Button
           variant="default"
           className="w-full"

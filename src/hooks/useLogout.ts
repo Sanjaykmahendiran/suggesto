@@ -7,14 +7,18 @@ const useLogout = () => {
 
   const logout = useCallback(() => {
     try {
-      // Clear all cookies
+      // Remove userID from cookies
       Cookies.remove("userID");
-      
-      // Force a clean navigation to avoid hook order issues
+
+      // Remove userID from local storage
+      localStorage.removeItem("userID");
+
+      // Force a clean navigation
       window.location.href = "/auth/create-account";
-      
+
     } catch (error) {
       console.error("Error during logout:", error);
+
       // Fallback navigation
       window.location.href = "/auth/create-account";
     }

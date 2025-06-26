@@ -4,7 +4,7 @@ export default function GoPremiumBanner() {
   return (
     <div className="flex justify-center p-4">
       <div className="relative max-w-xs w-full">
-        <div className="bg-gradient-to-r from-[#6c5ce7] to-purple-500 rounded-xl px-4 py-3 flex items-center gap-3 text-white shadow-md relative overflow-hidden">
+        <div className="bg-gradient-to-r from-[#b56bbc] to-purple-500 rounded-xl px-4 py-3 flex items-center gap-3 text-white shadow-md relative overflow-hidden">
           {/* Star icon with badge styling */}
           <div className="bg-white/20 rounded-full p-1.5">
             <Star className="w-4 h-4 text-white" strokeWidth={2} />

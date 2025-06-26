@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
-import { Users } from "lucide-react"
+import { Star, Users } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 type Movie = {
@@ -33,39 +33,12 @@ export const PopularWithFriendsSection = ({
     <div className="px-4 mb-6">
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-2">
-          <Users className="w-5 h-5 text-[#9370ff]" />
+          <Users className="w-5 h-5" />
           <h2 className="text-lg font-semibold">{title}</h2>
         </div>
-        <a href="/watch-list" className="text-sm text-[#9370ff]">
-          See All
-        </a>
       </div>
 
-      <div className="bg-[#292938] rounded-lg p-4 mb-3">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center">
-            <div className="relative">
-              <div className="flex -space-x-2">
-                <Avatar className="border-2 border-[#181826] w-8 h-8">
-                  <AvatarImage src="/api/placeholder/32/32" alt="Friend 1" />
-                  <AvatarFallback>F1</AvatarFallback>
-                </Avatar>
-                <Avatar className="border-2 border-[#181826] w-8 h-8">
-                  <AvatarImage src="/api/placeholder/32/32" alt="Friend 2" />
-                  <AvatarFallback>F2</AvatarFallback>
-                </Avatar>
-                <Avatar className="border-2 border-[#181826] w-8 h-8">
-                  <AvatarImage src="/api/placeholder/32/32" alt="Friend 3" />
-                  <AvatarFallback>F3</AvatarFallback>
-                </Avatar>
-              </div>
-            </div>
-            <div className="ml-2">
-              <p className="text-sm font-medium">{movies.length} popular movies</p>
-              <p className="text-xs text-gray-400">Your friends are watching</p>
-            </div>
-          </div>
-        </div>
+      <div className="bg-[#2b2b2b] rounded-lg p-4 mb-3">
 
         <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
           {movies.map((movie, index) => (
@@ -88,8 +61,8 @@ export const PopularWithFriendsSection = ({
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
-              <div className="absolute top-2 right-2 bg-[#9370ff] text-white text-xs px-1.5 py-0.5 rounded flex items-center gap-1">
-                <Users className="w-3 h-3" />
+              <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded flex items-center gap-1">
+                <Star className="w-3 h-3 text-yellow-400 fill-current" />
                 <span>{parseFloat(movie.rating.toString()).toFixed(1)}</span>
               </div>
               <div className="absolute bottom-2 left-2">

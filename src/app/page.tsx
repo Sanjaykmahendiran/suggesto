@@ -45,21 +45,21 @@ const carouselData = [
 const RedirectLoading = () => (
   <div className="px-4">
     {/* Movie Carousel Skeleton */}
-    <div className="h-[400px] w-full flex bg-[#292938] items-center justify-center mb-8">
-      <Skeleton className="h-[400px] rounded-lg bg-[#292938]" />
+    <div className="h-[400px] w-full flex bg-[#2b2b2b] items-center justify-center mb-8">
+      <Skeleton className="h-[400px] rounded-lg bg-[#2b2b2b]" />
     </div>
 
     {/* Section Skeletons */}
     {[1, 2, 3].map((section) => (
       <div key={section} className="mb-8">
         <div className="flex justify-between items-center mb-4">
-          <Skeleton className="h-6 w-40 bg-[#292938]" />
-          <Skeleton className="h-4 w-16 bg-[#292938]" />
+          <Skeleton className="h-6 w-40 bg-[#2b2b2b]" />
+          <Skeleton className="h-4 w-16 bg-[#2b2b2b]" />
         </div>
 
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
           {[1, 2, 3, 4].map((item) => (
-            <Skeleton key={item} className="min-w-[120px] h-[180px] rounded-lg bg-[#292938]" />
+            <Skeleton key={item} className="min-w-[120px] h-[180px] rounded-lg bg-[#2b2b2b]" />
           ))}
         </div>
       </div>
@@ -133,7 +133,11 @@ export default function RootPage() {
   const x = useMotionValue(0)
   const springX = useSpring(x, { stiffness: 500, damping: 30 })
   const progress = useTransform(x, [0, maxDragDistance], [0, 1])
-  const background = useTransform(progress, [0, 1], ["#6c5ce7", "#00cec9"])
+  const background = useTransform(progress, [0, 1], [
+    "linear-gradient(to right, #b56bbc, #7a71c4)", // start
+    "linear-gradient(to right, #b56bbc, #7a71c4)", // end
+  ])
+
   const arrowOpacity = useTransform(progress, [0, 0.8], [1, 0])
 
   useEffect(() => {
@@ -149,11 +153,11 @@ export default function RootPage() {
 
   if (!userId && !loading) {
     return (
-      <div className="fixed inset-0 flex flex-col text-white bg-[#181826] overflow-hidden">
+      <div className="fixed inset-0 flex flex-col text-white bg-[#121214] overflow-hidden">
         <div className="w-full max-w-md mx-auto flex flex-col h-full relative">
-          <div className="absolute top-0 left-0 right-0 h-25 bg-gradient-to-b from-[#181826] to-transparent z-20 pointer-events-none" />
+          <div className="absolute top-0 left-0 right-0 h-25 bg-gradient-to-b from-[#121214] to-transparent z-20 pointer-events-none" />
 
-          <div className="h-[60vh] relative ">
+          <div className="h-[60vh] relative border-none">
             <style jsx>{`
                 @keyframes bounceSlow {
                   0%, 100% {
@@ -176,17 +180,24 @@ export default function RootPage() {
               priority
               sizes="(max-width: 768px) 100vw, 50vw"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#181826] to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#121214] to-transparent" />
 
             <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 translate-y-1/2 z-30 bounce-slow">
               <motion.div
-                initial={{ opacity: 0, y: -20 }}
+                initial={{ opacity: 0, y: 20 }} 
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
               >
-                <Image src={logo} alt="Suggesto Logo" width={80} height={80} className="object-contain" />
+                <Image
+                  src={logo}
+                  alt="Suggesto Logo"
+                  width={80}
+                  height={80}
+                  className="object-contain"
+                />
               </motion.div>
             </div>
+
           </div>
 
           <div className="flex-1 flex flex-col items-center px-4 relative z-30">

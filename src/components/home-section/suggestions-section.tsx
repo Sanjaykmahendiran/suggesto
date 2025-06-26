@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { ArrowRight, CheckCircle, Clock, MessageSquare, XCircle } from "lucide-react"
@@ -44,39 +44,92 @@ export const SuggestionsSection: React.FC<SuggestionsSectionProps> = ({
     const [movieDetails, setMovieDetails] = useState<Record<number, Movie>>({})
     const [friendDetails, setFriendDetails] = useState<Record<number, Friend>>({})
     const [isLoading, setIsLoading] = useState(true)
+    const [moviesLoading, setMoviesLoading] = useState(false)
+    const [hasMore, setHasMore] = useState(true)
+    const [offset, setOffset] = useState(0)
+    const [totalCount, setTotalCount] = useState(0)
+    const observerRef = useRef<HTMLDivElement>(null)
+
+    const fetchSuggestionDetails = useCallback(async (currentOffset: number = 0, isLoadMore: boolean = false) => {
+        if (!suggestions || suggestions.length === 0) return
+
+        try {
+            if (!isLoadMore) {
+                setIsLoading(true)
+            } else {
+                setMoviesLoading(true)
+            }
+
+            // Updated API call with offset
+            const movieRes = await fetch(`https://suggesto.xyz/App/api.php?gofor=movieslist&limit=10&offset=${currentOffset}`)
+            const movieData = await movieRes.json()
+
+            // Handle the new response structure
+            const movies: Movie[] = movieData?.data || []
+            if (movieData?.total_count !== undefined) {
+                setTotalCount(movieData.total_count)
+            }
+
+            const user_id = Cookies.get("userID")
+            if (!user_id) throw new Error("User ID not found in cookies.")
+
+            const friendRes = await fetch(`https://suggesto.xyz/App/api.php?gofor=friendslist&user_id=${user_id}`)
+            const friends: Friend[] = await friendRes.json()
+
+            const movieMap: Record<number, Movie> = {}
+            movies.forEach((movie) => (movieMap[movie.movie_id] = movie))
+
+            const friendMap: Record<number, Friend> = {}
+            friends.forEach((friend) => (friendMap[friend.friend_id] = friend))
+
+            if (isLoadMore) {
+                setMovieDetails(prev => ({ ...prev, ...movieMap }))
+            } else {
+                setMovieDetails(movieMap)
+            }
+            setFriendDetails(friendMap)
+
+            // Check if there are more movies to load
+            if (movies.length < 10) {
+                setHasMore(false)
+            }
+
+            if (movies.length > 0) {
+                setOffset(currentOffset + movies.length)
+            }
+
+        } catch (err) {
+            console.error("Error fetching data:", err)
+        } finally {
+            setIsLoading(false)
+            setMoviesLoading(false)
+        }
+    }, [suggestions])
 
     useEffect(() => {
-        const fetchSuggestionDetails = async () => {
-            if (!suggestions || suggestions.length === 0) return
+        fetchSuggestionDetails(0, false)
+    }, [suggestions, fetchSuggestionDetails])
 
-            try {
-                setIsLoading(true)
-                const movieRes = await fetch("https://suggesto.xyz/App/api.php?gofor=movieslist")
-                const movies: Movie[] = await movieRes.json()
-
-                const user_id = Cookies.get("userID")
-                if (!user_id) throw new Error("User ID not found in cookies.")
-
-                const friendRes = await fetch(`https://suggesto.xyz/App/api.php?gofor=friendslist&user_id=${user_id}`)
-                const friends: Friend[] = await friendRes.json()
-
-                const movieMap: Record<number, Movie> = {}
-                movies.forEach((movie) => (movieMap[movie.movie_id] = movie))
-
-                const friendMap: Record<number, Friend> = {}
-                friends.forEach((friend) => (friendMap[friend.friend_id] = friend))
-
-                setMovieDetails(movieMap)
-                setFriendDetails(friendMap)
-            } catch (err) {
-                console.error("Error fetching data:", err)
-            } finally {
-                setIsLoading(false)
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                const target = entries[0]
+                if (target.isIntersecting && !moviesLoading && hasMore && !isLoading) {
+                    fetchSuggestionDetails(offset, true)
+                }
+            },
+            {
+                threshold: 0.1,
+                rootMargin: '50px'
             }
+        )
+
+        if (observerRef.current) {
+            observer.observe(observerRef.current)
         }
 
-        fetchSuggestionDetails()
-    }, [suggestions])
+        return () => observer.disconnect()
+    }, [moviesLoading, hasMore, offset, fetchSuggestionDetails, isLoading])
 
     const formatDate = (dateString: string) => {
         const date = new Date(dateString)
@@ -133,10 +186,10 @@ export const SuggestionsSection: React.FC<SuggestionsSectionProps> = ({
         <div className="px-4 mb-6">
             <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-2">
-                    <MessageSquare className="w-5 h-5 text-[#6c5ce7]" />
+                    <MessageSquare className="w-5 h-5 text-[#b56bbc]" />
                     <h2 className="text-lg font-semibold">{title}</h2>
                 </div>
-                <a href="/suggest" className="text-sm text-[#6c5ce7]">
+                <a href="/suggest" className="text-sm text-[#b56bbc]">
                     See All
                 </a>
             </div>
@@ -151,7 +204,7 @@ export const SuggestionsSection: React.FC<SuggestionsSectionProps> = ({
                             key={suggestion.movsug_id}
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="bg-[#292938] rounded-lg overflow-hidden"
+                            className="bg-[#2b2b2b] rounded-lg overflow-hidden"
                             onClick={
                                 suggestion.status === "pending"
                                     ? () => router.push(`/suggest/suggest-detail-page?movsug_id=${suggestion.movsug_id}`)
@@ -217,6 +270,17 @@ export const SuggestionsSection: React.FC<SuggestionsSectionProps> = ({
                         </motion.div>
                     )
                 })}
+
+                {moviesLoading && (
+                    <div className="flex justify-center py-4">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#b56bbc]"></div>
+                    </div>
+                )}
+
+                {/* Intersection observer target */}
+                {hasMore && !moviesLoading && (
+                    <div ref={observerRef} className="h-4 w-full" />
+                )}
             </div>
         </div>
     )

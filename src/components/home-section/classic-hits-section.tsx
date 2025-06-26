@@ -29,10 +29,10 @@ export const ClassicHitsSection = ({ movies, title = "Classic Hits" }: ClassicHi
     <div className="px-4 mb-6">
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-2">
-          <Clock className="w-5 h-5 text-primary" />
+          <Clock className="w-5 h-5 text-gradient-to-r from-[#b56bbc] to-[#7a71c4]" />
           <h2 className="text-lg font-semibold">{title}</h2>
         </div>
-        <a href="/watch-list" className="text-sm text-primary">
+        <a href="/watch-list" className="text-sm text-gradient-to-r from-[#b56bbc] to-[#7a71c4]">
           See All
         </a>
       </div>
@@ -58,7 +58,7 @@ export const ClassicHitsSection = ({ movies, title = "Classic Hits" }: ClassicHi
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
-            <div className="absolute top-2 right-2 bg-primary text-white text-xs px-1.5 py-0.5 rounded flex items-center gap-1">
+            <div className="absolute top-2 right-2 bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] text-white text-xs px-1.5 py-0.5 rounded flex items-center gap-1">
               <Clock className="w-3 h-3" />
               <span>{parseFloat(movie.rating.toString()).toFixed(1)}</span>
             </div>

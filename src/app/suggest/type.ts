@@ -4,7 +4,7 @@ export interface SuggestedMovie {
   genres: string
   name: string
   movsug_id: number
-  movie_id: number
+  movie_id: number | string
   title: string
   poster_path: string
   backdrop_path: string
@@ -32,8 +32,8 @@ export interface ReceivedMovie {
 }
 
 export interface ReceivedSuggestion {
-  movsug_id: number
-  movie_id: number
+  movsug_id: number 
+  movie_id: number | string
   title: string
   poster_path: string
   backdrop_path: string
@@ -47,7 +47,7 @@ export interface ReceivedSuggestion {
 }
 
 export interface Movie {
-  movie_id: number
+  movie_id: number | string
   title: string
   poster_path: string
   backdrop_path: string
@@ -72,7 +72,49 @@ export interface Friend {
 }
 
 export type User = {
+  location: string
   user_id: string
   name: string
   imgname?: string
 }
+
+export type Request = {
+    request_id: string;
+    request_text: string;
+    to_users: {
+        user_id: number;
+        name: string;
+        imgname: string;
+    }[];
+    created_date: string;
+    genre: string;
+    status: string;
+};
+
+export type Responder = {
+    responder_detail: {
+        name: string;
+        profile_pic?: string;
+    };
+    movies: {
+        movie_id: string;
+        poster_path?: string;
+        title: string;
+        rating?: number;
+        response_note?: string;
+        in_watchlist?: number;
+    }[];
+};
+
+export type SuggestionRequestType = {
+    request_text: string
+    request_id: number;
+    question: string | null;
+    created_date: string;
+    from_user: {
+        user_id: number;
+        name: string;
+        profile_pic: string;
+    };
+    is_suggested: number;
+};

@@ -53,3 +53,9 @@ export interface OTT {
   logo_url: string;
   status: number;
 }
+
+export interface Mood {
+  mood_name: string ;
+  mood_id:  number
+  image?: string
+}

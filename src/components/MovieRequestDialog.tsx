@@ -76,7 +76,7 @@ export default function MovieRequestDialog({
       {/* Request Form Dialog */}
       <div className="fixed bottom-20 right-4 z-10">
         <Dialog open={isOpen} onOpenChange={onClose}>
-          <DialogContent className="bg-[#292938] text-white border-[#3f3f5a] sm:max-w-[425px]">
+          <DialogContent className="bg-[#1f1f21] text-white border-[#3f3f5a] sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle className="text-xl">Request Movie</DialogTitle>
             </DialogHeader>
@@ -90,7 +90,7 @@ export default function MovieRequestDialog({
                   placeholder="Enter movie title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="bg-[#1a1a2e] border-[#3f3f5a]"
+                  className="bg-[#2b2b2b]"
                 />
 
                 <div>
@@ -102,7 +102,7 @@ export default function MovieRequestDialog({
                     placeholder="YYYY"
                     value={year}
                     onChange={(e) => setYear(e.target.value)}
-                    className="bg-[#1a1a2e] border-[#3f3f5a]"
+                    className="bg-[#2b2b2b]"
                   />
                 </div>
 
@@ -115,14 +115,15 @@ export default function MovieRequestDialog({
                     placeholder="Language"
                     value={language}
                     onChange={(e) => setLanguage(e.target.value)}
-                    className="bg-[#1a1a2e] border-[#3f3f5a]"
+                    className="bg-[#2b2b2b] "
                   />
                 </div>
               </div>
 
               <div className="mt-6 flex justify-end">
                 <Button
-                  className="bg-[#6c5ce7] hover:bg-[#6c5ce7]/80"
+                  variant="gradient"
+                  className="w-full"
                   onClick={handleSubmit}
                   disabled={isSubmitting}
                 >

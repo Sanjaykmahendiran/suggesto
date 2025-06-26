@@ -1,8 +1,8 @@
 import type React from "react";
-import { Inter } from "next/font/google";
+import { Overpass } from "next/font/google";
 import { Suspense } from "react";
 
-const inter = Inter({ subsets: ["latin"] });
+const overpass = Overpass({ subsets: ["latin"] });
 
 export const metadata = {
   title: "Suggesto",
@@ -16,8 +16,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-[#181826]`}>
-        <Suspense fallback={<div className="text-white p-4"></div>}>
+      <body className={`${overpass.className}`}>
+        <Suspense fallback={<div className="text-white"></div>}>
           {children}
         </Suspense>
       </body>

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { useUser } from "@/contexts/UserContext"
+import toast from 'react-hot-toast';
 
 export interface UserData {
   user_id: number;
@@ -18,24 +19,23 @@ export interface UserData {
   otp_status: string;
   created_date: string;
   modified_date: string;
+  not_count: number;
 }
 
 interface UseFetchUserDetailsReturn {
   user: UserData | null;
   loading: boolean;
   isPageValid: boolean;
-  error: string | null;
-  isRedirecting: boolean; // New loading state for redirects
+  isRedirecting: boolean;
 }
 
 const useFetchUserDetails = (): UseFetchUserDetailsReturn => {
   const [loading, setLoading] = useState(true);
   const [isPageValid, setIsPageValid] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
-  const [isRedirecting, setIsRedirecting] = useState(false); // New state
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const { user, setUser } = useUser()
-  
+
   const router = useRouter();
   const pathname = usePathname();
 
@@ -57,7 +57,6 @@ const useFetchUserDetails = (): UseFetchUserDetailsReturn => {
   const fetchUserDetails = useCallback(async (userId: string) => {
     try {
       setLoading(true);
-      setError(null);
 
       const response = await fetch(
         `https://suggesto.xyz/App/api.php?gofor=userget&user_id=${userId}`
@@ -74,7 +73,7 @@ const useFetchUserDetails = (): UseFetchUserDetailsReturn => {
     } catch (err) {
       console.error('Error fetching user details:', err);
       const errorMessage = err instanceof Error ? err.message : 'An error occurred';
-      setError(errorMessage);
+      toast.error(errorMessage);
       setUser(null);
       setLoading(false);
       return null;
@@ -88,14 +87,13 @@ const useFetchUserDetails = (): UseFetchUserDetailsReturn => {
     const userId = Cookies.get('userID');
 
     setLoading(true);
-    
+
     if (!userId) {
       // No user logged in
       const publicPages = ['/', '/auth/create-account'];
       setIsPageValid(publicPages.includes(pathname));
       setUser(null);
       setLoading(false);
-      setError(null);
       setHasInitialized(true);
       setIsRedirecting(false);
     } else {
@@ -116,7 +114,7 @@ const useFetchUserDetails = (): UseFetchUserDetailsReturn => {
       const pageValid = publicPages.includes(pathname);
       setIsPageValid(pageValid);
       setIsRedirecting(false);
-      
+
       if (!pageValid) {
         setIsRedirecting(true);
         router.push('/');
@@ -135,7 +133,7 @@ const useFetchUserDetails = (): UseFetchUserDetailsReturn => {
       const authPages = ['/', '/auth/create-account', '/auth/complete-account', '/auth/success'];
       if (authPages.includes(pathname)) {
         setIsPageValid(false);
-        setIsRedirecting(true); // Show redirecting state
+        setIsRedirecting(true);
         router.push('/home');
         return;
       }
@@ -169,7 +167,6 @@ const useFetchUserDetails = (): UseFetchUserDetailsReturn => {
     user,
     loading,
     isPageValid,
-    error,
     isRedirecting
   };
 };

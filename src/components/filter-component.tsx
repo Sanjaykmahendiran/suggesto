@@ -48,7 +48,7 @@ export default function FilterComponent({ onClick }: FilterComponentProps) {
           <X className="h-5 w-5" onClick={onClick} />
           <span className="font-medium">Filter</span>
         </div>
-        <button className="text-[#6c5ce7] text-sm" onClick={resetFilters}>
+        <button className="text-[#b56bbc] text-sm" onClick={resetFilters}>
           Reset Filters
         </button>
       </div>
@@ -62,7 +62,7 @@ export default function FilterComponent({ onClick }: FilterComponentProps) {
               <button
                 key={category}
                 className={`px-4 py-2 rounded-full text-sm ${
-                  selectedCategories.includes(category) ? "bg-[#6c5ce7]" : "bg-[#2d2d3a]"
+                  selectedCategories.includes(category) ? "bg-[#b56bbc]" : "bg-[#2d2d3a]"
                 }`}
                 onClick={() => handleCategoryToggle(category)}
               >
@@ -79,7 +79,7 @@ export default function FilterComponent({ onClick }: FilterComponentProps) {
             {["Premium", "Free"].map((type) => (
               <button
                 key={type}
-                className={`px-4 py-2 rounded-full text-sm ${selectedType === type ? "bg-[#6c5ce7]" : "bg-[#2d2d3a]"}`}
+                className={`px-4 py-2 rounded-full text-sm ${selectedType === type ? "bg-[#b56bbc]" : "bg-[#2d2d3a]"}`}
                 onClick={() => handleTypeToggle(type)}
               >
                 {type}
@@ -114,7 +114,7 @@ export default function FilterComponent({ onClick }: FilterComponentProps) {
       </div>
 
       {/* Apply Filters Button */}
-      <Button className="w-full mt-6 bg-[#6c5ce7] hover:bg-[#5b4dd1] text-white py-3 rounded-md">Apply Filters</Button>
+      <Button className="w-full mt-6 bg-[#b56bbc] hover:bg-[#5b4dd1] text-white py-3 rounded-md">Apply Filters</Button>
     </div>
   )
 }

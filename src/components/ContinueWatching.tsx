@@ -20,12 +20,12 @@ type ContinueWatchingProps = {
 
 const SkeletonContinueWatching = () => (
     <div className="relative min-w-[160px] h-[180px] rounded-lg overflow-hidden">
-        <Skeleton className="h-full w-full bg-[#292938]" />
+        <Skeleton className="h-full w-full bg-[#2b2b2b]" />
         <div className="absolute bottom-8 left-2 right-2">
-            <Skeleton className="h-4 w-24 bg-[#292938]/80 mb-1" />
+            <Skeleton className="h-4 w-24 bg-[#2b2b2b]/80 mb-1" />
         </div>
         <div className="absolute bottom-2 left-2 right-2">
-            <Skeleton className="h-1 w-full bg-[#292938]/60 rounded-full" />
+            <Skeleton className="h-1 w-full bg-[#2b2b2b]/60 rounded-full" />
         </div>
     </div>
 )

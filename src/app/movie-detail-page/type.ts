@@ -8,23 +8,79 @@ export type WatchlistData = {
 }
 
 export type Movie = {
+    movie_buddies: MovieBuddy[] | undefined
+    actor_id: string
+    status?: string
+    movie_id: number
+    movie_code?: string
+    is_tmdb?: number
+    title: string
+    overview: string
+    poster_path: string
+    backdrop_path: string
+    video: string
+    release_date: string
+    rating: string | number
+    sug_ratings?: any
+    language: string
+    popularity?: string
+    tagline?: string
+    revenue?: string
+    is_adult: string
+    actor1?: number
+    actor2?: number
+    actor3?: number
+    actor4?: number
     rated: number
-    movie_id?: string
-    tmdb_movie_id?: string
-    title?: string
-    poster_path?: string
-    backdrop_path?: string
-    genres?: string[]
-    rating?: number | string
-    release_date?: string
-    language?: string
-    overview?: string
-    runtime?: string
-    watchlist_data?: WatchlistData[]
-    otts?: { name: string; logo?: string }[]
-    liked?: number 
-    is_adult : string
+    liked: number
+    genres: string[]
+    watchlist_data: WatchlistData[]
+    actors: {
+        actor1?: {
+            actor_id: number;
+            name: string;
+            image: string;
+        };
+        actor2?: {
+            actor_id: number;
+            name: string;
+            image: string;
+        };
+        actor3?: {
+            actor_id: number;
+            name: string;
+            image: string;
+        };
+        actor4?: {
+            actor_id: number;
+            name: string;
+            image: string;
+        };
+    };
+    director?: {
+        actor_id: number;
+        name: string;
+        image: string;
+    };
+    music_director?: {
+        actor_id: number;
+        name: string;
+        image: string;
+    };
+    cinematographer?: {
+        actor_id: number;
+        name: string;
+        image: string;
+    };
+    editor?: {
+        actor_id: number;
+        name: string;
+        image: string;
+    };
+    created_date?: string
+    modified_date?: string
 }
+
 
 export const mockMovies = [
     {

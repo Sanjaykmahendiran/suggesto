@@ -22,15 +22,15 @@ type PeopleNearYouProps = {
 
 const SkeletonMovie = () => (
     <div className="relative min-w-[120px] h-[180px] rounded-lg overflow-hidden">
-        <Skeleton className="h-full w-full bg-[#292938]" />
+        <Skeleton className="h-full w-full bg-[#2b2b2b]" />
         <div className="absolute bottom-2 left-2 right-2">
-            <Skeleton className="h-4 w-24 bg-[#292938]/80 mb-1" />
+            <Skeleton className="h-4 w-24 bg-[#2b2b2b]/80 mb-1" />
         </div>
     </div>
 )
 
 const SkeletonPeopleNearby = () => (
-    <div className="bg-[#292938] rounded-lg p-4 mb-3">
+    <div className="bg-[#2b2b2b] rounded-lg p-4 mb-3">
         <div className="flex items-center justify-between mb-3">
             <div className="flex items-center">
                 <div className="flex -space-x-2">
@@ -102,7 +102,7 @@ export default function PeopleNearYouWatching({ isLoading, peopleNearYou }: Peop
             {isLoading ? (
                 <SkeletonPeopleNearby />
             ) : (
-                <div className="bg-[#292938] rounded-lg p-4 mb-3">
+                <div className="bg-[#2b2b2b] rounded-lg p-4 mb-3">
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center">
                             <div className="relative">
@@ -130,7 +130,7 @@ export default function PeopleNearYouWatching({ isLoading, peopleNearYou }: Peop
                         <Button
                             size="sm"
                             variant="outline"
-                            className="text-xs rounded-full h-8 border-gray-600 hover:bg-[#6c5ce7]/20"
+                            className="text-xs rounded-full h-8 border-gray-600 hover:bg-[#b56bbc]/20"
                             onClick={() => requestLocationPermission()}
                         >
                             Refresh
@@ -150,7 +150,7 @@ export default function PeopleNearYouWatching({ isLoading, peopleNearYou }: Peop
                             >
                                 <Image src={movie.imageSrc || "/placeholder.svg"} alt={movie.title} fill className="object-cover" />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
-                                <div className="absolute top-2 right-2 bg-[#6c5ce7] text-white text-xs px-1.5 py-0.5 rounded">
+                                <div className="absolute top-2 right-2 bg-[#b56bbc] text-white text-xs px-1.5 py-0.5 rounded">
                                     Trending
                                 </div>
                                 <div className="absolute bottom-2 left-2">

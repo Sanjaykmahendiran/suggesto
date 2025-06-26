@@ -1,5 +1,6 @@
 // Movie interface based on API response
 export interface Movie {
+  watch_id: string
   watchlist_id: string
   movie_id: number
   title: string
@@ -10,6 +11,7 @@ export interface Movie {
   status: string
   added_date: string
   overview?: string
+  total_count: number;
 }
 
 // Filtered movie interface from filter API

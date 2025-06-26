@@ -160,7 +160,7 @@ export default function WatchNowFilterComponent({ onClick, onApplyFilters }: Fil
     <div className="bg-[#181826] text-white p-6 rounded-t-2xl max-h-[90vh] overflow-y-auto">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold">Filters</h2>
-        <button onClick={onClick} className="p-2 rounded-full bg-[#292938]">
+        <button onClick={onClick} className="p-2 rounded-full bg-[#2b2b2b]">
           <X className="w-5 h-5" />
         </button>
       </div>
@@ -172,10 +172,10 @@ export default function WatchNowFilterComponent({ onClick, onApplyFilters }: Fil
           <div>
             <h3 className="font-medium mb-3">Sort By</h3>
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-full bg-[#292938] border-gray-600 text-white">
+              <SelectTrigger className="w-full bg-[#2b2b2b] border-gray-600 text-white">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
-              <SelectContent className="bg-[#292938] border-gray-600 text-white">
+              <SelectContent className="bg-[#2b2b2b] border-gray-600 text-white">
                 <SelectItem value="rating">Rating</SelectItem>
                 <SelectItem value="release_date">Release Date</SelectItem>
                 <SelectItem value="title">Title</SelectItem>
@@ -195,7 +195,7 @@ export default function WatchNowFilterComponent({ onClick, onApplyFilters }: Fil
               step={0.5}
               min={0}
               onValueChange={setMinRating}
-              className="[&>span:first-child]:h-1 [&>span:first-child]:bg-[#292938] [&_[role=slider]]:bg-[#6c5ce7] [&_[role=slider]]:w-5 [&_[role=slider]]:h-5 [&_[role=slider]]:border-0 [&>span:first-child_span]:bg-[#6c5ce7]"
+              className="[&>span:first-child]:h-1 [&>span:first-child]:bg-[#2b2b2b] [&_[role=slider]]:bg-[#b56bbc] [&_[role=slider]]:w-5 [&_[role=slider]]:h-5 [&_[role=slider]]:border-0 [&>span:first-child_span]:bg-[#b56bbc]"
             />
           </div>
 
@@ -211,7 +211,7 @@ export default function WatchNowFilterComponent({ onClick, onApplyFilters }: Fil
               step={0.5}
               min={0}
               onValueChange={setMaxRating}
-              className="[&>span:first-child]:h-1 [&>span:first-child]:bg-[#292938] [&_[role=slider]]:bg-[#6c5ce7] [&_[role=slider]]:w-5 [&_[role=slider]]:h-5 [&_[role=slider]]:border-0 [&>span:first-child_span]:bg-[#6c5ce7]"
+              className="[&>span:first-child]:h-1 [&>span:first-child]:bg-[#2b2b2b] [&_[role=slider]]:bg-[#b56bbc] [&_[role=slider]]:w-5 [&_[role=slider]]:h-5 [&_[role=slider]]:border-0 [&>span:first-child_span]:bg-[#b56bbc]"
             />
           </div>
 
@@ -219,10 +219,10 @@ export default function WatchNowFilterComponent({ onClick, onApplyFilters }: Fil
           <div>
             <h3 className="font-medium mb-3">Release Year</h3>
             <Select value={releaseYear} onValueChange={setReleaseYear}>
-              <SelectTrigger className="w-full bg-[#292938] border-gray-600 text-white">
+              <SelectTrigger className="w-full bg-[#2b2b2b] border-gray-600 text-white">
                 <SelectValue placeholder="Select year" />
               </SelectTrigger>
-              <SelectContent className="bg-[#292938] border-gray-600 text-white max-h-60">
+              <SelectContent className="bg-[#2b2b2b] border-gray-600 text-white max-h-60">
                 <SelectItem value="any-year">Any Year</SelectItem>
                 {years.map((year) => (
                   <SelectItem key={`year-${year}`} value={year.toString()}>
@@ -237,10 +237,10 @@ export default function WatchNowFilterComponent({ onClick, onApplyFilters }: Fil
           <div>
             <h3 className="font-medium mb-3">Language</h3>
             <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
-              <SelectTrigger className="w-full bg-[#292938] border-gray-600 text-white">
+              <SelectTrigger className="w-full bg-[#2b2b2b] border-gray-600 text-white">
                 <SelectValue placeholder="Select language" />
               </SelectTrigger>
-              <SelectContent className="bg-[#292938] border-gray-600 text-white max-h-60">
+              <SelectContent className="bg-[#2b2b2b] border-gray-600 text-white max-h-60">
                 <SelectItem value="any-language">Any Language</SelectItem>
                 {languages.map((lang) => (
                   <SelectItem key={`lang-${lang.id}`} value={lang.id}>
@@ -277,7 +277,7 @@ export default function WatchNowFilterComponent({ onClick, onApplyFilters }: Fil
       <div className="fixed bottom-0 left-0 w-full bg-[#181826] px-6 py-4 flex gap-3 z-10">
         <Button
           variant="outline"
-          className="flex-1 border-gray-600 text-white hover:bg-[#292938]"
+          className="flex-1 border-gray-600 text-white hover:bg-[#2b2b2b]"
           onClick={handleReset}
           disabled={loading}
         >

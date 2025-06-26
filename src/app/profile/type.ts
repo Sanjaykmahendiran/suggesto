@@ -14,6 +14,7 @@ export type UserData = {
   watchlist_count?: number
   watchedlist_count: number
   friends_count?: number
+  not_count?: number
   suggestedlist_count?: number
   badge?: string
   dob: string

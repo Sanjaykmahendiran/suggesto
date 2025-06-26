@@ -162,7 +162,7 @@ export default function UserMovieCollection() {
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-[#292938] rounded-xl overflow-hidden max-w-sm w-full"
+              className="bg-[#2b2b2b] rounded-xl overflow-hidden max-w-sm w-full"
               onClick={(e) => e.stopPropagation()}
             >
               {ratingMode ? (
@@ -202,7 +202,7 @@ export default function UserMovieCollection() {
                       fill
                       className="object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#292938] to-transparent"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#2b2b2b] to-transparent"></div>
 
                     <Button
                       className="absolute top-4 right-4 bg-black/50 rounded-full p-1.5"
@@ -237,7 +237,7 @@ export default function UserMovieCollection() {
                         </Button>
                       ) : (
                         <Button
-                          className="flex-1 bg-[#292938] border border-gray-700 text-white py-3 rounded-lg flex items-center justify-center gap-2"
+                          className="flex-1 bg-[#2b2b2b] border border-gray-700 text-white py-3 rounded-lg flex items-center justify-center gap-2"
                           onClick={() => {
                             setUserMovies((movies) =>
                               movies.map((movie) =>
@@ -254,7 +254,7 @@ export default function UserMovieCollection() {
 
                       <Button
                         className={`flex-1 ${
-                          selectedMovie.userRating ? "bg-[#292938] border border-gray-700" : "bg-[#9370ff]"
+                          selectedMovie.userRating ? "bg-[#2b2b2b] border border-gray-700" : "bg-[#9370ff]"
                         } text-white py-3 rounded-lg flex items-center justify-center gap-2`}
                         onClick={() => setRatingMode(true)}
                       >

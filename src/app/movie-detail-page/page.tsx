@@ -5,13 +5,17 @@ import { Heart, ArrowLeft, Share2, Users, Trash2, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useRouter, useSearchParams } from "next/navigation"
-import MovieShareCard from "@/components/moviesharecard"
-import { Skeleton } from "@/components/ui/skeleton"
+import MovieShareCard from "@/app/movie-detail-page/_components/moviesharecard"
 import Cookies from "js-cookie"
-import ReviewSection from "@/components/review-section"
+import ReviewSection from "@/app/movie-detail-page/_components/review-section"
 import { YouMightAlsoLike } from "@/components/you-might-also-like"
 import { Movie, WatchlistData } from "@/app/movie-detail-page/type"
 import { PageTransitionWrapper } from "@/components/PageTransition"
+import toast from "react-hot-toast"
+import RatingPopup from "./_components/ratingpopup"
+import CastAndCrew from "./_components/CastAndCrew"
+import LoadingSkeleton from "./_components/loadingskeleton"
+import MovieBuddiesSection from "./_components/movie-buddies"
 
 export default function MovieDetailPage() {
     const router = useRouter()
@@ -29,16 +33,17 @@ export default function MovieDetailPage() {
     const [hoverRating, setHoverRating] = useState(0)
     const [userReview, setUserReview] = useState("")
     const [submittingRating, setSubmittingRating] = useState(false)
-
+    const [showVideo, setShowVideo] = useState(false)
+    const [showConfirm, setShowConfirm] = useState(false);
     const [movie, setMovie] = useState<Movie | null>(null)
     const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
     const [addingToWatchlist, setAddingToWatchlist] = useState(false)
-    const [watchlistSuccess, setWatchlistSuccess] = useState(false)
-    const [watchlistError, setWatchlistError] = useState<string | null>(null)
     const [isExpanded, setIsExpanded] = useState(false);
-    const [ratingSuccessMessage, setRatingSuccessMessage] = useState("");
 
+    useEffect(() => {
+        // Scroll to top when component mounts
+        window.scrollTo(0, 0);
+    }, []);
 
     const toggleOverview = () => setIsExpanded(!isExpanded);
 
@@ -68,7 +73,6 @@ export default function MovieDetailPage() {
     const fetchMovieDetails = async () => {
         try {
             setLoading(true)
-            setError(null)
 
             if (!movie_id && !tmdb_movie_id) {
                 throw new Error("No movie ID provided")
@@ -115,7 +119,7 @@ export default function MovieDetailPage() {
             }
         } catch (err) {
             console.error("Error fetching movie details:", err)
-            setError(
+            toast.error(
                 typeof err === "object" && err !== null && "message" in err
                     ? (err as { message?: string }).message || "Failed to load movie details"
                     : "Failed to load movie details",
@@ -131,13 +135,12 @@ export default function MovieDetailPage() {
 
     const handleAddToWatchlist = async () => {
         if (!userId) {
-            setWatchlistError("Please login to add to watchlist")
+            toast.error("Please login to add to watchlist")
             return
         }
 
         try {
             setAddingToWatchlist(true)
-            setWatchlistError(null)
 
             // Create the request body with the required parameters
             const requestBody = {
@@ -161,9 +164,8 @@ export default function MovieDetailPage() {
             }
 
             const data = await response.json()
-            setWatchlistSuccess(true)
+            toast.success("Added to watchlist successfully")
             setTimeout(() => {
-                setWatchlistSuccess(false);
                 router.push("/watch-list");
             }, 1000);
 
@@ -174,7 +176,7 @@ export default function MovieDetailPage() {
                 const newWatchlistEntry: WatchlistData = {
                     watch_id: data.watch_id || 0, // Use the returned watch_id from API
                     user_id: Number.parseInt(userId),
-                    movie_id: Number.parseInt(prevMovie.movie_id || movie_id || "0"),
+                    movie_id: Number.parseInt(String(prevMovie.movie_id || movie_id || "0")),
                     friend_id: movie?.watchlist_data?.[0]?.friend_id ?? 0,
                     status: "planned",
                     created_date: new Date().toISOString(),
@@ -190,7 +192,7 @@ export default function MovieDetailPage() {
             })
         } catch (err) {
             console.error("Error adding to watchlist:", err)
-            setWatchlistError(
+            toast.error(
                 typeof err === "object" && err !== null && "message" in err
                     ? (err as { message?: string }).message || "Failed to add to watchlist"
                     : "Failed to add to watchlist",
@@ -200,15 +202,92 @@ export default function MovieDetailPage() {
         }
     }
 
+    const handleUpdateWatchlist = async () => {
+        if (!userId) {
+            toast.error("Please login to update watchlist");
+            return;
+        }
+
+        try {
+            setAddingToWatchlist(true);
+
+            // Find the user's watchlist entry to get the watch_id
+            const userWatchlistEntry = movie?.watchlist_data?.find(
+                (entry) => entry.user_id.toString() === userId.toString()
+            );
+
+            if (!userWatchlistEntry) {
+                toast.error("Movie not found in your watchlist");
+                return;
+            }
+
+            // Build URL with query parameters
+            const queryParams = new URLSearchParams({
+                gofor: "updatewatchlist",
+                watch_id: userWatchlistEntry.watch_id.toString(),
+            });
+
+            const url = `https://suggesto.xyz/App/api.php?${queryParams.toString()}`;
+
+            const response = await fetch(url, {
+                method: "GET",
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `Failed with status ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (data.status === "success" || data.response === "Watchroom Updated!") {
+                toast.success("Added to watchlist again successfully");
+                setTimeout(() => {
+                    router.push("/watch-list");
+                }, 1000);
+
+                // Update the movie state to reflect the new watchlist status
+                setMovie((prevMovie) => {
+                    if (!prevMovie || !prevMovie.watchlist_data) return prevMovie;
+
+                    const updatedWatchlistData = prevMovie.watchlist_data.map((entry) =>
+                        entry.user_id.toString() === userId.toString()
+                            ? { ...entry, status: "planned" }
+                            : entry
+                    );
+
+                    return {
+                        ...prevMovie,
+                        watchlist_data: updatedWatchlistData,
+                    };
+                });
+            } else {
+                throw new Error(data.message || "Failed to update watchlist");
+            }
+
+        } catch (err) {
+            console.error("Error updating watchlist:", err);
+            toast.error(
+                typeof err === "object" && err !== null && "message" in err
+                    ? (err as { message?: string }).message || "Failed to update watchlist"
+                    : "Failed to update watchlist"
+            );
+        } finally {
+            setAddingToWatchlist(false);
+        }
+    };
+
+
+
     const handleMarkAsWatched = async () => {
         if (!userId) {
-            setWatchlistError("Please login to mark as watched")
+            toast.error("Please login to mark as watched")
             return
         }
 
         try {
             setAddingToWatchlist(true)
-            setWatchlistError(null)
+
 
             // Find the user's watchlist entry to get the watch_id
             const userWatchlistEntry = movie?.watchlist_data?.find((entry) => entry.user_id.toString() === userId.toString())
@@ -237,11 +316,12 @@ export default function MovieDetailPage() {
             }
 
             const data = await response.json()
-            setWatchlistSuccess(true)
-            setTimeout(() => {
-                setWatchlistSuccess(false);
-                router.push("/watch-list");
-            }, 1000);
+            if (data.status === "Movie Watched") {
+                toast.success("Marked as watched successfully")
+                setTimeout(() => {
+                    router.back();
+                }, 1000);
+            }
 
             // Update the movie state to reflect the new watchlist status
             setMovie((prevMovie) => {
@@ -258,7 +338,7 @@ export default function MovieDetailPage() {
             })
         } catch (err) {
             console.error("Error marking as watched:", err)
-            setWatchlistError(
+            toast.error(
                 typeof err === "object" && err !== null && "message" in err
                     ? (err as { message?: string }).message || "Failed to mark as watched"
                     : "Failed to mark as watched",
@@ -271,19 +351,17 @@ export default function MovieDetailPage() {
     // New function to handle marking watchroom movie as watched
     const handleMarkAsWatchedRoom = async () => {
         if (!userId) {
-            setWatchlistError("Please login to mark as watched")
+            toast.error("Please login to mark as watched")
             return
         }
 
         if (!watromovId) {
-            setWatchlistError("Movie ID not found")
+            toast.error("Movie ID not found")
             return
         }
 
         try {
             setAddingToWatchlist(true)
-            setWatchlistError(null)
-
             const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=watchedmovieroom&watromov_id=${watromovId}`, {
                 method: "GET",
             })
@@ -296,9 +374,8 @@ export default function MovieDetailPage() {
 
             // Check for successful response
             if (data.status === "Room Members Watched Movie") {
-                setWatchlistSuccess(true)
+                toast.success("Marked as watched room movie successfully")
                 setTimeout(() => {
-                    setWatchlistSuccess(false);
                     router.back();
                 }, 1000);
             } else {
@@ -307,7 +384,7 @@ export default function MovieDetailPage() {
 
         } catch (err) {
             console.error("Error marking watchroom movie as watched:", err)
-            setWatchlistError(
+            toast.error(
                 typeof err === "object" && err !== null && "message" in err
                     ? (err as { message?: string }).message || "Failed to mark as watched"
                     : "Failed to mark as watched",
@@ -319,22 +396,20 @@ export default function MovieDetailPage() {
 
     const handleRatingSubmit = async () => {
         if (!userId) {
-            setWatchlistError("Please login to rate this movie")
+            toast.error("Please login to rate this movie")
             return
         }
 
         if (userRating === 0) {
-            setWatchlistError("Please select a rating")
+            toast.error("Please select a rating")
             return
         }
 
         try {
             setSubmittingRating(true)
-            setWatchlistError(null)
-
             const requestBody = {
                 gofor: "movierating",
-                movie_id: parseInt(movie?.movie_id || movie_id || "0"),
+                movie_id: parseInt(String(movie?.movie_id || movie_id || "0")),
                 user_id: parseInt(userId),
                 rating: userRating,
                 review: userReview.trim()
@@ -357,12 +432,10 @@ export default function MovieDetailPage() {
 
             // Check for specific success message
             if (data.response === "Movie Rated Successfully") {
-                setRatingSuccessMessage("Your rating was submitted successfully!");
+                toast.success("Your rating was submitted successfully!");
             } else {
-                setWatchlistSuccess(true);
-                setTimeout(() => setWatchlistSuccess(false), 2000);
+                toast.error("Failed to submit rating");
             }
-
 
             // Close the rating popup and reset form
             setShowRatingPopup(false)
@@ -370,14 +443,13 @@ export default function MovieDetailPage() {
             setUserReview("")
             setHoverRating(0)
             setTimeout(() => {
-                setRatingSuccessMessage("");
             }, 2000);
 
             fetchMovieDetails()
 
         } catch (err) {
             console.error("Error submitting rating:", err)
-            setWatchlistError(
+            toast.error(
                 typeof err === "object" && err !== null && "message" in err
                     ? (err as { message?: string }).message || "Failed to submit rating"
                     : "Failed to submit rating",
@@ -390,56 +462,7 @@ export default function MovieDetailPage() {
     // Show loading skeletons while fetching data
     if (loading) {
         return (
-            <div className="flex flex-col min-h-screen text-white">
-                <div className="relative">
-                    <div className="p-4 flex items-center">
-                        <button className="p-2" onClick={() => router.back()}>
-                            <ArrowLeft size={20} />
-                        </button>
-                        <h1 className="text-xl font-semibold ml-4">Movies</h1>
-                    </div>
-                    <Skeleton className="h-[400px] w-full bg-gray-800" />
-                </div>
-
-                <div className="px-4 py-6">
-                    <Skeleton className="h-8 w-36 bg-gray-800 mb-2" />
-                    <Skeleton className="h-4 w-48 bg-gray-800 mb-4" />
-
-                    <div className="flex gap-2 mb-6">
-                        <Skeleton className="h-6 w-16 bg-gray-800 rounded-full" />
-                        <Skeleton className="h-6 w-16 bg-gray-800 rounded-full" />
-                        <Skeleton className="h-6 w-16 bg-gray-800 rounded-full" />
-                    </div>
-
-                    <div className="flex justify-between mt-6">
-                        <Skeleton className="h-10 w-10 bg-gray-800 rounded-full" />
-                        <Skeleton className="h-10 w-32 bg-gray-800 rounded-full" />
-                        <Skeleton className="h-10 w-10 bg-gray-800 rounded-full" />
-                    </div>
-                </div>
-            </div>
-        )
-    }
-
-    // Show error state
-    if (error) {
-        return (
-            <div className="flex flex-col min-h-screen text-white">
-                <div className="p-4">
-                    <button className="p-2 " onClick={() => router.back()}>
-                        <ArrowLeft size={20} />
-                    </button>
-                </div>
-                <div className="flex flex-col items-center justify-center flex-1 px-4 text-center">
-                    <div className="bg-red-900/30 p-6 rounded-lg max-w-md">
-                        <h2 className="text-xl font-semibold mb-2">Error Loading Movie</h2>
-                        <p className="text-gray-300">{error}</p>
-                        <Button className="mt-4 bg-blue-600 hover:bg-blue-700" onClick={() => window.location.reload()}>
-                            Try Again
-                        </Button>
-                    </div>
-                </div>
-            </div>
+            <LoadingSkeleton />
         )
     }
 
@@ -455,7 +478,6 @@ export default function MovieDetailPage() {
         genres = [],
         release_date,
         language = "Unknown",
-        runtime = "",
         overview = "",
         rating,
         is_adult = "",
@@ -483,7 +505,6 @@ export default function MovieDetailPage() {
 
     // Format release year and country with rating
     const releaseYear = release_date ? new Date(release_date).getFullYear() : "";
-    const formattedRuntime = runtime || "";
     const audience = is_adult === "1" ? "A" : "GA";
     const ratingText = rating ? (
         <><span className="inline-flex items-center gap-2">
@@ -512,7 +533,11 @@ export default function MovieDetailPage() {
         releaseYear ? `${releaseYear} (${language?.toUpperCase() || "Unknown"})` : "",
         audience,
         ratingText,
-        formattedRuntime
+    ].filter(Boolean);
+
+    const videoreleaseInfo = [
+        releaseYear ? `${releaseYear} (${language?.toUpperCase() || "Unknown"})` : "",
+        audience,
     ].filter(Boolean);
 
 
@@ -523,7 +548,7 @@ export default function MovieDetailPage() {
             return {
                 text: "Watched",
                 action: undefined,
-                className: "bg-[#292938] cursor-default",
+                className: "bg-[#2b2b2b] cursor-default",
             };
         }
 
@@ -531,7 +556,7 @@ export default function MovieDetailPage() {
             return {
                 text: "Mark as watched",
                 action: handleMarkAsWatchedRoom,
-                className: "bg-[#292938]",
+                className: "bg-[#2b2b2b]",
             };
         }
 
@@ -541,7 +566,7 @@ export default function MovieDetailPage() {
             return {
                 text: "Add to watchlist",
                 action: handleAddToWatchlist,
-                className: "bg-[#292938]",
+                className: "bg-[#2b2b2b]",
             }
         }
 
@@ -550,13 +575,19 @@ export default function MovieDetailPage() {
                 return {
                     text: "Mark as watched",
                     action: handleMarkAsWatched,
-                    className: "bg-[#292938]",
+                    className: "bg-[#2b2b2b]",
+                }
+            case "watched":
+                return {
+                    text: "Add to watchlist Again",
+                    action: handleUpdateWatchlist,
+                    className: "bg-[#2b2b2b]",
                 }
             default:
                 return {
                     text: "Add to watchlist",
                     action: handleAddToWatchlist,
-                    className: "bg-[#292938]",
+                    className: "bg-[#2b2b2b]",
                 }
         }
     }
@@ -564,29 +595,28 @@ export default function MovieDetailPage() {
     const handleDeleteMovie = async () => {
         if (MovieType === "watchroom" || MovieType === "watchroomwatched") {
             if (!watromovId) {
-                setWatchlistError("Watchroom movie ID not found");
+                toast.error("Watchroom movie ID not found");
                 return;
             }
 
             try {
                 setAddingToWatchlist(true);
-                setWatchlistError(null);
+                ;
 
                 const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=deletewatroommov&watromov_id=${watromovId}`);
                 const result = await response.json();
 
                 if (result.response === "Movie removed from Watchroom") {
-                    setWatchlistSuccess(true);
+                    toast.success("Movie removed from Watchroom")
                     setTimeout(() => {
-                        setWatchlistSuccess(false);
                         router.back();
-                    }, 1000);
+                    }, 3000);
                 } else {
-                    setWatchlistError(result.message || "Failed to delete watchroom movie");
+                    toast.error(result.message || "Failed to delete watchroom movie");
                 }
             } catch (error) {
                 console.error("Error deleting watchroom movie:", error);
-                setWatchlistError("Network error: Failed to delete watchroom movie");
+                toast.error("Network error: Failed to delete watchroom movie");
             } finally {
                 setAddingToWatchlist(false);
             }
@@ -596,17 +626,17 @@ export default function MovieDetailPage() {
             );
 
             if (userWatchlistEntry) {
-                handleRemoveFromWatchlist(userWatchlistEntry.watch_id);
+                handleDeleteFromWatchlist(userWatchlistEntry.watch_id);
             } else {
-                setWatchlistError("Movie not found in your watchlist");
+                toast.error("Movie not found in your watchlist");
             }
         }
     };
 
-    const handleRemoveFromWatchlist = async (watchId: any) => {
+    const handleDeleteFromWatchlist = async (watchId: any) => {
         try {
             setAddingToWatchlist(true);
-            setWatchlistError(null);
+            ;
 
             const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=deletewatmov&watch_id=${watchId}`, {
                 method: 'GET',
@@ -614,18 +644,17 @@ export default function MovieDetailPage() {
 
             const data = await response.json();
 
-            if (data.response === "Movie removed from watchlist") {
-                setWatchlistSuccess(true);
+            if (data.response === "Movie removed from Watchlist") {
+                toast.success("Movie removed from watchlist")
                 setTimeout(() => {
-                    setWatchlistSuccess(false);
                     router.back();
                 }, 1000);
             } else {
-                setWatchlistError(data.message || "Failed to remove from watchlist");
+                toast.error(data.message || "Failed to remove from watchlist");
             }
         } catch (error) {
             console.error("Error removing from watchlist:", error);
-            setWatchlistError("Network error: Failed to remove from watchlist");
+            toast.error("Network error: Failed to remove from watchlist");
         } finally {
             setAddingToWatchlist(false);
         }
@@ -665,6 +694,55 @@ export default function MovieDetailPage() {
         }
     };
 
+    const handleAlreadySeen = async () => {
+        if (!userId) {
+            toast.error("Please login to mark as already seen")
+            return
+        }
+
+        try {
+            setAddingToWatchlist(true)
+
+
+            const requestBody = {
+                gofor: "alreadywatched",
+                user_id: userId,
+                movie_id: parseInt(String(movie?.movie_id ?? movie_id ?? "0"))
+            }
+
+            const response = await fetch("https://suggesto.xyz/App/api.php", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(requestBody),
+            })
+
+            if (!response.ok) {
+                const errorData = await response.json()
+                throw new Error(errorData.message || `Failed with status ${response.status}`)
+            }
+
+            const data = await response.json()
+
+            // Show success and navigate back
+            toast.success("Marked as already seen successfully")
+            setTimeout(() => {
+                router.back()
+            }, 1000)
+
+        } catch (err) {
+            console.error("Error marking as already seen:", err)
+            toast.error(
+                typeof err === "object" && err !== null && "message" in err
+                    ? (err as { message?: string }).message || "Failed to mark as already seen"
+                    : "Failed to mark as already seen",
+            )
+        } finally {
+            setAddingToWatchlist(false)
+        }
+    }
+
 
     // Helper to count how many users added this movie to their watchlist in the last week
     function getWatchlistCountLastWeek(watchlist_data?: WatchlistData[]): number {
@@ -679,313 +757,323 @@ export default function MovieDetailPage() {
 
     const actionButton = getActionButton()
 
+    const extractYouTubeVideoId = (url: string) => {
+        const regex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/;
+        const match = url?.match(regex);
+        return match ? match[1] : null;
+    };
+
     return (
 
         // <PageTransitionWrapper>
-            <div className="flex flex-col h-screen fixed inset-0 overflow-y-auto mb-16">
-                {/* Header with backdrop */}
-                <div className="relative pt-6">
-                    {/* Backdrop image */}
-                    {backdropUrl && (
-                        <div className="absolute inset-0 w-full h-full">
-                            <img
-                                src={backdropUrl}
-                                alt={`${title} backdrop`}
-                                className="w-full h-full object-cover"
-                            />
-                            {/* Dark overlay for better text readability */}
-                            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/90"></div>
-                            {/* Bottom gradient for smooth transition */}
-                            <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#181826] to-transparent"></div>
-                        </div>
-                    )}
+        <div className="flex flex-col min-h-screen overflow-y-auto ">
+            {/* Header with backdrop */}
+            <div className="relative pt-8">
+                {/* Backdrop image */}
+                {backdropUrl && (
+                    <div className="absolute inset-0 w-full h-full">
+                        <img
+                            src={backdropUrl}
+                            alt={`${title} backdrop`}
+                            className="w-full h-full object-cover"
+                        />
+                        {/* Dark overlay for better text readability */}
+                        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/90"></div>
+                        {/* Bottom gradient for smooth transition */}
+                        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#121214] to-transparent"></div>
+                    </div>
+                )}
 
-                    {/* Header content */}
-                    <div className="relative z-10 px-4 flex items-center justify-between">
-                        {/* Back Button */}
+                {/* Header content */}
+                <div className="relative z-10 px-4 flex items-center justify-between">
+                    {/* Back Button */}
+                    <button
+                        className="p-2 rounded-full bg-[#2b2b2b]"
+                        onClick={() => router.back()}
+                    >
+                        <ArrowLeft size={20} />
+                    </button>
+
+                    {/* Delete Button - Positioned right */}
+                    <div className="absolute right-2">
                         <button
-                            className="p-2 rounded-full bg-[#292938]"
-                            onClick={() => router.back()}
-                        >
-                            <ArrowLeft size={20} />
-                        </button>
-
-                        {/* Title (optional) */}
-                        {/* <h1 className="text-xl font-semibold">Title</h1> */}
-
-                        {/* Share Button */}
-                        <button
-                            className="p-2 rounded-full hover:bg-black/10 transition"
+                            className="p-2 rounded-full bg-[#2b2b2b] flex items-center justify-center"
                             onClick={() => setShowShareCard(true)}
                         >
                             <Share2 className="w-5 h-5" />
                         </button>
                     </div>
+                </div>
 
-                    {/* Movie poster section with backdrop */}
-                    <div className="relative z-10 px-4 pb-4">
-                        <div className="relative w-[80%] aspect-[2/3] max-w-sm mx-auto mb-4 rounded-lg overflow-hidden shadow-2xl">
-                            <img
-                                src={posterUrl || "/placeholder.svg"}
-                                alt={`${title} poster`}
-                                className="w-full h-full object-cover"
-                            />
-                        </div>
+                {/* Movie poster section */}
+                <div className="relative z-10 px-4 pb-4">
+                    <div className="relative w-[80%] aspect-[2/3] max-w-sm mx-auto mb-4 rounded-lg overflow-hidden shadow-2xl">
+                        <img
+                            src={posterUrl || "/placeholder.svg"}
+                            alt={`${title} poster`}
+                            className="w-full h-full object-cover"
+                        />
+                        {/* Play button overlay - only show if video exists */}
+                        {movie.video && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                                <button
+                                    onClick={() => setShowVideo(true)}
+                                    className="w-12 h-12 bg-white/70 rounded-full flex items-center justify-center hover:bg-red-700 transition-colors shadow-lg"
+                                >
+                                    <svg
+                                        className="w-10 h-10 text-white"
+                                        fill="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path d="M8 5v14l11-7z" />
+                                    </svg>
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                {/* Movie details */}
-                <div className="px-4 flex flex-col items-center -mt-4 relative z-10">
-                    <h2 className="text-2xl font-bold text-center mb-1">{title}</h2>
-                    <p className="text-sm text-gray-400 text-center mb-2">
-                        {releaseInfo.map((info, i) => (
-                            <span key={i}>
-                                {i > 0 && " | "}
-                                {info}
-                            </span>
-                        ))}
-                    </p>
+                {/* Video Popup Modal */}
+                {showVideo && movie.video && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                        {/* Click outside to close */}
+                        <div
+                            className="absolute inset-0 z-10"
+                            onClick={() => setShowVideo(false)}
+                        />
 
-                    {overview && (
-                        <p className="text-sm text-gray-300 text-center mb-2 px-4 leading-tight max-w-sm">
-                            {truncateOverview(overview)}{" "}
-                            {overview.length > 80 && (
-                                <span
-                                    onClick={toggleOverview}
-                                    className="text-primary cursor-pointer hover:underline"
-                                >
-                                    {isExpanded ? "less" : "more"}
-                                </span>
-                            )}
-                        </p>
-                    )}
+                        <div className="relative z-20 w-full mx-2 flex flex-col items-center">
+                            {/* Video Player */}
+                            <div className="relative w-full aspect-video rounded-lg overflow-hidden shadow-2xl">
+                                <iframe
+                                    src={`https://www.youtube.com/embed/${extractYouTubeVideoId(movie.video)}?autoplay=1&modestbranding=1&rel=0&disablekb=1&controls=1`}
+                                    title={title}
+                                    className="w-full h-full"
+                                    frameBorder="0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                />
+                            </div>
 
+                            {/* Video Info */}
+                            <div className="mt-4 mb-2 px-4 text-white text-center">
+                                <h2 className="text-2xl font-bold mb-1">{title}</h2>
+                                <p className="text-sm text-gray-400 mb-2">
+                                    {videoreleaseInfo.map((info, i) => (
+                                        <span key={i}>
+                                            {i > 0 && " | "}
+                                            {info}
+                                        </span>
+                                    ))}
+                                </p>
 
-                    {/* Genre tags */}
-                    <div className="flex flex-wrap justify-center gap-2 ">
-                        {genresArray.map((genre, index) => (
-                            <span key={index} className="px-3 py-1 text-sm bg-gray-800 rounded-full">
-                                {genre}
-                            </span>
-                        ))}
+                                <div className="flex flex-wrap justify-center gap-2 mt-2">
+                                    {genresArray.map((genre, index) => (
+                                        <span key={index} className="px-3 py-1 text-sm bg-[#2b2b2b] rounded-full">
+                                            {genre}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                        {/* Close button */}
+                        <button
+                            onClick={() => setShowVideo(false)}
+                            className="absolute top-10 right-6 p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors z-30"
+                        >
+                            <X className="w-4 h-4 text-white" />
+                        </button>
                     </div>
+                )}
 
+            </div>
+
+            {/* Movie details */}
+            <div className="px-4 flex flex-col items-center -mt-4 relative z-10">
+                <h2 className="text-2xl font-bold text-center mb-1">{title}</h2>
+                <p className="text-sm text-gray-400 text-center mb-2">
+                    {releaseInfo.map((info, i) => (
+                        <span key={i}>
+                            {i > 0 && " | "}
+                            {info}
+                        </span>
+                    ))}
+                </p>
+
+                {overview && (
+                    <p className="text-sm text-gray-300 text-center mb-2 px-4 leading-tight max-w-sm">
+                        {truncateOverview(overview)}{" "}
+                        {overview.length > 80 && (
+                            <span
+                                onClick={toggleOverview}
+                                className="text-primary cursor-pointer hover:underline"
+                            >
+                                {isExpanded ? "less" : "more"}
+                            </span>
+                        )}
+                    </p>
+                )}
+
+
+                {/* Genre tags */}
+                <div className="flex flex-wrap justify-center gap-2 ">
+                    {genresArray.map((genre, index) => (
+                        <span key={index} className="px-3 py-1 text-sm bg-[#2b2b2b] rounded-full">
+                            {genre}
+                        </span>
+                    ))}
+                </div>
+
+                <div className="flex items-center justify-center w-full ">
                     {/* Watchlist statistics - Only show for non-watchroom types */}
                     {MovieType !== "watchroom" && actionButton.text === "Add to watchlist" && (
                         <div className="flex space-x-2 text-sm text-gray-400 mt-4 mb-4">
-                            <div className="bg-gray-800/50 px-3 py-1 rounded-full flex items-center space-x-2">
+                            <div className="bg-[#2b2b2b] px-3 py-1 rounded-full flex items-center space-x-2">
                                 <Users className="w-4 h-4 text-primary" />
                                 <span>{getWatchlistCountLastWeek(movie?.watchlist_data)} Watchlisted last week</span>
                             </div>
                         </div>
                     )}
-
-                    {/* Action buttons */}
-                    <div className="fixed bottom-0 left-0 bg-[#181826] right-0 px-4 py-2 z-50 backdrop-blur-sm ">
-                        <div className="relative flex justify-center items-center w-full">
-                            {/* Favorite Button - Positioned left if visible */}
-                            {MovieType !== "watchroom" && MovieType !== "watchroomwatched" && (
-                                <div className="absolute left-0">
-                                    <button
-                                        className={cn(
-                                            "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300",
-                                            isFavorite
-                                                ? "bg-gradient-to-br from-green-500/60 to-green-700/60 backdrop-blur-md border border-white/20 shadow-lg"
-                                                : "bg-[#292938]"
-                                        )}
-                                        onClick={handleToggleFavorite}
-                                        disabled={addingToWatchlist}
-                                    >
-                                        <Heart
-                                            className={cn(
-                                                "w-5 h-5",
-                                                isFavorite ? "fill-green-500 text-green-500" : "text-white"
-                                            )}
-                                        />
-                                    </button>
-                                </div>
-                            )}
-
-
-                            {/* Centered Action Button */}
-                            {actionButton && (
-                                <button
-                                    className={cn(
-                                        "px-6 py-3 rounded-full text-lg text-primary font-semibold",
-                                        actionButton.className,
-                                        addingToWatchlist && "opacity-70"
-                                    )}
-                                    onClick={actionButton.action}
-                                    disabled={!!addingToWatchlist}
-                                >
-                                    {addingToWatchlist ? "Processing..." : actionButton.text}
-                                </button>
-                            )}
-
-
-                            {/* Delete Button - Positioned right */}
-                            <div className="absolute right-0">
-                                <button
-                                    className="w-12 h-12 rounded-full bg-[#292938] flex items-center justify-center"
-                                    onClick={handleDeleteMovie}
-                                >
-                                    <Trash2 className="w-5 h-5" />
-                                </button>
-                            </div>
-                        </div>
-
-                    </div>
-
-                    {/* Review Section */}
-                    <ReviewSection viewer_id={parseInt(userId)} movie_id={parseInt(movie_id || "")} />
-
-                    {/* You Might Also Like Section */}
-                    <YouMightAlsoLike movie_id={parseInt(movie_id || "")} user_id={parseInt(userId)} />
+                    {actionButton.text === "Add to watchlist" && (
+                        <Button
+                            variant="link"
+                            onClick={handleAlreadySeen}
+                            disabled={addingToWatchlist}
+                        >
+                            <span className="bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text text-transparent">
+                                {addingToWatchlist ? "Processing..." : "Already Seen"}</span>
+                        </Button>
+                    )}
                 </div>
 
-                {ratingSuccessMessage && (
-                    <div className="fixed top-16 left-0 right-0 flex justify-center z-50">
-                        <div className="bg-green-600 text-white px-4 py-2 rounded-md shadow-lg">
-                            {ratingSuccessMessage}
-                        </div>
-                    </div>
-                )}
+                {/* Action buttons */}
+                <div className="fixed px-2 bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/100 to-black/0 z-50 h-20 flex items-center justify-center">
+                    <div className="relative flex items-center justify-center w-full">
 
-                {watchlistSuccess && (
-                    <div className="fixed top-16 left-0 right-0 flex justify-center z-50">
-                        <div className="bg-green-600 text-white px-4 py-2 rounded-md shadow-lg">
-                            {MovieType === "watchroom"
-                                ? "Marked as watched room movie successfully"
-                                : watchlist_status === "watched"
-                                    ? "Marked as watched successfully"
-                                    : "Added to watchlist successfully"}
-                        </div>
-                    </div>
-                )}
+                        {/* Delete Button - Left */}
 
-                {watchlistError && (
-                    <div className="fixed top-16 left-0 right-0 flex justify-center z-50">
-                        <div className="bg-red-600 text-white px-4 py-2 rounded-md shadow-lg">{watchlistError}</div>
-                    </div>
-                )}
+                        <button
+                            className="absolute w-12 h-12 left-0 p-2 flex items-center justify-center rounded-full bg-[#2b2b2b]"
+                            onClick={() => setShowConfirm(true)}
+                        >
+                            <Trash2 size={20} />
+                        </button>
 
-                {/* Rating Popup */}
-                {showRatingPopup && (
-                    <div className="fixed inset-0 z-50 backdrop-blur-sm bg-black/70 flex items-center justify-center p-4">
-                        <div className="bg-gray-900 rounded-lg p-6 w-full max-w-md mx-4 shadow-xl border border-gray-700">
-                            {/* Header */}
-                            <div className="flex items-center justify-between mb-6">
-                                <h3 className="text-xl font-semibold text-white">Rate & Review</h3>
+                        {/* Centered Action Button */}
+                        {actionButton && (
+                            <button
+                                className={cn(
+                                    "px-6 py-3 rounded-full text-lg font-semibold",
+                                    actionButton.className,
+                                    addingToWatchlist && "opacity-70"
+                                )}
+                                onClick={actionButton.action}
+                                disabled={!!addingToWatchlist}
+                            >
+                                <span className="bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text text-transparent">
+                                    {addingToWatchlist ? "Processing..." : actionButton.text}
+                                </span>
+                            </button>
+                        )}
+
+                        {/* Favorite Button - Right */}
+                        {MovieType !== "watchroom" && MovieType !== "watchroomwatched" && (
+                            <div className="absolute right-0">
                                 <button
-                                    onClick={() => {
-                                        setShowRatingPopup(false)
-                                        setUserRating(0)
-                                        setUserReview("")
-                                        setHoverRating(0)
-                                    }}
-                                    className="text-gray-400 hover:text-white transition-colors"
-                                >
-                                    <X size={24} />
-                                </button>
-                            </div>
-
-                            {/* Movie Title */}
-                            <p className="text-gray-300 text-center mb-4">{title}</p>
-
-                            {/* Star Slider Rating */}
-                            <div className="flex flex-col items-center mb-6 px-2">
-                                <div className="w-full relative">
-                                    {/* Range Slider with custom star thumb */}
-                                    <input
-                                        type="range"
-                                        min={0}
-                                        max={10}
-                                        step={1}
-                                        value={userRating}
-                                        onChange={(e) => setUserRating(Number(e.target.value))}
-                                        className="w-full appearance-none custom-star-thumb"
-                                        style={{
-                                            '--slider-value': `${(userRating / 10) * 100}%`,
-                                        } as React.CSSProperties & Record<string, any>}
-                                    />
-
-                                </div>
-
-                                {/* Rating Display */}
-                                <div className="flex justify-between w-full mt-3 text-sm">
-                                    <span className="text-gray-400 italic">Slide to rate →</span>
-                                    <span className="text-white font-semibold">{userRating}/10</span>
-                                </div>
-
-                                {/* Description */}
-                                <p className="mt-4 text-center text-2xl text-white font-[Pacifico]">
-                                    Your ratings matter!
-                                </p>
-                                <p className="text-xs text-gray-400 text-center mt-1">
-                                    They help others decide what to watch next.
-                                </p>
-
-                            </div>
-
-
-                            {/* Review Textarea */}
-                            <div className="mb-6">
-                                <label className="block text-sm font-medium text-gray-300 mb-2">
-                                    Review (Optional)
-                                </label>
-                                <textarea
-                                    value={userReview}
-                                    onChange={(e) => setUserReview(e.target.value)}
-                                    placeholder="Share your thoughts about this movie..."
-                                    className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
-                                    rows={4}
-                                    maxLength={500}
-                                />
-                                <p className="text-xs text-gray-400 mt-1">{userReview.length}/500 characters</p>
-                            </div>
-
-                            {/* Submit Button */}
-                            <div className="flex space-x-3">
-                                <button
-                                    onClick={() => {
-                                        setShowRatingPopup(false)
-                                        setUserRating(0)
-                                        setUserReview("")
-                                        setHoverRating(0)
-                                    }}
-                                    className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors"
-                                    disabled={submittingRating}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleRatingSubmit}
-                                    disabled={submittingRating || userRating === 0}
                                     className={cn(
-                                        "flex-1 px-4 py-2 rounded-md font-semibold transition-colors",
-                                        userRating === 0
-                                            ? "bg-gray-600 text-gray-400 cursor-not-allowed"
-                                            : "bg-primary text-white hover:bg-blue-700",
-                                        submittingRating && "opacity-70"
+                                        "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300",
+                                        isFavorite
+                                            ? "bg-gradient-to-br from-green-500/60 to-green-700/60 backdrop-blur-md border border-white/20 shadow-lg"
+                                            : "bg-[#2b2b2b]"
                                     )}
+                                    onClick={handleToggleFavorite}
+                                    disabled={addingToWatchlist}
                                 >
-                                    {submittingRating ? "Submitting..." : "Submit "}
+                                    <Heart
+                                        className={cn(
+                                            "w-5 h-5",
+                                            isFavorite ? "fill-green-500 text-green-500" : "text-white"
+                                        )}
+                                    />
                                 </button>
                             </div>
-                        </div>
+                        )}
                     </div>
-                )}
+                </div>
 
-                {/* Bottom Slide Filter Component */}
-                {showShareCard && (
-                    <div className="fixed inset-0 z-50 backdrop-blur-sm bg-black/70 transition-all duration-300">
-                        {/* Full-screen blur layer */}
-                        <div className="absolute bottom-0 w-full shadow-xl">
-                            <MovieShareCard onClick={() => setShowShareCard(false)} movieTitle={title} />
+
+                {/* Cast and Crew Section */}
+                <CastAndCrew movieData={movie} actorId={movie.actor_id} />
+
+                <MovieBuddiesSection movies={movie.movie_buddies} />
+
+                {/* Review Section */}
+                <ReviewSection viewer_id={parseInt(userId)} movie_id={parseInt(movie_id || "")} />
+
+                {/* You Might Also Like Section */}
+                <YouMightAlsoLike movie_id={parseInt(movie_id || "")} user_id={parseInt(userId)} />
+            </div>
+
+            {/* Rating Popup */}
+            <RatingPopup
+                show={showRatingPopup}
+                title={title}
+                userRating={userRating}
+                userReview={userReview}
+                hoverRating={hoverRating}
+                submittingRating={submittingRating}
+                onClose={() => {
+                    setShowRatingPopup(false)
+                    setUserRating(0)
+                    setUserReview("")
+                    setHoverRating(0)
+                }}
+                onRatingChange={(value) => setUserRating(value)}
+                onReviewChange={(value) => setUserReview(value)}
+                onSubmit={handleRatingSubmit}
+                setHoverRating={(value) => setHoverRating(value)}
+            />
+
+            {/* Bottom Slide Filter Component */}
+            {showShareCard && (
+                <div className="fixed inset-0 z-50 backdrop-blur-sm bg-black/70 transition-all duration-300">
+                    {/* Full-screen blur layer */}
+                    <div className="absolute bottom-0 w-full shadow-xl">
+                        <MovieShareCard
+                            onClick={() => setShowShareCard(false)}
+                            movieTitle={title}
+                            ratings={rating}
+                            releaseDate={releaseYear ? `${releaseYear} (${language?.toUpperCase() || "Unknown"})` : ""}
+                            genresArray={genresArray}
+                            movieImage={posterUrl}
+                            movieId={parseInt(movie_id || "")}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {showConfirm && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-[#1e1e1e] p-6 rounded-xl shadow-lg text-white w-full text-center">
+                        <p className="mb-4">Are you sure you want to delete this movie?</p>
+                        <div className="flex justify-center gap-4">
+                            <button
+                                onClick={() => setShowConfirm(false)}
+                                className="bg-[#2b2b2b] hover:bg-[#2b2b2b] px-4 py-2 rounded-md"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleDeleteMovie}
+                                className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-md"
+                            >
+                                Delete
+                            </button>
                         </div>
                     </div>
-                )}
-            </div>
+                </div>
+            )}
+        </div>
         // </PageTransitionWrapper>
 
     )

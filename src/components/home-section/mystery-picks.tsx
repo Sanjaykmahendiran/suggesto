@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
-import { Users } from "lucide-react"
+import { Star, Users } from "lucide-react"
 
 type Movie = {
     movie_id: string | number
@@ -35,12 +35,9 @@ export const MysteryWeekendPicks = ({
                     <Users className="w-5 h-5 text-[#9370ff]" />
                     <h2 className="text-lg font-semibold">{title}</h2>
                 </div>
-                <a href="/watch-list" className="text-sm text-[#9370ff]">
-                    See All
-                </a>
             </div>
 
-            <div className="bg-[#292938] rounded-lg p-4 mb-3">
+            <div className="bg-[#2b2b2b] rounded-lg p-4 mb-3">
                 <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
                     {movies.map((movie, index) => (
                         <motion.div
@@ -62,8 +59,8 @@ export const MysteryWeekendPicks = ({
                                 className="w-full h-full object-cover"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
-                            <div className="absolute top-2 right-2 bg-[#9370ff] text-white text-xs px-1.5 py-0.5 rounded flex items-center gap-1">
-                                <Users className="w-3 h-3" />
+                            <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded flex items-center gap-1">
+                                <Star className="w-3 h-3 text-yellow-400 fill-current" />
                                 <span>{parseFloat(movie.rating.toString()).toFixed(1)}</span>
                             </div>
                             <div className="absolute bottom-2 left-2">

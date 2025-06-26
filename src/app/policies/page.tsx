@@ -4,6 +4,7 @@ import { PageTransitionProvider, PageTransitionWrapper } from "@/components/Page
 import { ArrowLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
+import toast from "react-hot-toast"
 
 export default function PoliciesPage() {
   const router = useRouter()
@@ -14,12 +15,10 @@ export default function PoliciesPage() {
     returnpolicy: ""
   })
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
 
   useEffect(() => {
     const fetchPolicies = async () => {
       setLoading(true)
-      setError("")
 
       try {
         const [privacyResponse, termsResponse, returnResponse] = await Promise.all([
@@ -48,7 +47,7 @@ export default function PoliciesPage() {
         })
       } catch (err) {
         console.error("Error fetching policy data:", err)
-        setError("Failed to load policy data. Please try again later.")
+        toast.error("Failed to load policy data. Please try again later.")
       } finally {
         setLoading(false)
       }
@@ -66,20 +65,6 @@ export default function PoliciesPage() {
       )
     }
 
-    if (error) {
-      return (
-        <div className="text-center py-8">
-          <p className="text-red-500">{error}</p>
-          <button
-            className="mt-4 px-4 py-2 bg-primary rounded hover:bg-opacity-80 transition-colors"
-            onClick={() => window.location.reload()}
-          >
-            Try Again
-          </button>
-        </div>
-      )
-    }
-
     switch (activePolicy) {
       case "privacy":
         return (
@@ -87,7 +72,7 @@ export default function PoliciesPage() {
             <h2 className="text-xl font-bold">Privacy Policy</h2>
             <p className="text-sm text-gray-300">Last updated: May 14, 2025</p>
             <div
-              className="policy-content text-gray-300 space-y-4"
+              className="policy-content font-thin space-y-4"
               dangerouslySetInnerHTML={{ __html: policyData.privacy }}
             />
           </div>
@@ -98,7 +83,7 @@ export default function PoliciesPage() {
             <h2 className="text-xl font-bold">Terms of Service</h2>
             <p className="text-sm text-gray-300">Last updated: May 14, 2025</p>
             <div
-              className="policy-content text-gray-300 space-y-4"
+              className="policy-content font-thin space-y-4"
               dangerouslySetInnerHTML={{ __html: policyData.terms }}
             />
           </div>
@@ -109,7 +94,7 @@ export default function PoliciesPage() {
             <h2 className="text-xl font-bold">Return Policy</h2>
             <p className="text-sm text-gray-300">Last updated: May 14, 2025</p>
             <div
-              className="policy-content text-gray-300 space-y-4"
+              className="policy-content font-thin space-y-4"
               dangerouslySetInnerHTML={{ __html: policyData.returnpolicy }}
             />
           </div>
@@ -120,47 +105,49 @@ export default function PoliciesPage() {
   }
 
   return (
-    
-      // <PageTransitionWrapper>
-        <div className="flex flex-col h-screen text-white ">
-          {/* Fixed Header */}
-          <header className="flex items-center justify-between p-4 ">
-            <div className="flex items-center gap-2">
-              <button className="mr-2 p-2 rounded-full bg-[#292938]" onClick={() => router.back()}>
-                <ArrowLeft size={20} />
-              </button>
-              <h1 className="text-xl font-bold text-white">Policies</h1>
-            </div>
-          </header>
 
-          {/* Fixed Tab Navigation */}
-          <div className="flex ">
-            <button
-              className={`flex-1 py-3 text-center ${activePolicy === "privacy" ? "border-b-2 border-primary text-primary font-medium" : "text-gray-400"}`}
-              onClick={() => setActivePolicy("privacy")}
-            >
-              Privacy Policy
-            </button>
-            <button
-              className={`flex-1 py-3 text-center ${activePolicy === "terms" ? "border-b-2 border-primary text-primary font-medium" : "text-gray-400"}`}
-              onClick={() => setActivePolicy("terms")}
-            >
-              Terms of Service
-            </button>
-            <button
-              className={`flex-1 py-3 text-center ${activePolicy === "returnpolicy" ? "border-b-2 border-primary text-primary font-medium" : "text-gray-400"}`}
-              onClick={() => setActivePolicy("returnpolicy")}
-            >
-              Return Policy
-            </button>
-          </div>
-
-          {/* Scrollable Main Content */}
-          <main className="flex-1 px-6 py-4 overflow-y-auto">
-            {renderPolicyContent()}
-          </main>
+    // <PageTransitionWrapper>
+    <div className="flex flex-col h-screen text-white ">
+      {/* Fixed Header */}
+      <header className="flex items-center justify-between px-4 pb-4 pt-8 ">
+        <div className="flex items-center gap-2">
+          <button className="mr-2 p-2 rounded-full bg-[#2b2b2b]" onClick={() => router.back()}>
+            <ArrowLeft size={20} />
+          </button>
+          <h1 className="text-xl font-bold text-white">Policies</h1>
         </div>
-      // </PageTransitionWrapper>
-    
+      </header>
+
+      {/* Fixed Tab Navigation */}
+      <div className="flex">
+        {["privacy", "terms", "returnpolicy"].map((type) => (
+          <button
+            key={type}
+            className={`relative flex-1 py-3 text-center transition-all duration-200
+        ${activePolicy === type
+                ? "font-bold text-transparent bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text"
+                : "text-gray-400"
+              }`}
+            onClick={() => setActivePolicy(type)}
+          >
+            {type === "privacy" && "Privacy Policy"}
+            {type === "terms" && "Terms of Service"}
+            {type === "returnpolicy" && "Return Policy"}
+
+            {activePolicy === type && (
+              <span className="absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-[#b56bbc] to-[#7a71c4]" />
+            )}
+          </button>
+        ))}
+      </div>
+
+
+      {/* Scrollable Main Content */}
+      <main className="flex-1 px-6 py-4 overflow-y-auto">
+        {renderPolicyContent()}
+      </main>
+    </div>
+    // </PageTransitionWrapper>
+
   )
 }

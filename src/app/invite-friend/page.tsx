@@ -12,10 +12,11 @@ import Image from "next/image"
 import Cookies from 'js-cookie'
 import { useRouter } from "next/navigation"
 import { PageTransitionProvider, PageTransitionWrapper } from "@/components/PageTransition"
+import toast from "react-hot-toast"
 
 // Skeleton Loading Component
 const FriendSkeleton = () => (
-  <div className="bg-[#292938] rounded-lg p-4 flex items-center justify-between animate-pulse">
+  <div className="bg-[#2b2b2b] rounded-lg p-4 flex items-center justify-between animate-pulse">
     <div className="flex items-center gap-3">
       <div className="w-10 h-10 bg-gray-600 rounded-full"></div>
       <div className="space-y-2">
@@ -45,8 +46,8 @@ export default function InviteFriends() {
   }
   const [invitedFriends, setInvitedFriends] = useState<InvitedFriend[]>([])
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [userData, setUserData] = useState<any>(null)
+  const [invitedFriendsLoading, setInvitedFriendsLoading] = useState(false)
   const router = useRouter()
 
   const userId = Cookies.get('userID')
@@ -72,12 +73,11 @@ export default function InviteFriends() {
   // Fetch invited friends data from API
   const fetchInvitedFriends = async () => {
     if (!userId) {
-      setError("User ID not found")
+      toast.error("User ID not found")
       return
     }
 
-    setLoading(true)
-    setError(null)
+    setInvitedFriendsLoading(true)
 
     try {
       const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=referredlist&user_id=${userId}`)
@@ -97,13 +97,13 @@ export default function InviteFriends() {
 
         setInvitedFriends(transformedData)
       } else {
-        setError("Failed to fetch invited friends")
+        toast.error("Failed to fetch invited friends")
       }
     } catch (err) {
       console.error("Error fetching invited friends:", err)
-      setError("Network error occurred")
+      toast.error("Network error occurred")
     } finally {
-      setLoading(false)
+      setInvitedFriendsLoading(false)
     }
   }
 
@@ -132,12 +132,12 @@ export default function InviteFriends() {
     }
   }
 
-  // Fetch data when component mounts or when switching to invited friends tab
+  // Fetch invited friends data on component mount to show count immediately
   useEffect(() => {
-    if (activeTab === "invited") {
+    if (userId) {
       fetchInvitedFriends()
     }
-  }, [activeTab, userId])
+  }, [userId])
 
   // Handle copy referral code to clipboard
   const handleCopyCode = async () => {
@@ -172,7 +172,7 @@ export default function InviteFriends() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Join iky App',
+          title: 'Join Suggesto App',
           text: shareText,
           url: 'https://play.google.com/store/apps/details?id=your.app.id'
         })
@@ -194,14 +194,14 @@ export default function InviteFriends() {
   }
 
   return (
-        
+
     // <PageTransitionWrapper>
     <div className="max-w-sm mx-auto min-h-screen">
       {/* Header */}
-      <div className=" px-4 pb-3 flex items-center justify-between ">
+      <div className=" px-4 pb-3 pt-8 flex items-center justify-between ">
         <div className="flex items-center gap-3">
           <button
-            className="p-2.5 rounded-full bg-[#292938] backdrop-blur-sm  transition-all duration-300"
+            className="p-2.5 rounded-full bg-[#2b2b2b] backdrop-blur-sm  transition-all duration-300"
             onClick={handleBack}
           >
             <ArrowLeft size={20} className="text-white" />
@@ -214,14 +214,14 @@ export default function InviteFriends() {
       <div className=" px-4 py-2 items-center justify-center flex gap-2">
         <button
           onClick={() => setActiveTab("referrals")}
-          className={`px-4 py-2 w-full rounded-full text-sm font-medium transition-colors ${activeTab === "referrals" ? "bg-primary text-white" : " text-white"
+          className={`px-4 py-2 w-full rounded-full text-sm font-medium transition-colors ${activeTab === "referrals" ? "bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] text-white" : " text-white"
             }`}
         >
           Your Referrals
         </button>
         <button
           onClick={() => setActiveTab("invited")}
-          className={`px-4 py-2 w-full rounded-full text-sm font-medium transition-colors ${activeTab === "invited" ? "bg-primary text-white" : " text-white"
+          className={`px-4 py-2 w-full rounded-full text-sm font-medium transition-colors ${activeTab === "invited" ? "bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] text-white" : " text-white"
             }`}
         >
           Invited Friends ({invitedFriends.length})
@@ -355,7 +355,7 @@ export default function InviteFriends() {
         ) : (
           <div className="space-y-3">
             {/* Skeleton Loading State */}
-            {loading && (
+            {invitedFriendsLoading && (
               <div className="space-y-3">
                 {[...Array(5)].map((_, index) => (
                   <FriendSkeleton key={index} />
@@ -363,21 +363,9 @@ export default function InviteFriends() {
               </div>
             )}
 
-            {/* Error State */}
-            {error && !loading && (
-              <div className="text-center py-8">
-                <p className="text-red-400 mb-2">{error}</p>
-                <button
-                  onClick={fetchInvitedFriends}
-                  className="text-primary text-sm font-medium"
-                >
-                  Try Again
-                </button>
-              </div>
-            )}
 
             {/* Empty State */}
-            {!loading && !error && invitedFriends.length === 0 && (
+            {!invitedFriendsLoading && invitedFriends.length === 0 && (
               <div className="text-center py-8 flex flex-col items-center justify-center min-h-[400px]">
                 <Users className="w-12 h-12 text-gray-400 mb-4" />
                 <p className="text-gray-300">No invited friends yet</p>
@@ -394,8 +382,8 @@ export default function InviteFriends() {
             )}
 
             {/* Friends List */}
-            {!loading && !error && invitedFriends.map((friend) => (
-              <div key={friend.id} className="bg-[#292938] rounded-lg p-4 flex items-center justify-between">
+            {!invitedFriendsLoading && invitedFriends.map((friend) => (
+              <div key={friend.id} className="bg-[#2b2b2b] rounded-lg p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Avatar className="w-10 h-10">
                     <AvatarImage src={friend.avatar} alt={friend.name}
@@ -439,6 +427,6 @@ export default function InviteFriends() {
       )}
     </div>
     // </PageTransitionWrapper>
-        
+
   )
 }

@@ -32,9 +32,9 @@ export default function AboutPage() {
     // <PageTransitionWrapper>
     <div className="flex flex-col min-h-screen text-white">
       {/* Header */}
-      <header className="flex items-center p-4">
+      <header className="flex items-center px-4 pb-4 pt-8">
         <button
-          className="mr-4 p-2 rounded-full bg-[#292938]"
+          className="mr-4 p-2 rounded-full bg-[#2b2b2b]"
           onClick={() => router.back()}
         >
           <ArrowLeft size={20} />
@@ -46,7 +46,7 @@ export default function AboutPage() {
       <main className="flex-1 px-6 py-4 overflow-y-auto">
         <section className="space-y-6">
           <div
-            className="policy-content text-gray-300 space-y-4"
+            className="policy-content font-thin text-white space-y-4"
             dangerouslySetInnerHTML={{ __html: aboutData }}
           />
         </section>

@@ -229,7 +229,7 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
           className="w-full md:w-[380px] p-0"
           align="start"
         >
-          <Command className="bg-[#292938] text-white">
+          <Command className="bg-[#2b2b2b] text-white">
             <div className="relative flex items-center">
               <CommandInput
                 placeholder="Search..."

@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp, Search, ArrowLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageTransitionProvider, PageTransitionWrapper } from "@/components/PageTransition";
+import toast from "react-hot-toast";
 
 // Define interfaces for TypeScript
 interface FAQ {
@@ -22,7 +23,6 @@ export default function HelpCenterPage() {
     const [faqs, setFaqs] = useState<FAQ[]>([])
     const [categories, setCategories] = useState<string[]>([])
     const [isLoading, setIsLoading] = useState<boolean>(true)
-    const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
         // Fetch FAQs from API
@@ -45,7 +45,7 @@ export default function HelpCenterPage() {
 
                 setIsLoading(false)
             } catch (err) {
-                setError(err instanceof Error ? err.message : "An unknown error occurred")
+                toast.error(err instanceof Error ? err.message : "An unknown error occurred")
                 setIsLoading(false)
             }
         }
@@ -71,11 +71,11 @@ export default function HelpCenterPage() {
 
     return (
 
-//   <PageTransitionWrapper>
+        //   <PageTransitionWrapper>
         <div className="min-h-screen text-white">
             {/* Header */}
-            <div className="flex items-center gap-3 p-4">
-                <button className="mr-4 p-2 rounded-full bg-gray-800" onClick={() => router.back()}>
+            <div className="flex items-center gap-3 px-4 pt-8">
+                <button className="mr-4 p-2 rounded-full bg-[#2b2b2b]" onClick={() => router.back()}>
                     <ArrowLeft size={20} />
                 </button>
                 <h1 className="text-lg font-medium">FAQs</h1>
@@ -86,7 +86,7 @@ export default function HelpCenterPage() {
                 {categories.map((category) => (
                     <button
                         key={category}
-                        className={`whitespace-nowrap rounded-full px-4 py-2 text-sm ${activeCategory === category ? "bg-primary text-white" : "bg-gray-800 text-white"
+                        className={`whitespace-nowrap rounded-full px-4 py-2 text-sm ${activeCategory === category ? "bg-primary text-white" : "bg-[#2b2b2b] text-white"
                             }`}
                         onClick={() => setActiveCategory(category)}
                     >
@@ -96,7 +96,7 @@ export default function HelpCenterPage() {
             </div>
 
             {/* Search */}
-            <div className="mx-4 mb-4 mt-4 flex items-center rounded-md bg-gray-800 px-3 py-2">
+            <div className="mx-4 mb-4 mt-4 flex items-center rounded-md bg-[#2b2b2b] px-3 py-2">
                 <Search className="mr-2 h-5 w-5 text-gray-400" />
                 <input
                     type="text"
@@ -112,7 +112,7 @@ export default function HelpCenterPage() {
                     {/* Skeleton for category buttons */}
                     <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
                         {[1, 2, 3, 4].map((item) => (
-                            <Skeleton key={item} className="h-9 w-24 rounded-full bg-[#292938]" />
+                            <Skeleton key={item} className="h-9 w-24 rounded-full bg-[#2b2b2b]" />
                         ))}
                     </div>
 
@@ -120,32 +120,21 @@ export default function HelpCenterPage() {
                     {[1, 2, 3, 4, 5].map((item) => (
                         <div key={item} className="rounded-lg  p-4">
                             <div className="flex items-center justify-between">
-                                <Skeleton className="h-5 w-3/4 rounded-md bg-[#292938]" />
-                                <Skeleton className="h-5 w-5 rounded-md bg-[#292938]" />
+                                <Skeleton className="h-5 w-3/4 rounded-md bg-[#2b2b2b]" />
+                                <Skeleton className="h-5 w-5 rounded-md bg-[#2b2b2b]" />
                             </div>
                         </div>
                     ))}
                 </div>
             )}
-            {/* Error state */}
-            {error && (
-                <div className="p-4 text-red-500">
-                    <p>Error loading FAQs: {error}</p>
-                    <button
-                        className="mt-2 text-primary underline"
-                        onClick={() => window.location.reload()}
-                    >
-                        Try again
-                    </button>
-                </div>
-            )}
+
 
             {/* FAQs */}
-            {!isLoading && !error && (
+            {!isLoading && (
                 <div className="space-y-4 px-4 pb-8">
                     {filteredFaqs.length > 0 ? (
                         filteredFaqs.map((faq) => (
-                            <div key={faq.id} className="rounded-lg bg-gray-800 p-4">
+                            <div key={faq.id} className="rounded-lg bg-[#2b2b2b] p-4">
                                 <div
                                     className="flex cursor-pointer items-center justify-between"
                                     onClick={() => toggleQuestion(faq.question)}
@@ -159,7 +148,7 @@ export default function HelpCenterPage() {
                                 </div>
 
                                 {expandedQuestion === faq.question && (
-                                    <p className="mt-2 text-sm text-gray-400">{faq.answer}</p>
+                                    <p className="mt-2 text-sm text-gray-300">{faq.answer}</p>
                                 )}
                             </div>
                         ))

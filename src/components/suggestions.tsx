@@ -24,7 +24,7 @@ type SuggestionProps = {
 };
 
   const SkeletonSuggestion = () => (
-    <div className="bg-[#292938] rounded-lg w-full">
+    <div className="bg-[#2b2b2b] rounded-lg w-full">
       <div className="flex p-3">
         <Skeleton className="w-20 h-28 rounded-lg bg-[#181826]" />
         <div className="ml-3 flex-1">
@@ -72,7 +72,7 @@ export default function ReceivedSuggestions({ isLoading, receivedSuggestions }: 
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.3 }}
-                            className="bg-[#292938] rounded-lg  w-full"
+                            className="bg-[#2b2b2b] rounded-lg  w-full"
                         >
                             <div className="flex p-3">
                                 <div className="relative w-20 h-28 rounded-lg overflow-hidden flex-shrink-0">
@@ -104,7 +104,7 @@ export default function ReceivedSuggestions({ isLoading, receivedSuggestions }: 
                                     <div className="flex items-center gap-2">
                                         <Button
                                             size="sm"
-                                            className="rounded-full text-xs h-8 px-3 bg-[#6c5ce7] hover:bg-[#6c5ce7]/80"
+                                            className="rounded-full text-xs h-8 px-3 bg-[#b56bbc] hover:bg-[#b56bbc]/80"
                                             onClick={() => router.push("/movie-detail-page")}
                                         >
                                             Watch Now
@@ -112,14 +112,14 @@ export default function ReceivedSuggestions({ isLoading, receivedSuggestions }: 
                                         <Button
                                             size="sm"
                                             variant="outline"
-                                            className="rounded-full text-xs h-8 px-3 border-gray-600 hover:bg-[#6c5ce7]/20 hover:text-white"
+                                            className="rounded-full text-xs h-8 px-3 border-gray-600 hover:bg-[#b56bbc]/20 hover:text-white"
                                         >
                                             Add to List
                                         </Button>
                                         <Button
                                             size="sm"
                                             variant="outline"
-                                            className="rounded-full text-xs h-8 w-8 p-0 border-gray-600 hover:bg-[#6c5ce7]/20 hover:text-white ml-auto"
+                                            className="rounded-full text-xs h-8 w-8 p-0 border-gray-600 hover:bg-[#b56bbc]/20 hover:text-white ml-auto"
                                         >
                                             <Share2 className="w-3 h-3" />
                                         </Button>

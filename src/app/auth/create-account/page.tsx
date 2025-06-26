@@ -10,6 +10,7 @@ import mobileNumber from "@/assets/mobile-number-2.png"
 import OTP from "@/assets/OTP-ICON.png"
 import Image from "next/image"
 import { useUser } from "@/contexts/UserContext"
+import toast from "react-hot-toast"
 
 export default function Login() {
   const router = useRouter()
@@ -18,8 +19,6 @@ export default function Login() {
   const [mobile, setMobile] = useState("")
   const [otp, setOtp] = useState(["", "", "", ""])
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [successMessage, setSuccessMessage] = useState("")
   const [resendDisabled, setResendDisabled] = useState(false)
   const [countdown, setCountdown] = useState(30)
   const { user, setUser } = useUser()
@@ -69,12 +68,11 @@ export default function Login() {
     e.preventDefault()
 
     if (!mobile || mobile.length < 10) {
-      setError("Please enter a valid mobile number")
+      toast.error("Please enter a valid mobile number")
       return
     }
 
     setLoading(true)
-    setError("")
 
     try {
       // Call the API to register the user
@@ -84,18 +82,16 @@ export default function Login() {
 
       // Check if user_id exists in the response
       if (data.user_id) {
-        // Store user_id in localStorage for later use
-        localStorage.setItem("user_id", data.user_id)
         setMockOTP(data.otp)
         // Move to OTP verification step
         setStep("otp")
         setResendDisabled(true)
       } else {
         // Handle error when user_id is not present
-        setError(data.message || "Registration failed. Please try again.")
+        toast.error(data.message || "Registration failed. Please try again.")
       }
     } catch (err) {
-      setError("Something went wrong. Please try again.")
+      toast.error("Something went wrong. Please try again.")
       console.error("API error:", err)
     } finally {
       setLoading(false)
@@ -127,12 +123,9 @@ export default function Login() {
   }
 
   const handleVerifyOTP = async () => {
-    // Clear previous messages
-    setError("");
-    setSuccessMessage("");
 
     if (!otp.every(digit => digit)) {
-      setError("Please enter the complete OTP");
+      toast.error("Please enter the complete OTP");
       return;
     }
 
@@ -145,12 +138,11 @@ export default function Login() {
       const data = await response.json();
 
       if (data.user_id && data.message === "OTP is success") {
-        setSuccessMessage("OTP verified successfully!");
+        toast.success("OTP verified successfully!");
 
         // Set user_id cookie (expires in 7 days)
         Cookies.set("userID", data.user_id, { expires: 7 });
         setUser(data);
-
 
         // Redirect based on register_level_status
         setTimeout(() => {
@@ -159,12 +151,12 @@ export default function Login() {
           } else {
             router.push("/auth/complete-account");
           }
-        }, 1500);
+        }, 3000);
       } else {
-        setError(data.message || "Invalid OTP. Please try again.");
+        toast.error(data.message || "Invalid OTP. Please try again.");
       }
     } catch (err) {
-      setError("Something went wrong. Please try again.");
+      toast.error("Something went wrong. Please try again.");
       console.error("API error:", err);
     } finally {
       setLoading(false);
@@ -175,7 +167,6 @@ export default function Login() {
     if (resendDisabled) return
 
     setLoading(true)
-    setError("")
 
     try {
       // Call the API to resend OTP
@@ -184,7 +175,7 @@ export default function Login() {
       const data = await response.json()
 
       if (data.user_id && data.otp) {
-        setSuccessMessage("OTP Resent successfully!")
+        toast.success("OTP Resent successfully!")
 
         // Reset OTP fields
         setOtp(["", "", "", ""])
@@ -193,10 +184,10 @@ export default function Login() {
 
         setResendDisabled(true)
       } else {
-        setError(data.message || "Failed to resend code. Please try again.")
+        toast.error(data.message || "Failed to resend code. Please try again.")
       }
     } catch (err) {
-      setError("Something went wrong. Please try again.")
+      toast.error("Something went wrong. Please try again.")
       console.error("API error:", err)
     } finally {
       setLoading(false)
@@ -204,14 +195,14 @@ export default function Login() {
   }
 
   return (
-    <div className="flex flex-col bg-[#181826] min-h-screen fixed inset-0 ">
+    <div className="flex flex-col bg-[#121214] min-h-screen fixed inset-0 ">
       {step === "mobile" ? (
         <div className="flex flex-col min-h-screen px-6 ">
           {/* Back button and title */}
           <div className="flex items-center pt-12 pb-4 ">
             <button
               onClick={() => router.push("/")}
-              className="w-10 h-10 rounded-full bg-[#292938] flex items-center justify-center mr-4"
+              className="w-10 h-10 rounded-full bg-[#2b2b2b] flex items-center justify-center mr-4"
             >
               <ArrowLeft className="h-5 w-5 text-white" />
             </button>
@@ -244,7 +235,7 @@ export default function Login() {
               inputMode="numeric"
               pattern="[0-9]*"
               placeholder="Enter your mobile number"
-              className="bg-[#292938] border-gray-700 border h-12 rounded-xl w-full px-4 text-white placeholder-gray-400"
+              className="bg-[#2b2b2b] border-gray-700 border h-12 rounded-xl w-full px-4 text-white placeholder-gray-400"
               value={mobile}
               onChange={(e) => {
                 const input = e.target.value.replace(/\D/g, '');
@@ -263,7 +254,6 @@ export default function Login() {
                 }
               }}
             />
-            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
           </div>
 
           {/* Button */}
@@ -286,7 +276,7 @@ export default function Login() {
           <div className="flex items-center pt-12 pb-4 mb-6">
             <button
               onClick={() => setStep("mobile")}
-              className="w-10 h-10 rounded-full bg-[#292938] flex items-center justify-center mr-4"
+              className="w-10 h-10 rounded-full bg-[#2b2b2b] flex items-center justify-center mr-4"
             >
               <ArrowLeft className="h-5 w-5 text-white" />
             </button>
@@ -335,18 +325,16 @@ export default function Login() {
                   onChange={(e) => handleInputChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
                   onFocus={() => setActiveInput(index)}
-                  className={`w-16 h-16 bg-[#292938] text-center border-2 rounded-full focus:outline-none text-2xl text-white ${activeInput === index ? 'border-[#6c5ce7]' : 'border-gray-700'
+                  className={`w-16 h-16 bg-[#2b2b2b] text-center border-2 rounded-full focus:outline-none text-2xl text-white ${activeInput === index ? 'border-[#b56bbc]' : 'border-gray-700'
                     }`}
                 />
               </div>
             ))}
           </div>
 
-          {error && <p className="text-red-500 text-sm text-center mb-4">{error}</p>}
-          {successMessage && <p className="text-green-500 text-sm text-center mb-4">{successMessage}</p>}
-
           {/* Verify OTP */}
           <Button
+            variant="default"
             onClick={handleVerifyOTP}
             className="w-full"
             disabled={!otp.every((digit) => digit) || loading}
@@ -359,7 +347,7 @@ export default function Login() {
             Didn't receive Code?{" "}
             <button
               onClick={handleResendCode}
-              className={`${resendDisabled ? "text-gray-500" : "text-[#6c5ce7]"}`}
+              className={`${resendDisabled ? "text-gray-500" : "text-[#b56bbc]"}`}
               disabled={resendDisabled}
             >
               {resendDisabled ? `Resend Code (${countdown}s)` : "Resend Code"}
