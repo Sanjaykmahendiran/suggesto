@@ -29,7 +29,7 @@ const SkeletonMovie = () => (
   </div>
 )
 
-export default function WatchNow() {
+export default function Watchlist() {
   const router = useRouter()
   const [currentIndex, setCurrentIndex] = useState(0)
   const [showFilter, setShowFilter] = useState(false)

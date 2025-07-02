@@ -235,20 +235,7 @@ export default function InviteFriends() {
 
             {/* Decorative elements */}
             <div className="relative px-6">
-              <style jsx>{`
-                @keyframes bounceSlow {
-                  0%, 100% {
-                    transform: translateY(0);
-                  }
-                  50% {
-                    transform: translateY(-20px);
-                  }
-                }
 
-                .bounce-slow {
-                  animation: bounceSlow 2s infinite;
-                }
-              `}</style>
 
               <div className="w-40 h-40 max-w-xs mx-auto aspect-[4/3] relative bounce-slow">
                 <Image

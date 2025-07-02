@@ -18,6 +18,7 @@ import SuggestNotFound from "@/assets/not-found-suggest.png"
 import { RequestCardSkeleton, MovieCardSkeleton } from "@/app/suggest/_components/loading"
 import { Movie, SuggestionRequestType } from "@/app/suggest/type"
 import DefaultImage from "@/assets/default-user.webp"
+import CoinAnimation from "@/components/coin-animation";
 
 // Movie Card Skeleton Component
 const MovieSkeleton = () => (
@@ -58,6 +59,8 @@ const SuggestionFormPopup = ({
     const [initialLoad, setInitialLoad] = useState(true);
     const [totalCount, setTotalCount] = useState(0);
     const observerRef = useRef<HTMLDivElement>(null);
+    const [showCoinAnimation, setShowCoinAnimation] = useState(false)
+    const [coinsEarned, setCoinsEarned] = useState(0)
 
     // Fetch movies with pagination
     const fetchMovies = useCallback(async (currentOffset: number = 0, isLoadMore: boolean = false) => {
@@ -192,6 +195,10 @@ const SuggestionFormPopup = ({
             });
 
             const data = await res.json();
+            if (data.coins_earned) {
+                setCoinsEarned(data.coins_earned)
+                setShowCoinAnimation(true)
+            }
             if (data?.status === "success") {
                 toast.success("Suggestion submitted successfully!");
                 onClose();
@@ -351,6 +358,14 @@ const SuggestionFormPopup = ({
                     </Button>
                 </div>
             </div>
+
+            <CoinAnimation
+                show={showCoinAnimation}
+                coinsEarned={coinsEarned}
+                message="Coins Earned!"
+                onAnimationEnd={() => setShowCoinAnimation(false)}
+                duration={3000} />
+
         </div>
     );
 };

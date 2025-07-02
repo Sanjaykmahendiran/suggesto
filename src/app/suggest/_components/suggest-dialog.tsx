@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
 import Cookies from "js-cookie"
 import DefaultImage from "@/assets/default-user.webp"
+import CoinAnimation from "@/components/coin-animation"
 
 interface Movie {
   watch_id: number
@@ -87,7 +88,8 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
   const [totalFriendsCount, setTotalFriendsCount] = useState(0)
   const [friendsInitialLoad, setFriendsInitialLoad] = useState(true)
   const friendsObserverRef = useRef<HTMLDivElement>(null)
-
+  const [showCoinAnimation, setShowCoinAnimation] = useState(false)
+  const [coinsEarned, setCoinsEarned] = useState(0)
 
   // Fetch movies and suggested movies when dialog opens
   useEffect(() => {
@@ -267,6 +269,11 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
         })
 
         if (!response.ok) throw new Error('Failed to suggest movie')
+        const result = await response.json()
+        if (result.coins_earned) {
+          setCoinsEarned(result.coins_earned)
+          setShowCoinAnimation(true)
+        }
 
         // Update the suggested movies list to prevent re-suggesting
         setSuggestedMovies(prev => [...prev, {
@@ -323,7 +330,7 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
   const moviesToDisplay = suggestStep === 1 ? filteredMovies : getAvailableMoviesForFriend()
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+    <><Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="bg-[#1f1f21] border-gray-700 text-white p-0 max-w-md h-[700px] flex flex-col">
         <div className="sticky top-0 z-10 bg-[#1f1f21] p-4 border-b border-gray-700">
           <div className="flex items-center justify-between">
@@ -349,8 +356,7 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
                   placeholder={suggestStep === 1 ? "Search for a movie..." : "Search for a friend..."}
                   className="w-full px-3 py-2 rounded-md bg-[#2b2b2b] border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary"
                   value={suggestStep === 1 ? searchQuery : friendSearchQuery}
-                  onChange={(e) => suggestStep === 1 ? setSearchQuery(e.target.value) : setFriendSearchQuery(e.target.value)}
-                />
+                  onChange={(e) => suggestStep === 1 ? setSearchQuery(e.target.value) : setFriendSearchQuery(e.target.value)} />
               </div>
             </div>
           )}
@@ -381,8 +387,7 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
                         onError={(e) => {
                           const target = e.target as HTMLImageElement
                           target.src = "/api/placeholder/64/96"
-                        }}
-                      />
+                        }} />
                     </div>
                     <div>
                       <h3 className="font-medium">{movie.title}</h3>
@@ -412,8 +417,7 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
                     onError={(e) => {
                       const target = e.target as HTMLImageElement
                       target.src = "/api/placeholder/64/96"
-                    }}
-                  />
+                    }} />
                 </div>
                 <div>
                   <h3 className="font-medium">{selectedMovie?.title}</h3>
@@ -431,8 +435,7 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
               ) : (
                 <div className="grid grid-cols-3 gap-4">
                   {filteredFriends.map((friend) => {
-                    const alreadySuggested = selectedMovie && suggestedMovies.some(suggested =>
-                      suggested.movie_id === selectedMovie.movie_id.toString() &&
+                    const alreadySuggested = selectedMovie && suggestedMovies.some(suggested => suggested.movie_id === selectedMovie.movie_id.toString() &&
                       (suggested.suggested_to === friend.name ||
                         suggested.suggested_to === friend.friend_id.toString())
                     )
@@ -442,8 +445,7 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
                         key={friend.friend_id}
                         className={`flex flex-col items-center gap-2  rounded-lg relative ${alreadySuggested
                           ? 'opacity-50 cursor-not-allowed'
-                          : 'hover:bg-[#181826] cursor-pointer'
-                          }`}
+                          : 'hover:bg-[#181826] cursor-pointer'}`}
                         whileHover={!alreadySuggested ? { scale: 1.05 } : {}}
                         onClick={() => !alreadySuggested && handleFriendSelect(friend)}
                         disabled={!!alreadySuggested}
@@ -456,8 +458,7 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
                             onError={(e) => {
                               const target = e.target as HTMLImageElement
                               target.src = DefaultImage.src
-                            }}
-                          />
+                            }} />
                           <AvatarFallback>{friend.name[0]}</AvatarFallback>
                         </Avatar>
                         <span className="text-sm text-center">{friend.name}</span>
@@ -516,8 +517,7 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
                     onError={(e) => {
                       const target = e.target as HTMLImageElement
                       target.src = "/api/placeholder/64/96"
-                    }}
-                  />
+                    }} />
                 </div>
                 <div className="flex-1">
                   <h3 className="font-medium">{selectedMovie?.title}</h3>
@@ -525,17 +525,14 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
                     <span className="text-xs text-gray-400">To:</span>
                     <Avatar className="w-5 h-5">
                       <AvatarImage
-                        src={
-                          selectedFriend?.profile_pic ||
-                          (typeof DefaultImage === "string" ? DefaultImage : DefaultImage.src)
-                        }
+                        src={selectedFriend?.profile_pic ||
+                          (typeof DefaultImage === "string" ? DefaultImage : DefaultImage.src)}
                         alt={selectedFriend?.name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement
                           target.src = typeof DefaultImage === "string" ? DefaultImage : DefaultImage.src
-                        }}
-                      />
+                        }} />
                       <AvatarFallback>{selectedFriend?.name[0]}</AvatarFallback>
                     </Avatar>
                     <span className="text-xs">{selectedFriend?.name}</span>
@@ -549,8 +546,7 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
                   placeholder="Write a short note..."
                   className="bg-[#2b2b2b] text-white border-gray-700"
                   value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                />
+                  onChange={(e) => setNote(e.target.value)} />
               </div>
 
               <div className="mt-4 p-3 bg-[#2b2b2b] rounded-lg">
@@ -576,5 +572,13 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
         </div>
       </DialogContent>
     </Dialog>
+
+      <CoinAnimation
+        show={showCoinAnimation}
+        coinsEarned={coinsEarned}
+        message="Coins Earned!"
+        onAnimationEnd={() => setShowCoinAnimation(false)}
+        duration={3000} />
+    </>
   )
 }

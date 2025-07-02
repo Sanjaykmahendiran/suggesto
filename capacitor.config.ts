@@ -12,7 +12,9 @@ const config: CapacitorConfig = {
       // Handle back button behavior
       handleBackButton: true,
       // Exit app on back button from root
-      exitAppOnBackButtonPressed: false
+      exitAppOnBackButtonPressed: false,
+
+       launchShowDuration: 0
     }
   }
 };

@@ -34,6 +34,7 @@ import User from "@/assets/users.png";
 import BackgroundImage from "@/assets/profile-banner.jpg"
 import Top10Wall from "@/components/home-section/top10wall-section"
 import DefaultImage from "@/assets/default-user.webp"
+import RewardSection from "./_components/reward-points-card"
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -140,7 +141,7 @@ export default function ProfilePage() {
                 <Crown className="w-5 h-5" />
               </Link>
               <button
-                onClick={handleNotifications} 
+                onClick={handleNotifications}
                 className="relative p-2.5"
                 aria-label="Notifications"
               >
@@ -410,6 +411,14 @@ export default function ProfilePage() {
           )}
         </div>
 
+        <div className="mt-8 mb-2">
+          {/* Reward section */}
+          <RewardSection
+            key="rewardsection"
+            coins={userData?.coins ?? ""}
+          />
+        </div>
+        
         <div className="mt-8 mb-2">
           {/* Top 10 Movie Wall */}
           <Top10Wall key="top10wall" />

@@ -218,7 +218,7 @@ export default function ManageRoomDialog({
                                                 <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
                                                     <Avatar className="h-8 w-8 flex-shrink-0">
                                                         <AvatarImage
-                                                            src={formatImageUrl(friend.profile_pic || DefaultImage )}
+                                                            src={formatImageUrl(friend.profile_pic || "")}
                                                             alt={friend.name}
                                                             className="w-full h-full object-cover"
                                                         />
@@ -265,7 +265,7 @@ export default function ManageRoomDialog({
                                                 <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
                                                     <Avatar className="h-8 w-8 flex-shrink-0">
                                                         <AvatarImage
-                                                            src={formatImageUrl(friend.profile_pic || DefaultImage )}
+                                                            src={formatImageUrl(friend.profile_pic )}
                                                             alt={friend.name}
                                                             className="w-full h-full object-cover"
                                                         />

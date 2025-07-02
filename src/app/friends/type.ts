@@ -1,4 +1,5 @@
 export interface Friend {
+    dob: string
     is_starred: number
     friends_count: number
     friend_id: number

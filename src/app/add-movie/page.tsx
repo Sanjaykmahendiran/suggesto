@@ -387,7 +387,7 @@ const AddMoviePage = () => {
 
       setHasMore(newMovies.length === 10 && (offset + newMovies.length) < totalCount)
     } catch (error) {
-      console.error("Error loading more results:", error) 
+      console.error("Error loading more results:", error)
       setHasMore(false)
     } finally {
       setIsLoadingMore(false)
@@ -417,7 +417,7 @@ const AddMoviePage = () => {
 
   const visibleGenres = showAllGenres ? genres : genres.slice(0, 6)
   const visibleLanguages = showAllCollections ? languages : languages.slice(0, 6)
-  // const visibleOtts = showAllOtts ? otts : otts.slice(0, 6)
+  const visibleOtts = showAllOtts ? otts : otts.slice(0, 6)
   const visibleMoods = showAllMoods ? moods : moods.slice(0, 6)
 
   // Get poster URL with base path
@@ -703,7 +703,7 @@ const AddMoviePage = () => {
 
 
             {/* OTT Platforms Section */}
-            {/* <div className="mb-6">
+            <div className="mb-6">
               <h2 className="text-lg font-semibold mb-3">OTT Platforms</h2>
               <div className="grid grid-cols-2 gap-3">
                 {visibleOtts.map((ott) => (
@@ -736,7 +736,7 @@ const AddMoviePage = () => {
                   <ChevronDown className={`ml-1 h-4 w-4 transition-transform ${showAllOtts ? "rotate-180" : ""}`} />
                 </button>
               )}
-            </div> */}
+            </div>
 
 
             {/* Years Section */}

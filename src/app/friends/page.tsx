@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import Image from "next/image"
-import { ArrowLeft, MoreVertical, Search, Heart, X, UserPlus, Plus, ArrowRight, EyeIcon, StarIcon } from "lucide-react"
+import { ArrowLeft, MoreVertical, Search, Heart, X, UserPlus, Plus, ArrowRight, EyeIcon, StarIcon, Cake } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Cookies from "js-cookie"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -339,6 +339,17 @@ export default function FriendsPage() {
         router.push(url);
     };
 
+    const isBirthday = (dob: string) => {
+        if (!dob) return false;
+
+        const today = new Date();
+        const birthDate = new Date(dob);
+
+        // Check if month and day match (ignoring year)
+        return today.getMonth() === birthDate.getMonth() &&
+            today.getDate() === birthDate.getDate();
+    };
+
     const renderSearchResults = () => {
         if (searchLoading) {
             return (
@@ -617,7 +628,7 @@ export default function FriendsPage() {
                                                     </button>
                                                 </div>
                                             ) : (activeTab === "friends" || activeTab === "starred") ? (
-                                                <div className="flex flex-col items-center text-gray-400 text-sm gap-2">
+                                                <div className="flex flex-col items-end text-gray-400 text-sm gap-2">
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
@@ -633,9 +644,15 @@ export default function FriendsPage() {
                                                         />
                                                     </button>
 
-                                                    <div className="flex items-center gap-1">
-                                                        <EyeIcon className="w-4 h-4" />
-                                                        <span>{friend.friends_count || 0}</span>
+                                                    {/* Cake, Eye, and Count in same line, centered */}
+                                                    <div className="flex items-center gap-2">
+                                                        {isBirthday(friend.dob) && (
+                                                            <Cake className="w-4 h-4 text-[#B3EB50]" />
+                                                        )}
+                                                        <div className="flex items-center gap-1">
+                                                            <EyeIcon className="w-4 h-4" />
+                                                            <span className="text-sm leading-none">{friend.friends_count || 0}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             ) : (

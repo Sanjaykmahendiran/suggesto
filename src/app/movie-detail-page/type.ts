@@ -8,6 +8,7 @@ export type WatchlistData = {
 }
 
 export type Movie = {
+    available_on_ott: boolean
     movie_buddies: MovieBuddy[] | undefined
     actor_id: string
     status?: string

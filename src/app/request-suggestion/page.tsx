@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { ArrowLeft, Search, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import DefaultImage from "@/assets/default-user.webp"
+import CoinAnimation from '@/components/coin-animation';
 
 const SuggestionRequestPage = () => {
     const router = useRouter();
@@ -28,8 +29,9 @@ const SuggestionRequestPage = () => {
     const [friends, setFriends] = useState<Friend[]>([]);
     const [filteredFriends, setFilteredFriends] = useState<Friend[]>([]);
     const [selectedFriends, setSelectedFriends] = useState<number[]>([]);
-    const [hasSubmitted, setHasSubmitted] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showCoinAnimation, setShowCoinAnimation] = useState(false)
+    const [coinsEarned, setCoinsEarned] = useState(0)
 
     const userId = Cookies.get("userID")
 
@@ -129,7 +131,11 @@ const SuggestionRequestPage = () => {
                 body: JSON.stringify(requestData)
             });
 
-            const result = await response.json();
+            const result = await response.json()
+            if (result.coins_earned) {
+                setCoinsEarned(result.coins_earned)
+                setShowCoinAnimation(true)
+            }
 
             if (response.ok) {
                 toast.dismiss(loadingToast);
@@ -338,6 +344,15 @@ const SuggestionRequestPage = () => {
                     {isSubmitting ? 'Sending Request...' : 'Send Request'}
                 </button>
             </div>
+
+            <CoinAnimation
+                show={showCoinAnimation}
+                coinsEarned={coinsEarned}
+                message="Coins Earned!"
+                onAnimationEnd={() => setShowCoinAnimation(false)}
+                duration={3000}
+            />
+
         </div>
     );
 };

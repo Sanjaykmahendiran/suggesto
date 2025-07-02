@@ -94,14 +94,6 @@ export default function SuggestPage() {
     setHasSetInitialTab(true)
   }
 
-  // Get current tab data availability
-  const getCurrentTabDataAvailability = () => {
-    if (activeTab === "suggestions") {
-      return subFilter === "received" ? dataAvailability.suggestionsReceived : dataAvailability.suggestionsSent
-    } else {
-      return subFilter === "received" ? dataAvailability.requestsReceived : dataAvailability.requestsSent
-    }
-  }
 
   // Fetch suggestions when component mounts and when filters change
   useEffect(() => {
@@ -166,10 +158,6 @@ export default function SuggestPage() {
           newDataAvailability.suggestionsSent = Array.isArray(data) && data.length > 0
         }
 
-        // TODO: Add requests data checking here when APIs are available
-        // For now, you can manually set these based on your other components
-        // newDataAvailability.requestsReceived = await checkRequestsReceived()
-        // newDataAvailability.requestsSent = await checkRequestsSent()
 
         setDataAvailability(newDataAvailability)
         setInitialLoadComplete(true)

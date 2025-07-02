@@ -22,6 +22,7 @@ import { PageTransitionProvider, PageTransitionWrapper } from "@/components/Page
 import { WatchRoomAPIResponse, Room, Friend, CreateRoomPayload, FriendsAPIResponse } from "@/app/watch-room/type"
 import toast from "react-hot-toast"
 import DefaultImage from "@/assets/default-user.webp"
+import CoinAnimation from "@/components/coin-animation"
 
 // Loading Skeleton Component
 const LoadingSkeleton = () => (
@@ -44,6 +45,8 @@ export default function WatchRoomPage() {
     const [isCreatingRoom, setIsCreatingRoom] = useState(false)
     const [showCreateDialog, setShowCreateDialog] = useState(false)
     const { user, setUser } = useUser()
+    const [showCoinAnimation, setShowCoinAnimation] = useState(false)
+    const [coinsEarned, setCoinsEarned] = useState(0)
 
     const userId = Cookies.get('userID') || ''
 
@@ -121,6 +124,10 @@ export default function WatchRoomPage() {
 
             if (!response.ok) throw new Error('Failed to create room')
             const result = await response.json()
+            if (result.coins_earned) {
+                setCoinsEarned(result.coins_earned)
+                setShowCoinAnimation(true)
+            }
 
             // Refresh the rooms list after creating a new room
             await fetchWatchRooms()
@@ -250,7 +257,7 @@ export default function WatchRoomPage() {
                     <div className="h-10 w-10 rounded-full p-[2px] bg-gradient-to-tr from-[#15F5FD] to-[#036CDA]">
                         <div className="h-full w-full rounded-full overflow-hidden bg-black">
                             <Image
-                                src={user?.imgname || DefaultImage }
+                                src={user?.imgname || DefaultImage}
                                 alt="Profile"
                                 width={40}
                                 height={40}
@@ -306,7 +313,7 @@ export default function WatchRoomPage() {
                                                 {room.friends.slice(0, 3).map((friend, index) => (
                                                     <Avatar key={friend.friend_id} className="h-8 w-8 border border-[#1E1E2E]">
                                                         <AvatarImage
-                                                            src={formatImageUrl(friend.profile_pic || DefaultImage)}
+                                                            src={formatImageUrl(friend.profile_pic)}
                                                             alt={friend.name}
                                                             className="object-cover"
                                                         />
@@ -346,8 +353,6 @@ export default function WatchRoomPage() {
             >
                 <Plus className="w-6 h-6 text-white" />
             </motion.button>
-
-
 
             {/* Create Room Dialog */}
             <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
@@ -400,7 +405,7 @@ export default function WatchRoomPage() {
                                                 <div className="flex items-center gap-2">
                                                     <Avatar className="h-8 w-8">
                                                         <AvatarImage
-                                                            src={formatImageUrl(friend.profile_pic || DefaultImage)}
+                                                            src={formatImageUrl(friend.profile_pic)}
                                                             alt={friend.name}
                                                         />
                                                         <AvatarFallback>{friend.name[0]}</AvatarFallback>
@@ -434,6 +439,15 @@ export default function WatchRoomPage() {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Coin Animation */}
+            <CoinAnimation
+                show={showCoinAnimation}
+                coinsEarned={coinsEarned}
+                message="Coins Earned!"
+                onAnimationEnd={() => setShowCoinAnimation(false)}
+                duration={3000}
+            />
             <BottomNavigation currentPath="/watch-room" />
         </div >
 

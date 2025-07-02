@@ -14,6 +14,7 @@ import { Top10MovieEntry, Movie } from "./type"
 import { PodiumSkeleton, RankingItemSkeleton } from "@/components/top-wall-skeleton"
 import { PageTransitionProvider, PageTransitionWrapper } from "@/components/PageTransition"
 import DefaultImage from "@/assets/default-user.webp"
+import CoinAnimation from "@/components/coin-animation"
 
 export default function Leaderboard() {
     const router = useRouter()
@@ -37,11 +38,26 @@ export default function Leaderboard() {
     const [moviesOffset, setMoviesOffset] = useState(0)
     const [totalMoviesCount, setTotalMoviesCount] = useState(0)
     const observerRef = useRef<HTMLDivElement>(null)
+    const [showCoinAnimation, setShowCoinAnimation] = useState(false)
+    const [hasShownCoinAnimation, setHasShownCoinAnimation] = useState(false)
 
     // Modified: Get friend_id from search params and user_id from cookies
     const friendId = searchParams.get("friend_id")
     const userId = Cookies.get('userID') || ''
     const isViewingFriend = Boolean(friendId)
+
+    useEffect(() => {
+        // Only show for current user, not for friends
+        if (isViewingFriend) return
+
+        // Check if all 10 positions are filled with real data (not mock data)
+        const realMoviesCount = top10Movies.filter(movie => !movie.isMockData).length
+
+        if (realMoviesCount === 10 && !hasShownCoinAnimation && !usingMockData) {
+            setShowCoinAnimation(true)
+            setHasShownCoinAnimation(true)
+        }
+    }, [top10Movies, isViewingFriend, hasShownCoinAnimation, usingMockData])
 
     // Updated fetch top 10 movies data
     const fetchTop10Movies = async () => {
@@ -730,6 +746,14 @@ export default function Leaderboard() {
                     </motion.div>
                 </div>
             )}
+
+            <CoinAnimation
+                show={showCoinAnimation}
+                coinsEarned={20}
+                message="Top 10 Complete!"
+                onAnimationEnd={() => setShowCoinAnimation(false)}
+                duration={3000}
+            />
         </div>
         // </PageTransitionWrapper>
 

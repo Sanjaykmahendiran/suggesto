@@ -1,7 +1,6 @@
 import type React from "react"
 import "./globals.css"
 import { Overpass } from "next/font/google"
-
 import { UserProvider } from "@/contexts/UserContext"
 import { PageTransitionProvider } from "@/components/PageTransition"
 import { Toaster } from "react-hot-toast"

@@ -18,4 +18,5 @@ export type UserData = {
   suggestedlist_count?: number
   badge?: string
   dob: string
+  coins: string
 }

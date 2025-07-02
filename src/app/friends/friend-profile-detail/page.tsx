@@ -19,6 +19,7 @@ import Bookmark from "@/assets/bookmark.png";
 import Eye from "@/assets/eye.png";
 import User from "@/assets/users.png";
 import DefaultImage from "@/assets/default-user.webp"
+import CoinAnimation from "@/components/coin-animation"
 
 export default function ProfileDetailPage() {
     const { user, setUser } = useUser()
@@ -36,6 +37,8 @@ export default function ProfileDetailPage() {
     const [activeTab, setActiveTab] = useState<'received' | 'sent'>('received')
     const [acceptLoading, setAcceptLoading] = useState<boolean>(false)
     const [rejectLoading, setRejectLoading] = useState<boolean>(false)
+    const [showCoinAnimation, setShowCoinAnimation] = useState(false)
+    const [coinsEarned, setCoinsEarned] = useState(0)
 
     const defaultBadges = ["Cine Seed", "Newcomer", "Suggesto Starter", "Fresh Reeler"];
     const fallbackBadge = defaultBadges[(userData?.user_id ?? 0) % defaultBadges.length] || defaultBadges[0];
@@ -188,6 +191,11 @@ export default function ProfileDetailPage() {
             });
 
             const result = await response.json();
+            if (result.coins_earned) {
+                setCoinsEarned(result.coins_earned)
+                setShowCoinAnimation(true)
+            }
+
             if (result.status === "Friend Request Accepted" || response.ok) {
                 toast.success("Friend request accepted!");
                 setIsAccepted(true); // <-- update state
@@ -1014,6 +1022,14 @@ export default function ProfileDetailPage() {
                     </div>
                 </div>
             )}
+
+            <CoinAnimation
+                show={showCoinAnimation}
+                coinsEarned={coinsEarned}
+                message="Coins Earned!"
+                onAnimationEnd={() => setShowCoinAnimation(false)}
+                duration={3000}
+            />
 
         </div>
         // </PageTransitionWrapper>

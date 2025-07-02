@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { ArrowLeft, Smartphone, CheckCircle } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Cookies from "js-cookie"
 import { Button } from "@/components/ui/button"
@@ -67,10 +67,19 @@ export default function Login() {
   const handleMobileSubmit = async (e: { preventDefault: () => void }) => {
     e.preventDefault()
 
-    if (!mobile || mobile.length < 10) {
-      toast.error("Please enter a valid mobile number")
-      return
+    const isValidMobile = /^[6-9]\d{9}$/.test(mobile);
+
+    if (!isValidMobile) {
+      toast.error("Please enter a valid 10-digit mobile number");
+      return;
     }
+
+    const blockedNumbers = ['1234567890', '0000000000', '9999999999', '8888888888', '7777777777', '6666666666'];
+    if (blockedNumbers.includes(mobile)) {
+      toast.error("Please enter a valid 10-digit mobile number.");
+      return;
+    }
+
 
     setLoading(true)
 

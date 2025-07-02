@@ -18,5 +18,5 @@ export default function StatusBarSetup() {
     setupStatusBar()
   }, [])
 
-  return null
+  return null     
 }
