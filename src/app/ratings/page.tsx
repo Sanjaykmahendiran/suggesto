@@ -193,7 +193,7 @@ export default function RatingsPage() {
 
     return (
         // <PageTransitionWrapper>
-        <div className="max-w-2xl mx-auto min-h-screen">
+        <div className=" mx-auto min-h-screen">
             <header className="flex items-center px-4 pt-8 relative mb-4">
                 <button
                     className="p-2 rounded-full bg-[#2b2b2b]"
@@ -256,8 +256,8 @@ export default function RatingsPage() {
                                     <button
                                         onClick={() => handleLike(rating.rating_id)}
                                         className={`flex items-center transition ${rating.is_liked_by_me
-                                                ? "text-[#b56bbc]"
-                                                : "text-gray-500 hover:text-[#b56bbc]"
+                                            ? "text-[#b56bbc]"
+                                            : "text-gray-500 hover:text-[#b56bbc]"
                                             }`}
                                     >
                                         <ThumbsUp

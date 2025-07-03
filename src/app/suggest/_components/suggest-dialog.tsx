@@ -91,6 +91,12 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
   const [showCoinAnimation, setShowCoinAnimation] = useState(false)
   const [coinsEarned, setCoinsEarned] = useState(0)
 
+
+  const triggerCoinAnimation = (coinsEarned: number) => {
+    setCoinsEarned(coinsEarned);
+    setShowCoinAnimation(true);
+  };
+
   // Fetch movies and suggested movies when dialog opens
   useEffect(() => {
     if (isOpen) {
@@ -249,9 +255,13 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
     setSuggestStep(3)
   }
 
-  const handleSuggest = async () => {
+  const handleSuggest = async (event: React.MouseEvent<HTMLButtonElement>) => {
     if (selectedMovie && selectedFriend) {
       setSubmitting(true)
+
+      // Store the button element reference before async operations
+      const buttonElement = event.currentTarget;
+
       try {
         const userId = Cookies.get('userID');
         const response = await fetch('https://suggesto.xyz/App/api.php', {
@@ -270,9 +280,10 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
 
         if (!response.ok) throw new Error('Failed to suggest movie')
         const result = await response.json()
-        if (result.coins_earned) {
-          setCoinsEarned(result.coins_earned)
-          setShowCoinAnimation(true)
+
+        // Check if response indicates success and trigger coin animation
+        if (result.response === "Movie Suggested!" && result.coins_earned) {
+          triggerCoinAnimation(result.coins_earned);
         }
 
         // Update the suggested movies list to prevent re-suggesting
@@ -578,7 +589,8 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
         coinsEarned={coinsEarned}
         message="Coins Earned!"
         onAnimationEnd={() => setShowCoinAnimation(false)}
-        duration={3000} />
+        duration={3000}
+      />
     </>
   )
 }

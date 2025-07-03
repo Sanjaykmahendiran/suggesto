@@ -191,15 +191,15 @@ export default function ProfileDetailPage() {
             });
 
             const result = await response.json();
-            if (result.coins_earned) {
-                setCoinsEarned(result.coins_earned)
-                setShowCoinAnimation(true)
-            }
 
-            if (result.status === "Friend Request Accepted" || response.ok) {
+            if (result.status === "Friend Request Accepted") {
+                if (result.coins_earned) {
+                    setCoinsEarned(result.coins_earned)
+                    setShowCoinAnimation(true)
+                }
+
                 toast.success("Friend request accepted!");
-                setIsAccepted(true); // <-- update state
-                // Optional: router.refresh(); // if you want full re-render
+                setIsAccepted(true);
             } else {
                 console.error("Failed to accept request");
                 toast.error("Failed to accept request. Please try again.");

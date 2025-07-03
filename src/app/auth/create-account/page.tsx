@@ -186,6 +186,9 @@ export default function Login() {
       if (data.user_id && data.otp) {
         toast.success("OTP Resent successfully!")
 
+        // Set the new OTP for auto-fill
+        setMockOTP(data.otp)
+
         // Reset OTP fields
         setOtp(["", "", "", ""])
         setActiveInput(0)

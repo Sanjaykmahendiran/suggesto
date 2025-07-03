@@ -28,6 +28,7 @@ import Top10Wall from "@/components/home-section/top10wall-section"
 import { App } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
 import ExitDialog from "@/components/exit-dialog"
+import CoinAnimation from "@/components/coin-animation"
 
 type HomeData = {
   recentSuggestions?: any[];
@@ -69,6 +70,8 @@ export default function HomePage() {
   const [hasMoreData, setHasMoreData] = useState(true)
   const [allSectionsData, setAllSectionsData] = useState<React.ReactNode[]>([])
   const [visibleSections, setVisibleSections] = useState<React.ReactNode[]>([])
+  const [showCoinAnimation, setShowCoinAnimation] = useState(false)
+  const [coinsEarned, setCoinsEarned] = useState(0)
 
   // Exit confirmation states
   const [showExitConfirmation, setShowExitConfirmation] = useState(false)
@@ -107,7 +110,7 @@ export default function HomePage() {
   const LONG_PRESS_DURATION = 10
   const LONG_PRESS_MOVEMENT_THRESHOLD = 15
   const BACK_PRESS_TIMEOUT = 2000
-  const SECTIONS_PER_PAGE = 3 // Load 3 sections at a time
+  const SECTIONS_PER_PAGE = 3
 
   // Handle hardware back button
   const handleBackButton = useCallback(() => {
@@ -172,12 +175,28 @@ export default function HomePage() {
       const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=userget&user_id=${user_id}`)
       const data = await response.json()
       if (data && data.user_id) {
+        // Get old coins from cookies
+        const oldCoins = parseInt(Cookies.get('old_coins') || '0', 10);
+        const newCoins = parseInt(data.coins || '0', 10);
+
+        // Check if coins increased
+        if (newCoins > oldCoins) {
+          const earnedCoins = newCoins - oldCoins;
+          setCoinsEarned(earnedCoins);
+          setShowCoinAnimation(true);
+        }
+
+        // Update cookies with new coins value
+        if (data.coins) {
+          Cookies.set('old_coins', data.coins, { expires: 7 });
+        }
+
         setUser(data)
       }
     } catch (error) {
       console.error('Error fetching user data:', error)
     }
-  }, [])
+  }, [setUser])
 
   const fetchHomeData = useCallback(async (page: number = 1, isRefresh: boolean = false) => {
     try {
@@ -999,6 +1018,15 @@ export default function HomePage() {
         isOpen={showExitConfirmation}
         onCancel={() => handleExitConfirmation(false)}
         onConfirm={() => handleExitConfirmation(true)} />
+
+      <CoinAnimation
+        show={showCoinAnimation}
+        coinsEarned={coinsEarned}
+        message="Coins Earned!"
+        onAnimationEnd={() => setShowCoinAnimation(false)}
+        duration={3000}
+      />
+
 
       <BottomNavigation currentPath="/home" />
     </>

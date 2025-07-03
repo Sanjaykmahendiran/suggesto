@@ -11,6 +11,7 @@ import { motion } from "framer-motion"
 import CreatePollDialog from "./_componets/craete-poll"
 import { Movie, Poll, users } from "@/app/polls/type"
 import PollCardSkeleton from "@/app/polls/_componets/poll-loading"
+import CoinAnimation from "@/components/coin-animation";
 
 export default function PollPage() {
     const router = useRouter()
@@ -34,6 +35,8 @@ export default function PollPage() {
     const [totalCount, setTotalCount] = useState(0)
     const observerRef = useRef<HTMLDivElement>(null)
     const userId = Cookies.get("userID")
+    const [showCoinAnimation, setShowCoinAnimation] = useState(false)
+    const [coinsEarned, setCoinsEarned] = useState(0)
 
     // Fetch poll results
     const fetchPollResults = async (pollId: number): Promise<Poll | null> => {
@@ -136,6 +139,12 @@ export default function PollPage() {
             const data = await response.json()
 
             if (data.status === 'success') {
+                // Show coin animation if coins were earned
+                if (data.coins_earned) {
+                    setCoinsEarned(data.coins_earned)
+                    setShowCoinAnimation(true)
+                }
+
                 toast.success(data.message || 'Vote submitted successfully!');
 
                 // Mark this poll as voted
@@ -623,24 +632,26 @@ export default function PollPage() {
                             <div className="p-4 space-y-4">
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1">
-                                        <h3 className="font-semibold text-white mb-2">{poll.question}</h3>
-                                        <p className="text-sm text-gray-400 mb-3">
-                                            Choose from {poll.movies?.length || 0} movie options
-                                        </p>
+                                        <h3 className="font-semibold text-white mb-2 flex items-center justify-between gap-2">
+                                            {poll.question}
+                                            {(poll.is_voted === 1 || votedPolls.has(poll.poll_id)) && (
+                                                <CheckCircle className="h-4 w-4 text-[#b56bbc] shrink-0" />
+                                            )}
+                                        </h3>
+
 
                                         {/* Show voted status */}
-                                        {(poll.is_voted === 1 || votedPolls.has(poll.poll_id)) && (
-                                            <div className="flex items-center space-x-2 bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text text-transparent text-sm mb-3">
+                                        {/* {(poll.is_voted === 1 || votedPolls.has(poll.poll_id)) && (
+                                            <p className="flex items-center space-x-2 bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text text-transparent text-sm mb-3">
                                                 <CheckCircle className="h-4 w-4 text-[#b56bbc]" />
-                                                <span>You voted on this poll</span>
-                                            </div>
-                                        )}
+                                            
+                                            </p>
+                                        )} */}
 
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center space-x-4 text-sm text-gray-400">
                                                 {poll.created_by && (
                                                     <div className="flex items-center space-x-2">
-                                                        <span>Requested By</span>
                                                         <span className="flex items-center space-x-2">
                                                             <img
                                                                 src={poll.created_by.imgname}
@@ -857,6 +868,13 @@ export default function PollPage() {
             <CreatePollDialog
                 isOpen={showCreatePollDialog}
                 onClose={() => setShowCreatePollDialog(false)}
+            />
+            <CoinAnimation
+                show={showCoinAnimation}
+                coinsEarned={coinsEarned}
+                message="Coins Earned!"
+                onAnimationEnd={() => setShowCoinAnimation(false)}
+                duration={3000}
             />
 
         </div>

@@ -90,8 +90,6 @@ export default function MovieDetailPage() {
 
         try {
             setProcessingAccept(true)
-            
-
             // Create the request body for adding to watchlist
             const requestBody = {
                 gofor: "addwatchlist",
@@ -183,7 +181,7 @@ export default function MovieDetailPage() {
             const data = await response.json();
 
             if (data.response === "Movie removed from Suggested List") {
-               toast.success("Movie successfully removed from watchlist");
+                toast.success("Movie successfully removed from watchlist");
                 router.back();
             } else {
                 toast.error("Failed to remove from watchlist:", data.message || data);
@@ -204,23 +202,23 @@ export default function MovieDetailPage() {
                         </button>
                         <h1 className="text-xl font-semibold ml-4">Movie Suggestion</h1>
                     </div>
-                    <Skeleton className="h-[400px] w-full bg-gray-800" />
+                    <Skeleton className="h-[400px] w-full bg-[#2b2b2b]" />
                 </div>
 
                 <div className="px-4 py-6">
-                    <Skeleton className="h-8 w-36 bg-gray-800 mb-2" />
-                    <Skeleton className="h-4 w-48 bg-gray-800 mb-4" />
+                    <Skeleton className="h-8 w-36 bg-[#2b2b2b] mb-2" />
+                    <Skeleton className="h-4 w-48 bg-[#2b2b2b] mb-4" />
 
                     <div className="flex gap-2 mb-6">
-                        <Skeleton className="h-6 w-16 bg-gray-800 rounded-full" />
-                        <Skeleton className="h-6 w-16 bg-gray-800 rounded-full" />
-                        <Skeleton className="h-6 w-16 bg-gray-800 rounded-full" />
+                        <Skeleton className="h-6 w-16 bg-[#2b2b2b] rounded-full" />
+                        <Skeleton className="h-6 w-16 bg-[#2b2b2b] rounded-full" />
+                        <Skeleton className="h-6 w-16 bg-[#2b2b2b] rounded-full" />
                     </div>
 
                     <div className="flex justify-between mt-6">
-                        <Skeleton className="h-10 w-10 bg-gray-800 rounded-full" />
-                        <Skeleton className="h-10 w-32 bg-gray-800 rounded-full" />
-                        <Skeleton className="h-10 w-10 bg-gray-800 rounded-full" />
+                        <Skeleton className="h-10 w-10 bg-[#2b2b2b] rounded-full" />
+                        <Skeleton className="h-10 w-32 bg-[#2b2b2b] rounded-full" />
+                        <Skeleton className="h-10 w-10 bg-[#2b2b2b] rounded-full" />
                     </div>
                 </div>
             </div>
@@ -334,8 +332,8 @@ export default function MovieDetailPage() {
 
                 {/* Suggestion info */}
                 <div className="bg-[#121214] px-4 py-2 rounded-lg mb-4 text-center">
-                    <p className="text-sm bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text text-transparent">
-                        Suggested by <span className="font-semibold">{suggested_by_name}</span>
+                    <p className="text-sm font-medium text-gray-300">
+                        Suggested by <span className="font-bold bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text text-transparent">{suggested_by_name}</span>
                     </p>
                     {suggestionDate && (
                         <p className="text-xs text-gray-400 mt-1">on {suggestionDate}</p>
@@ -363,7 +361,7 @@ export default function MovieDetailPage() {
                         </Button>
                         <button
                             onClick={handleRemoveSuggestion}
-                            className="w-12 h-12 ml-3 rounded-full bg-gray-800 flex items-center justify-center"
+                            className="w-12 h-12 ml-3 rounded-full bg-[#2b2b2b] flex items-center justify-center"
                             title="Remove from watchlist"
                         >
                             <Trash2 className="w-5 h-5" />

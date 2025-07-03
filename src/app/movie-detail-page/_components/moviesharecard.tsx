@@ -3,7 +3,7 @@ import React from 'react';
 import { X } from 'lucide-react';
 import Image from "next/image"
 import { Share } from '@capacitor/share';
-import { Clipboard } from '@capacitor/Clipboard';
+import { Clipboard } from '@capacitor/clipboard';
 import { Toast } from '@capacitor/toast';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Capacitor } from '@capacitor/core';

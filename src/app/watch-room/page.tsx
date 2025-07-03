@@ -111,6 +111,7 @@ export default function WatchRoomPage() {
     }
 
     // Create new watch room
+    // Create new watch room
     const createWatchRoom = async (payload: CreateRoomPayload) => {
         try {
             setIsCreatingRoom(true)
@@ -124,7 +125,9 @@ export default function WatchRoomPage() {
 
             if (!response.ok) throw new Error('Failed to create room')
             const result = await response.json()
-            if (result.coins_earned) {
+
+            // Fixed: Check for coins_earned and trigger animation
+            if (result.coins_earned && result.coins_earned > 0) {
                 setCoinsEarned(result.coins_earned)
                 setShowCoinAnimation(true)
             }
@@ -188,7 +191,7 @@ export default function WatchRoomPage() {
 
         try {
             const memberIds = selectedFriends.map(friend => parseInt(friend.friend_id.toString()))
-            memberIds.push(parseInt(userId)) // Add current user to members
+            memberIds.push(parseInt(userId))
 
             const payload: CreateRoomPayload = {
                 gofor: "watchroom",

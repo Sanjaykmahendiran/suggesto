@@ -13,6 +13,7 @@ import { App } from "@capacitor/app"
 import type { PluginListenerHandle } from "@capacitor/core"
 import Cookies from "js-cookie"
 import { Skeleton } from "@/components/ui/skeleton"
+import { registerServiceWorker } from "@/lib/serviceWorker"
 
 const carouselData = [
   {
@@ -40,6 +41,7 @@ const carouselData = [
     ]
   }
 ]
+
 
 
 const RedirectLoading = () => (
@@ -76,6 +78,10 @@ export default function RootPage() {
   const containerRef = useRef<HTMLDivElement>(null)
   const [sliderWidth, setSliderWidth] = useState(320) // Set a default width
   const [userId, setUserId] = useState<string | undefined>()
+
+  useEffect(() => {
+    registerServiceWorker()
+  }, [])
 
   // Fetch cookie only on client
   useEffect(() => {
@@ -184,7 +190,7 @@ export default function RootPage() {
 
             <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 translate-y-1/2 z-30 bounce-slow">
               <motion.div
-                initial={{ opacity: 0, y: 20 }} 
+                initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
               >

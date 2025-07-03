@@ -17,6 +17,8 @@ import NotFound from "@/components/notfound"
 import WatchListNotFound from "@/assets/not-found-watchlist.png"
 import toast from "react-hot-toast"
 import DefaultImage from "@/assets/default-user.webp"
+import CachedImage from "@/components/CachedImage"
+import { useImagePreloader } from "@/hooks/useCachedImage"
 
 type SearchState = "initial" | "results" | "not-found"
 
@@ -57,6 +59,7 @@ export default function Watchlist() {
   const [lastSearches, setLastSearches] = useState<string[]>([])
   const { user, setUser } = useUser()
   const [totalCount, setTotalCount] = useState(0)
+  const { preloadImages } = useImagePreloader()
 
   // Fetch watchlist movies with pagination
   const fetchWatchlistMovies = useCallback(async (offset: number = 0, isLoadMore: boolean = false) => {
@@ -297,6 +300,20 @@ export default function Watchlist() {
     }))
   }
 
+  useEffect(() => {
+    if (watchlistMovies.length > 0) {
+      // Preload next batch of images in background
+      const imagesToPreload = watchlistMovies
+        .slice(currentIndex + 1, currentIndex + 6) // Preload next 5 images
+        .map(movie => getPosterUrl(movie.poster_path))
+        .filter(url => url !== getPosterUrl("/placeholder.svg"))
+
+      if (imagesToPreload.length > 0) {
+        preloadImages(imagesToPreload)
+      }
+    }
+  }, [watchlistMovies, currentIndex, preloadImages])
+
   // If search is open, show search interface
   if (showSearch) {
     return (
@@ -368,11 +385,13 @@ export default function Watchlist() {
                       className="relative w-full h-[200px] rounded-lg overflow-hidden cursor-pointer"
                       whileHover={{ scale: 1.05 }}
                     >
-                      <Image
+                      <CachedImage
                         src={getPosterUrl(movie.poster_path)}
                         alt={movie.title}
                         fill
                         className="object-cover"
+                        width={0}
+                        height={0}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
                       <div className="absolute top-2 right-2 bg-gradient-to-r from-[#ff968b] to-[#ff2251] text-white text-xs px-1.5 py-0.5 rounded flex items-center gap-1">
@@ -399,11 +418,13 @@ export default function Watchlist() {
                   <Link href={`/movie-detail-page?movie_id=${movie.movie_id}`} key={movie.watchlist_id}>
                     <div className="flex bg-[#2b2b2b] rounded-lg overflow-hidden hover:bg-[#333342] transition-colors">
                       <div className="relative w-24 h-32 flex-shrink-0">
-                        <Image
+                        <CachedImage
                           src={getPosterUrl(movie.poster_path)}
                           alt={movie.title}
                           fill
                           className="object-cover"
+                          width={0}
+                          height={0}
                         />
                         <div className="absolute top-2 right-2 bg-gradient-to-r from-[#ff968b] to-[#ff2251] text-white text-xs px-1.5 py-0.5 rounded flex items-center gap-1">
                           <Star className="w-3 h-3 text-white" />
@@ -582,11 +603,13 @@ export default function Watchlist() {
                     whileHover={{ scale: 1.05 }}
                     className="relative flex w-full h-[230px] rounded-lg overflow-hidden cursor-pointer"
                   >
-                    <Image
+                    <CachedImage
                       src={getPosterUrl(movie.poster_path)}
                       alt={movie.title}
                       fill
                       className="object-cover"
+                      width={0}
+                      height={0}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
                     <div className="absolute top-2 right-2 bg-gradient-to-r from-[#ff968b] to-[#ff2251] text-white text-xs px-1.5 py-0.5 rounded flex items-center gap-1">
@@ -724,11 +747,13 @@ export default function Watchlist() {
                           </div>
                         )}
                         <div className="relative h-full">
-                          <Image
+                          <CachedImage
                             src={getPosterUrl(watchlistMovies[index].poster_path || watchlistMovies[index].backdrop_path || "/placeholder.svg")}
                             alt={watchlistMovies[index].title}
                             fill
                             className="object-cover"
+                            width={0}
+                            height={0}
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-[#2b2b2b] via-transparent to-transparent"></div>
 

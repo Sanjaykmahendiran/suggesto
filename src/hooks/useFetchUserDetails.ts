@@ -20,6 +20,7 @@ export interface UserData {
   created_date: string;
   modified_date: string;
   not_count: number;
+  coins: string
 }
 
 interface UseFetchUserDetailsReturn {
@@ -67,6 +68,11 @@ const useFetchUserDetails = (): UseFetchUserDetailsReturn => {
       }
 
       const userData: UserData = await response.json();
+
+      // Save coins as old_coins in cookies
+      if (userData.coins) {
+        Cookies.set('old_coins', userData.coins, { expires: 7 }); // Expires in 7 days
+      }
       setUser(userData);
 
       return userData;

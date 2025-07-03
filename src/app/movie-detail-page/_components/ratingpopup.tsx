@@ -14,7 +14,7 @@ interface RatingPopupProps {
   onClose: () => void
   onRatingChange: (value: number) => void
   onReviewChange: (value: string) => void
-  onSubmit: () => void
+  onSubmit: (buttonElement: HTMLElement) => void
   setHoverRating: (value: number) => void
 }
 
@@ -113,7 +113,7 @@ const RatingPopup: React.FC<RatingPopupProps> = ({
             Cancel
           </button>
           <button
-            onClick={onSubmit}
+            onClick={(e) => onSubmit(e.currentTarget)}
             disabled={submittingRating || userRating === 0}
             className={cn(
               "flex-1 px-4 py-2 rounded-md font-semibold transition-colors",

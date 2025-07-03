@@ -17,6 +17,7 @@ import RatingPopup from "./_components/ratingpopup"
 import CastAndCrew from "./_components/CastAndCrew"
 import LoadingSkeleton from "./_components/loadingskeleton"
 import MovieBuddiesSection from "./_components/movie-buddies"
+import CoinAnimation from "@/components/coin-animation"
 
 export default function MovieDetailPage() {
     const router = useRouter()
@@ -25,7 +26,7 @@ export default function MovieDetailPage() {
     const movie_id = searchParams.get("movie_id")
     const tmdb_movie_id = searchParams.get("tmdb_movie_id")
     const watromovId = searchParams.get("watromov_id")
-    const userId = Cookies.get("userID") || "1"
+    const userId = Cookies.get("userID") || ""
 
     const [isFavorite, setIsFavorite] = useState(false)
     const [showShareCard, setShowShareCard] = useState(false)
@@ -42,60 +43,18 @@ export default function MovieDetailPage() {
     const [isExpanded, setIsExpanded] = useState(false);
     const [showCoinAnimation, setShowCoinAnimation] = useState(false)
     const [walletPosition, setWalletPosition] = useState({ x: 0, y: 0 })
-    const [coinsEarned, setCoinsEarned] = useState(5)
-
-    const coinAnimationStyles = `
-  @keyframes coinFly {
-    0% {
-      transform: translate(0, 0) scale(1);
-      opacity: 1;
-    }
-    50% {
-      transform: translateY(-50px) scale(1.2);
-      opacity: 0.8;
-    }
-    100% {
-      transform: translateY(-100px) scale(0.8);
-      opacity: 0;
-    }
-  }
-  
-  @keyframes walletBounce {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-  }
-  
-  @keyframes walletSlideDown {
-    0% { transform: translateY(-100px); opacity: 0; }
-    100% { transform: translateY(0); opacity: 1; }
-  }
-  
-  @keyframes walletSlideUp {
-    0% { transform: translateY(0); opacity: 1; }
-    100% { transform: translateY(-100px); opacity: 0; }
-  }
-  
-  .coin-animation {
-    animation: coinFly 1s ease-out forwards;
-  }
-  
-  .wallet-bounce {
-    animation: walletBounce 0.5s ease-in-out;
-  }
-  
-  .wallet-slide-down {
-    animation: walletSlideDown 0.3s ease-out;
-  }
-  
-  .wallet-slide-up {
-    animation: walletSlideUp 0.3s ease-in forwards;
-  }
-`;
+    const [coinsEarned, setCoinsEarned] = useState(0)
 
     const triggerCoinAnimation = (buttonElement: HTMLElement, coinsEarned = 5) => {
         const buttonRect = buttonElement.getBoundingClientRect();
-        const walletX = window.innerWidth / 2;
-        const walletY = 20;
+
+        // Use the button's center position as the starting point
+        const startX = buttonRect.left + buttonRect.width / 2;
+        const startY = buttonRect.top + buttonRect.height / 2;
+
+        // Set wallet position (adjust these coordinates based on where your wallet icon is)
+        const walletX = window.innerWidth - 50; // Assuming wallet is top-right
+        const walletY = 50;
 
         setWalletPosition({ x: walletX, y: walletY });
         setCoinsEarned(coinsEarned);
@@ -212,7 +171,6 @@ export default function MovieDetailPage() {
         try {
             setAddingToWatchlist(true)
 
-            // Create the request body with the required parameters
             const requestBody = {
                 gofor: "addwatchlist",
                 user_id: userId,
@@ -236,8 +194,10 @@ export default function MovieDetailPage() {
             const data = await response.json()
 
             // Check if response indicates success and trigger coin animation
-            if (data.response === "Added to Watch List!" && data.coins_earned) {
-                triggerCoinAnimation(buttonElement, data.coins_earned);
+            if (data.response === "Added to Watch List!") {
+                // Use coins_earned from API response, fallback to 5 if not provided
+                const coinsEarned = data.coins_earned || 5;
+                triggerCoinAnimation(buttonElement, coinsEarned);
             }
 
             toast.success("Added to watchlist successfully")
@@ -357,27 +317,27 @@ export default function MovieDetailPage() {
 
 
     const handleMarkAsWatched = async (event: React.MouseEvent<HTMLButtonElement>) => {
-        triggerCoinAnimation(event.currentTarget);
         if (!userId) {
             toast.error("Please login to mark as watched")
             return
         }
 
+        // Store the button element reference before async operations
+        const buttonElement = event.currentTarget;
+
         try {
             setAddingToWatchlist(true)
 
-
-            // Find the user's watchlist entry to get the watch_id
             const userWatchlistEntry = movie?.watchlist_data?.find((entry) => entry.user_id.toString() === userId.toString())
 
             if (!userWatchlistEntry) {
                 throw new Error("Movie not found in your watchlist")
             }
 
-            // Create the request body with the required parameters
             const requestBody = {
                 gofor: "watchedmovie",
                 watch_id: userWatchlistEntry.watch_id.toString(),
+                user_id: userId,
             }
 
             const response = await fetch("https://suggesto.xyz/App/api.php", {
@@ -394,7 +354,12 @@ export default function MovieDetailPage() {
             }
 
             const data = await response.json()
+
             if (data.status === "Movie Watched") {
+                // Trigger coin animation after successful API call
+                const coinsEarned = data.coins_earned || 10;
+                triggerCoinAnimation(buttonElement, coinsEarned);
+
                 toast.success("Marked as watched successfully")
                 setTimeout(() => {
                     router.back();
@@ -428,7 +393,6 @@ export default function MovieDetailPage() {
 
     // New function to handle marking watchroom movie as watched
     const handleMarkAsWatchedRoom = async (event: React.MouseEvent<HTMLButtonElement>) => {
-        triggerCoinAnimation(event.currentTarget);
         if (!userId) {
             toast.error("Please login to mark as watched")
             return
@@ -439,9 +403,12 @@ export default function MovieDetailPage() {
             return
         }
 
+        // Store the button element reference before async operations
+        const buttonElement = event.currentTarget;
+
         try {
             setAddingToWatchlist(true)
-            const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=watchedmovieroom&watromov_id=${watromovId}`, {
+            const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=watchedmovieroom&watromov_id=${watromovId}&user_id=${userId}`, {
                 method: "GET",
             })
 
@@ -451,8 +418,11 @@ export default function MovieDetailPage() {
 
             const data = await response.json()
 
-            // Check for successful response
             if (data.status === "Room Members Watched Movie") {
+                // Trigger coin animation after successful API call
+                const coinsEarned = data.coins_earned || 15; // Default to 15 for room movies
+                triggerCoinAnimation(buttonElement, coinsEarned);
+
                 toast.success("Marked as watched room movie successfully")
                 setTimeout(() => {
                     router.back();
@@ -473,7 +443,7 @@ export default function MovieDetailPage() {
         }
     }
 
-    const handleRatingSubmit = async () => {
+    const handleRatingSubmit = async (buttonElement?: HTMLElement) => {
         if (!userId) {
             toast.error("Please login to rate this movie")
             return
@@ -511,6 +481,11 @@ export default function MovieDetailPage() {
 
             // Check for specific success message
             if (data.response === "Movie Rated Successfully") {
+                // Trigger coin animation if button element is provided and coins earned
+                if (buttonElement && data.coins_earned) {
+                    triggerCoinAnimation(buttonElement, data.coins_earned);
+                }
+
                 toast.success("Your rating was submitted successfully!");
             } else {
                 toast.error("Failed to submit rating");
@@ -521,8 +496,6 @@ export default function MovieDetailPage() {
             setUserRating(0)
             setUserReview("")
             setHoverRating(0)
-            setTimeout(() => {
-            }, 2000);
 
             fetchMovieDetails()
 
@@ -739,8 +712,11 @@ export default function MovieDetailPage() {
         }
     };
 
-    const handleToggleFavorite = async () => {
+    const handleToggleFavorite = async (event: React.MouseEvent<HTMLButtonElement>) => {
         if (addingToWatchlist) return;
+
+        // Store the button element reference before async operations
+        const buttonElement = event.currentTarget;
 
         setAddingToWatchlist(true);
 
@@ -760,6 +736,11 @@ export default function MovieDetailPage() {
             const data = await res.json();
 
             if (data.liked !== undefined) {
+                // Check if the response indicates success and trigger coin animation
+                if (data.response === "Liked Successfully" && data.coins_earned) {
+                    triggerCoinAnimation(buttonElement, data.coins_earned);
+                }
+
                 setIsFavorite(data.liked);
                 setMovie(prev => prev ? { ...prev, liked: data.liked ? 1 : 0 } : prev);
                 fetchMovieDetails();
@@ -1140,7 +1121,7 @@ export default function MovieDetailPage() {
                 }}
                 onRatingChange={(value) => setUserRating(value)}
                 onReviewChange={(value) => setUserReview(value)}
-                onSubmit={handleRatingSubmit}
+                onSubmit={(buttonElement) => handleRatingSubmit(buttonElement)}
                 setHoverRating={(value) => setHoverRating(value)}
             />
 
@@ -1184,41 +1165,13 @@ export default function MovieDetailPage() {
                 </div>
             )}
 
-            {showCoinAnimation && (
-                <>
-                    <style>{coinAnimationStyles}</style>
-                    {/* Wallet at top */}
-                    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 wallet-slide-down">
-                        <div className="bg-gradient-to-r from-yellow-400 to-yellow-600 p-3 rounded-lg shadow-lg wallet-bounce">
-                            <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
-                                    💰
-                                </div>
-                                <span className="text-black font-bold">+{coinsEarned} Coins</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Flying coins */}
-                    {[...Array(coinsEarned)].map((_, index) => (
-                        <div
-                            key={index}
-                            className="fixed z-40 pointer-events-none"
-                            style={{
-                                left: `calc(50% - 10px + ${(index - 2) * 20}px)`,
-                                bottom: '80px',
-                                animationDelay: `${index * 0.1}s`
-                            }}
-                        >
-                            <div className="coin-animation">
-                                <div className="w-6 h-6 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center text-xs">
-                                    💰
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </>
-            )}
+            <CoinAnimation
+                show={showCoinAnimation}
+                coinsEarned={coinsEarned}
+                message="Coins Earned!"
+                onAnimationEnd={() => setShowCoinAnimation(false)}
+                duration={3000}
+            />
         </div>
         // </PageTransitionWrapper>
 

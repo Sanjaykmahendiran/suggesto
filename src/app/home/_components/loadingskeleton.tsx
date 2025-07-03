@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 const LoadingSkeleton = () => (
   <div className="px-4">
     {/* Movie Carousel Skeleton */}
-    <div className="h-[400px] w-80 flex items-center bg-[#2b2b2b] justify-center mb-8">
+    <div className="h-[400px]  flex items-center bg-[#2b2b2b] justify-center mb-8">
       <Skeleton className="h-[400px] rounded-lg " />
     </div>
 

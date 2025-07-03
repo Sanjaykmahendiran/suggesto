@@ -195,13 +195,22 @@ const SuggestionFormPopup = ({
             });
 
             const data = await res.json();
-            if (data.coins_earned) {
-                setCoinsEarned(data.coins_earned)
-                setShowCoinAnimation(true)
-            }
+
             if (data?.status === "success") {
                 toast.success("Suggestion submitted successfully!");
-                onClose();
+
+                if (data.coins_earned) {
+                    setCoinsEarned(data.coins_earned);
+                    setShowCoinAnimation(true);
+
+                    // Wait for animation to complete before closing
+                    setTimeout(() => {
+                        onClose();
+                    }, 3000); // Match the animation duration
+                } else {
+                    // No coins earned, close immediately
+                    onClose();
+                }
             } else {
                 toast.error("An error occurred while submitting.");
             }
@@ -363,8 +372,12 @@ const SuggestionFormPopup = ({
                 show={showCoinAnimation}
                 coinsEarned={coinsEarned}
                 message="Coins Earned!"
-                onAnimationEnd={() => setShowCoinAnimation(false)}
-                duration={3000} />
+                onAnimationEnd={() => {
+                    setShowCoinAnimation(false);
+                    onClose();
+                }}
+                duration={3000}
+            />
 
         </div>
     );

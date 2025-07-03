@@ -132,12 +132,13 @@ const SuggestionRequestPage = () => {
             });
 
             const result = await response.json()
-            if (result.coins_earned) {
-                setCoinsEarned(result.coins_earned)
-                setShowCoinAnimation(true)
-            }
 
             if (response.ok) {
+                if (result.coins_earned) {
+                    setCoinsEarned(result.coins_earned)
+                    setShowCoinAnimation(true)
+                }
+
                 toast.dismiss(loadingToast);
                 toast.success('Request sent successfully! 🎉');
 
@@ -147,6 +148,10 @@ const SuggestionRequestPage = () => {
                 setNumItems('');
                 setSelectedFriends([]);
                 setSearchTerm('');
+
+                setTimeout(() => {
+                    router.back();
+                }, 3000);
             } else {
                 toast.dismiss(loadingToast);
                 toast.error(result.message || 'Failed to send request');
@@ -160,7 +165,6 @@ const SuggestionRequestPage = () => {
             setIsSubmitting(false);
         }
     };
-
 
     const handleBack = () => router.back();
 
@@ -207,12 +211,12 @@ const SuggestionRequestPage = () => {
                             <SelectTrigger id="genreSelect" className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-[#ff7db8] transition-colors">
                                 <SelectValue placeholder="Genre " />
                             </SelectTrigger>
-                            <SelectContent className="bg-[#181826] text-white max-h-60 overflow-y-auto">
+                            <SelectContent className="bg-[#2b2b2b] text-white max-h-60 overflow-y-auto">
                                 {genres.map((genre) => (
                                     <SelectItem
                                         key={genre.genre_id}
                                         value={genre.name}
-                                        className="bg-[#181826] text-white hover:bg-white/10"
+                                        className="bg-[#2b2b2b] text-white hover:bg-white/10"
                                     >
                                         {genre.name}
                                     </SelectItem>
