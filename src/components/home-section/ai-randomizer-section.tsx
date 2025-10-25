@@ -2,9 +2,9 @@
 
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
-import { Bot, Shuffle, Sparkles, Star } from "lucide-react"
+import { Bot, Star,  } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useState } from "react"
+import DefaultMoviePoster from "@/assets/default-movie-poster.jpg"
 
 type Movie = {
     backdrop_path: any
@@ -22,7 +22,7 @@ type AiRandomizerSectionProps = {
     title?: string
 }
 
-export const AiRandomizerSection = ({   sectionKey, movies, title = "AI Recommendations" }: AiRandomizerSectionProps) => {
+export const AiRandomizerSection = ({ sectionKey, movies, title = "AI Recommendations" }: AiRandomizerSectionProps) => {
     const router = useRouter()
 
     if (!movies || movies.length === 0) {
@@ -30,7 +30,7 @@ export const AiRandomizerSection = ({   sectionKey, movies, title = "AI Recommen
     }
 
     return (
-        <div className="px-4 mb-14">
+        <div className="px-4 mb-14 " data-tour-target="ai-randomizer" >
             <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-2">
                     <Bot className="w-5 h-5 text-white" />
@@ -61,7 +61,7 @@ export const AiRandomizerSection = ({   sectionKey, movies, title = "AI Recommen
                             onClick={() => router.push(`/movie-detail-page?movie_id=${movie.movie_id}`)}
                         >
                             <img
-                                src={`https://suggesto.xyz/App/${movie.backdrop_path}`}
+                                src={movie.backdrop_path ? `https://suggesto.xyz/App/${movie.backdrop_path}` : DefaultMoviePoster.src}
                                 alt={movie.title}
                                 className="w-full h-full object-cover"
                             />

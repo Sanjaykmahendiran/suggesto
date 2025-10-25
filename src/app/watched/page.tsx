@@ -163,7 +163,7 @@ export default function WatchNow() {
                 <Link href="/profile">
                     <div className="w-10 h-10 rounded-full border-2 border-primary overflow-hidden">
                         <Image
-                            src={user?.imgname || DefaultImage }
+                            src={user?.imgname || DefaultImage}
                             alt="Profile"
                             width={40}
                             height={40}
@@ -220,6 +220,7 @@ export default function WatchNow() {
                                     fill
                                     className="object-cover"
                                 />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
                                 <div className="absolute top-2 right-2 bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] text-white text-xs px-1.5 py-0.5 rounded flex items-center gap-1">
                                     <Star className="w-3 h-3 text-white" />
                                     {movie.rating}

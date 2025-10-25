@@ -6,6 +6,8 @@ import { PageTransitionProvider } from "@/components/PageTransition"
 import { Toaster } from "react-hot-toast"
 import StatusBarSetup from "@/components/StatusBarSetup"
 import NavigationBarSetup from "@/components/NavigationBarSetup"
+import { TourProvider } from "@/contexts/TourContext"
+import { GlobalTourManager } from "@/components/app-tour/GlobalTourManager"
 
 const overpass = Overpass({ subsets: ["latin"] })
 
@@ -20,7 +22,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className="no-scrollbar">
       <body className={`${overpass.className}`}>
         {/* Capacitor status bar and navigation bar setup runs only on mobile devices */}
         <StatusBarSetup />
@@ -61,7 +63,12 @@ export default function RootLayout({
                 },
               }}
             />
-            <main className="bg-[#121214] mb-18">{children}</main>
+            <main className="bg-[#121214] mb-18">
+              <TourProvider>
+                {children}
+                <GlobalTourManager />
+              </TourProvider>
+            </main>
           </UserProvider>
         </PageTransitionProvider>
       </body>

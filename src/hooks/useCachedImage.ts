@@ -1,17 +1,17 @@
-// hooks/useCachedImage.js
+// hooks/useCachedImage.ts
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { imageCacheManager } from '@/lib/imageCache'
 
-export const useCachedImage = (src, fallbackSrc = '/placeholder.svg') => {
-    const [imageSrc, setImageSrc] = useState(fallbackSrc)
-    const [isLoading, setIsLoading] = useState(true)
-    const [error, setError] = useState(null)
-    const abortControllerRef = useRef()
+export const useCachedImage = (src: string | { src: string } | null, fallbackSrc = '/placeholder.svg') => {
+    const [imageSrc, setImageSrc] = useState<string>(fallbackSrc)
+    const [isLoading, setIsLoading] = useState<boolean>(true)
+    const [error, setError] = useState<Error | null>(null)
+    const abortControllerRef = useRef<AbortController | undefined>(undefined)
 
     // Helper function to extract URL from Next.js static imports
-    const extractImageUrl = useCallback((imageSource) => {
+    const extractImageUrl = useCallback((imageSource: string | { src: string } | null): string | null => {
         if (!imageSource) return null
 
         if (typeof imageSource === "string") {
@@ -25,7 +25,7 @@ export const useCachedImage = (src, fallbackSrc = '/placeholder.svg') => {
         return null
     }, [])
 
-    const loadImage = useCallback(async (imageUrl) => {
+    const loadImage = useCallback(async (imageUrl: string | null): Promise<string> => {
         if (!imageUrl) {
             setImageSrc(fallbackSrc)
             setIsLoading(false)
@@ -89,10 +89,10 @@ export const useCachedImage = (src, fallbackSrc = '/placeholder.svg') => {
                 return imageUrl
             }
         } catch (err) {
-            if (err.name === 'AbortError') return fallbackSrc
+            if (err instanceof Error && err.name === 'AbortError') return fallbackSrc
 
             console.error('Error loading image:', err)
-            setError(err)
+            setError(err instanceof Error ? err : new Error(String(err)))
             setImageSrc(fallbackSrc)
             setIsLoading(false)
             return fallbackSrc
@@ -134,16 +134,16 @@ export const useCachedImage = (src, fallbackSrc = '/placeholder.svg') => {
 
 // Hook for batch image preloading
 export const useImagePreloader = () => {
-    const [preloadedImages, setPreloadedImages] = useState(new Set())
-    const activeRequests = useRef(new Map())
+    const [preloadedImages, setPreloadedImages] = useState<Set<string>>(new Set())
+    const activeRequests = useRef<Map<string, AbortController>>(new Map())
 
-    const preloadImages = useCallback(async (imageUrls) => {
+    const preloadImages = useCallback(async (imageUrls: Array<string | { src: string } | null>) => {
         if (!Array.isArray(imageUrls) || imageUrls.length === 0) return
 
         const validUrls = imageUrls
             .map(url => {
                 // Handle Next.js static imports
-                if (typeof url === 'object' && url.src) return url.src
+                if (typeof url === 'object' && url !== null && 'src' in url) return url.src
                 if (typeof url === 'string') return url
                 return null
             })
@@ -167,7 +167,7 @@ export const useImagePreloader = () => {
             const promises = chunk.map(async (url) => {
                 // Mark as active
                 const abortController = new AbortController()
-                activeRequests.current.set(url, abortController)
+                if (url) activeRequests.current.set(url, abortController)
 
                 try {
                     const cachedBlob = await imageCacheManager.getCachedImage(url)
@@ -186,7 +186,7 @@ export const useImagePreloader = () => {
                         setPreloadedImages(prev => new Set(prev).add(url))
                     }
                 } catch (error) {
-                    if (error.name !== 'AbortError') {
+                    if (!(error instanceof Error) || error.name !== 'AbortError') {
                         console.warn('Failed to preload image:', url, error)
                     }
                 } finally {

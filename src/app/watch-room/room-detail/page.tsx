@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import Image from "next/image"
-import { ArrowLeft, Users, Film, Settings, UserPlus, Plus, Search, UserMinus, Edit2, LogOut } from "lucide-react"
+import { ArrowLeft, Users, Film, Settings, UserPlus, Plus, Search, UserMinus, Edit2, LogOut, Delete, Trash2, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -18,9 +18,15 @@ import toast from "react-hot-toast"
 import { Movie, Room, RoomData, Friend } from "@/app/watch-room/room-detail/type"
 import ManageRoomDialog from "../_components/manage-room"
 import EditRoomNameDialog from "../_components/edit-room-name"
+import { useTourIntegration } from "@/hooks/useTourIntegration"
+import Link from "next/link"
+import { useUser } from "@/contexts/UserContext"
+import DefaultImage from "@/assets/default-user.webp"
+import RoomDetailLoading from "../_components/roomdetail-loading"
 
 
 export default function RoomDetailPage() {
+    const { user, setUser } = useUser()
     const router = useRouter()
     const searchParams = useSearchParams()
     const roomId = searchParams.get("room_id")
@@ -56,6 +62,7 @@ export default function RoomDetailPage() {
     const [hasMoreMovies, setHasMoreMovies] = useState(true)
     const [totalMoviesCount, setTotalMoviesCount] = useState(0)
 
+    useTourIntegration('roomDetail', [loading], !loading)
 
     // Fetch room details
     const fetchRoomDetails = async () => {
@@ -306,6 +313,7 @@ export default function RoomDetailPage() {
             setIsUpdatingRoom(false)
         }
     }
+
     const handleExitRoom = async () => {
         setIsUpdatingRoom(true)
 
@@ -334,6 +342,33 @@ export default function RoomDetailPage() {
         }
     }
 
+    const handleDeleteRoom = async () => {
+        setIsUpdatingRoom(true)
+
+        try {
+            const response = await fetch(
+                `https://suggesto.xyz/App/api.php?gofor=removewatchroom&room_id=${room!.id}`
+            )
+
+            if (!response.ok) throw new Error('Failed to delete room')
+
+            const result = await response.json()
+
+            if (result.response === 'Watchroom Deleted') {
+                toast.success('Watchroom Deleted Successfully')
+                router.push('/watch-room')
+            } else {
+                toast.error(result.message || 'Something went wrong')
+            }
+
+            return result
+        } catch (error) {
+            console.error('Error removing member:', error)
+            toast.error('Failed to delete the room')
+        } finally {
+            setIsUpdatingRoom(false)
+        }
+    }
 
 
     // Add this function with your other API functions
@@ -472,74 +507,52 @@ export default function RoomDetailPage() {
 
     // Loading state
     if (loading) {
-        return (
-            <div className="flex flex-col min-h-screen text-white fixed inset-0">
-                <div className="relative ">
-                    <div className="p-4 flex items-center justify-center">
-                        <button className="absolute left-4 p-2" onClick={() => router.back()}>
-                            <ArrowLeft size={20} />
-                        </button>
-                        <Skeleton className="h-6 w-32 bg-[#2b2b2b]" />
-                    </div>
-
-                    <div className="px-4 pb-4">
-                        <Skeleton className="h-32 w-full bg-[#2b2b2b] rounded-lg mb-4" />
-                    </div>
-                </div>
-
-                <div className="px-4 py-6">
-                    <Skeleton className="h-8 w-48 bg-[#2b2b2b] mb-2" />
-                    <Skeleton className="h-4 w-32 bg-[#2b2b2b] mb-4" />
-
-                    <div className="flex gap-2 mb-6">
-                        {[1, 2, 3].map(i => (
-                            <Skeleton key={i} className="h-8 w-8 bg-[#2b2b2b] rounded-full" />
-                        ))}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                        {[1, 2, 3, 4].map(i => (
-                            <Skeleton key={i} className="aspect-[2/3] bg-[#2b2b2b] rounded-lg" />
-                        ))}
-                    </div>
-                </div>
-            </div>
-        )
+        <RoomDetailLoading />
     }
-
 
     if (!room) return null
 
     const memberCount = room.members.length
-    const currentUser = room.members.find(m => m.user_id === userId)
 
     const handleManageRoom = () => {
         setShowManageDialog(true)
     }
 
     return (
-
         // <PageTransitionWrapper>
-        <div className="flex flex-col h-screen text-white ">
+        <div className="text-white min-h-screen mb-22">
             {/* Header */}
-            <div className="relative pt-8">
-                {/* Background gradient */}
-                <div className="absolute inset-0 "></div>
-
-                {/* Header content */}
-                <div className="relative z-10 p-4 flex items-center justify-center">
-                    <button
-                        className="absolute left-4 p-2 rounded-full  bg-[#2b2b2b]"
-                        onClick={() => router.back()}
-                    >
+            <header className="p-4 flex items-center justify-between pt-8">
+                <div className="flex items-center gap-2">
+                    <button className="mr-2 p-2 rounded-full bg-[#2b2b2b]" onClick={() => router.back()}>
                         <ArrowLeft size={20} />
                     </button>
-                    <h1 className="text-xl font-semibold">Watch Room</h1>
+                    <div>
+                        <h1 className="text-xl font-bold text-white">Watch Room</h1>
+                        <p className="text-xs text-gray-400">
+                            Watch movies with friends
+                        </p>
+                    </div>
                 </div>
+                <Link href="/profile">
+                    <div className="h-10 w-10 rounded-full p-[2px] bg-gradient-to-tr from-[#15F5FD] to-[#036CDA]">
+                        <div className="h-full w-full rounded-full overflow-hidden bg-black">
+                            <Image
+                                src={user?.imgname || DefaultImage}
+                                alt="Profile"
+                                width={40}
+                                height={40}
+                                className="w-full h-full object-cover"
+                            />
+                        </div>
+                    </div>
+                </Link>
+            </header>
 
+            <div className="flex flex-col flex-1 relative">
                 {/* Room info card with merged members section */}
                 <div className="relative z-10 px-4 pb-4">
-                    <div className="bg-[#2b2b2b] rounded-xl p-4 mb-2">
+                    <div className="bg-[#2b2b2b] rounded-xl p-4 mb-2" data-tour-target="room-info-card">
                         <div className="flex items-start justify-between mb-2">
                             <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1">
@@ -548,6 +561,7 @@ export default function RoomDetailPage() {
                                         <button
                                             onClick={() => setShowEditNameDialog(true)}
                                             className="p-1 rounded-full bg-[#3E3E4E] hover:bg-[#4A4A5E] transition-colors"
+                                            data-tour-target="edit-room-name"
                                         >
                                             <Edit2 size={14} />
                                         </button>
@@ -568,20 +582,32 @@ export default function RoomDetailPage() {
                                 </div>
                             </div>
                             {room.is_creator ? (
-                                <button
-                                    className="p-2 rounded-full bg-[#3E3E4E] hover:bg-[#4A4A5E] transition-colors"
-                                    onClick={handleManageRoom}
-                                >
-                                    <Settings size={16} />
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        className="p-2 rounded-full bg-[#3E3E4E] hover:bg-[#4A4A5E] transition-colors"
+                                        onClick={handleManageRoom}
+                                        data-tour-target="room-settings"
+                                    >
+                                        <Settings size={16} />
+                                    </button>
+                                    <button
+                                        className="p-2 rounded-full bg-[#3E3E4E] hover:bg-[#4A4A5E] transition-colors"
+                                        onClick={handleDeleteRoom}
+                                        data-tour-target="delete-room"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
                             ) : (
                                 <button
                                     className="p-2 rounded-full bg-[#3E3E4E] hover:bg-[#4A4A5E] transition-colors"
                                     onClick={() => setShowConfirm(true)}
+                                    data-tour-target="leave-room"
                                 >
                                     <LogOut size={16} />
                                 </button>
                             )}
+
 
                         </div>
 
@@ -649,13 +675,14 @@ export default function RoomDetailPage() {
                 <div className="mb-6">
                     {/* Tab Headers - Made Full Width */}
                     <div className="flex items-center mb-4">
-                        <div className="flex bg-[#2b2b2b] rounded-lg p-1 flex-1">
+                        <div className="flex bg-[#2b2b2b] rounded-lg p-1 flex-1" data-tour-target="movie-tabs">
                             <button
                                 className={`flex-1 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'planned'
                                     ? 'bg-gradient-to-r from-[#15F5FD] to-[#036CDA] text-white'
                                     : 'text-gray-400 hover:text-white'
                                     }`}
                                 onClick={() => setActiveTab('planned')}
+                                data-tour-target="planned-movies"
                             >
                                 Planned ({room.addedMovies.filter(movie => movie.status === 'planned').length})
                             </button>
@@ -665,6 +692,7 @@ export default function RoomDetailPage() {
                                     : 'text-gray-400 hover:text-white'
                                     }`}
                                 onClick={() => setActiveTab('watched')}
+                                data-tour-target="watched-movies"
                             >
                                 Watched ({room.addedMovies.filter(movie => movie.status === 'watched').length})
                             </button>
@@ -679,32 +707,32 @@ export default function RoomDetailPage() {
                             ))}
                         </div>
                     ) : getCurrentMovies().length > 0 ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                            {getCurrentMovies().map((movie) => (
-                                <div
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3" data-tour-target="movie-grid">
+                            {getCurrentMovies().map((movie, index) => (
+                                <motion.div
                                     key={movie.movie_id}
-                                    className="bg-[#2b2b2b] rounded-lg overflow-hidden cursor-pointer hover:bg-[#32324A] transition-colors"
-                                    onClick={() => handleMovieClick(movie, activeTab)}  // activeTab could be "watched", "planned", etc.
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: index * 0.1 }}
+                                    whileHover={{ scale: 1.05 }}
+                                    className="relative flex w-full h-[230px] rounded-lg overflow-hidden cursor-pointer"
+                                    onClick={() => handleMovieClick(movie, activeTab)}
                                 >
-                                    <div className="aspect-[2/3] relative">
-                                        <Image
-                                            src={formatImageUrl(movie.poster_path)}
-                                            alt={movie.title}
-                                            fill
-                                            className="object-cover"
-                                        />
+                                    <Image
+                                        src={formatImageUrl(movie.poster_path)}
+                                        alt={movie.title}
+                                        fill
+                                        className="object-cover"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                                    <div className="absolute top-2 right-2 bg-gradient-to-r from-[#15F5FD] to-[#036CDA] text-white text-xs px-1.5 py-0.5 rounded flex items-center gap-1">
+                                        <Star className="w-3 h-3 text-white" />
+                                        {movie.rating}
                                     </div>
-                                    <div className="p-3">
-                                        <h5 className="font-medium text-sm line-clamp-1 mb-1">{movie.title}</h5>
-                                        <div className="flex justify-between text-xs text-gray-400 mb-2">
-                                            <span>{new Date(movie.release_date).getFullYear()}</span>
-                                            <span className="flex items-center gap-1">
-                                                <span style={{ color: 'gold' }}>★</span>
-                                                {movie.rating}
-                                            </span>
-                                        </div>
+                                    <div className="absolute bottom-2 left-2">
+                                        <h3 className="text-sm font-medium text-white">{movie.title}</h3>
                                     </div>
-                                </div>
+                                </motion.div>
                             ))}
                         </div>
                     ) : (
@@ -761,6 +789,7 @@ export default function RoomDetailPage() {
                 whileTap={{ scale: 0.95 }}
                 onClick={handleAddMovie}
                 disabled={addingMovie}
+                data-tour-target="add-movie-button"
             >
                 <Plus className="w-6 h-6 text-white" />
             </motion.button>
@@ -779,6 +808,7 @@ export default function RoomDetailPage() {
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
                             <input
+                                data-tour-target="movie-search"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="Search movies..."
@@ -894,29 +924,31 @@ export default function RoomDetailPage() {
                 isUpdating={isUpdatingRoomName}
             />
 
-            {showConfirm && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-                    <div className="bg-[#1e1e1e] p-6 rounded-xl shadow-lg text-white w-full text-center">
-                        <p className="mb-4">Are you sure you want to Leave the room?</p>
-                        <div className="flex justify-center gap-4">
-                            <button
-                                onClick={() => setShowConfirm(false)}
-                                className="bg-[#2b2b2b] hover:bg-gray-700 px-4 py-2 rounded-md"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleExitRoom}
-                                className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-md"
-                            >
-                                Delete
-                            </button>
+            {
+                showConfirm && (
+                    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+                        <div className="bg-[#1e1e1e] p-6 rounded-xl shadow-lg text-white w-full text-center">
+                            <p className="mb-4">Are you sure you want to Leave the room?</p>
+                            <div className="flex justify-center gap-4">
+                                <button
+                                    onClick={() => setShowConfirm(false)}
+                                    className="bg-[#2b2b2b] hover:bg-gray-700 px-4 py-2 rounded-md"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleExitRoom}
+                                    className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-md"
+                                >
+                                    Delete
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
-        </div>
+        </div >
         // </PageTransitionWrapper>
 
     )

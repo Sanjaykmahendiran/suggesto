@@ -157,7 +157,7 @@ export default function WatchNowFilterComponent({ onClick, onApplyFilters }: Fil
   }
 
   return (
-    <div className="bg-[#181826] text-white p-6 rounded-t-2xl max-h-[90vh] overflow-y-auto">
+    <div className="bg-[#1f1f21] text-white p-6 rounded-t-2xl max-h-[90vh] overflow-y-auto">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold">Filters</h2>
         <button onClick={onClick} className="p-2 rounded-full bg-[#2b2b2b]">
@@ -274,7 +274,7 @@ export default function WatchNowFilterComponent({ onClick, onApplyFilters }: Fil
       </div>
 
       {/* Action Buttons */}
-      <div className="fixed bottom-0 left-0 w-full bg-[#181826] px-6 py-4 flex gap-3 z-10">
+      <div className="fixed bottom-0 left-0 w-full bg-[#1f1f21] px-6 py-4 flex gap-3 z-10">
         <Button
           variant="outline"
           className="flex-1 border-gray-600 text-white hover:bg-[#2b2b2b]"

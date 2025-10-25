@@ -4,6 +4,7 @@ import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
 import { Sparkles, TrendingUp, Clock, Star, Users, Bot } from "lucide-react"
 import React from "react"
+import DefaultMoviePoster from "@/assets/default-movie-poster.jpg"
 
 type Movie = {
   movie_id: string | number
@@ -15,7 +16,7 @@ type Movie = {
 }
 
 interface DynamicMovieSectionProps {
-  sectionKey : string
+  sectionKey: string
   movies: Movie[]
   title: string
   sectionType?: string
@@ -69,7 +70,7 @@ export const DynamicMovieSection: React.FC<DynamicMovieSectionProps> = ({
         >
           See All
         </motion.button>
-      </div> 
+      </div>
 
       {/* Movies Horizontal Scroll */}
       <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
@@ -85,7 +86,7 @@ export const DynamicMovieSection: React.FC<DynamicMovieSectionProps> = ({
             <div className="relative overflow-hidden rounded-lg aspect-[2/3] bg-[#2b2b2b]">
               {/* Rest of your existing movie card content remains the same */}
               <img
-                src={`https://suggesto.xyz/App/${movie.poster_path}`}
+                src={movie.poster_path ? `https://suggesto.xyz/App/${movie.poster_path}` : DefaultMoviePoster.src}
                 alt={movie.title}
                 className="min-w-[120px] h-[180px] object-cover transition-transform duration-300 group-hover:scale-105"
                 onError={(e) => {

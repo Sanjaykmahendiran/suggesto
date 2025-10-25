@@ -17,19 +17,30 @@ import { BottomNavigation } from "@/components/bottom-navigation"
 import Link from "next/link"
 import { useUser } from "@/contexts/UserContext"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useTourIntegration } from "@/hooks/useTourIntegration"
 
-type Tab = "friends" | "requests" | "suggested" | "starred"
+type Tab = "friends" | "requests" | "suggested" | "starred" | "contacts"
 type Step = "list" | "search"
 
 
 export default function FriendsPage() {
     const router = useRouter()
     const { user, setUser } = useUser()
+    const searchParams = useSearchParams()
+    const pageType = searchParams.get("type");
+    const friendId = searchParams.get("friend_id");
+
     const [step, setStep] = useState<Step>("list")
     const [friends, setFriends] = useState<Friend[]>([])
     const [allFriends, setAllFriends] = useState<Friend[]>([])
     const [loading, setLoading] = useState(true)
-    const [activeTab, setActiveTab] = useState<Tab>("friends")
+    const [activeTab, setActiveTab] = useState<Tab>(() => {
+        const savedTab = Cookies.get('friends-active-tab') as Tab;
+        if (pageType === "new_login") return "contacts";
+        return savedTab && ['friends', 'requests', 'suggested', 'starred', 'contacts'].includes(savedTab)
+            ? savedTab
+            : "friends";
+    });
     const [actionLoading, setActionLoading] = useState<number | null>(null)
     const [imageLoaded, setImageLoaded] = useState(false)
     const [imageError, setImageError] = useState(false)
@@ -42,9 +53,6 @@ export default function FriendsPage() {
     const [filteredFriends, setFilteredFriends] = useState<Friend[]>([])
     const [isSearching, setIsSearching] = useState(false)
     const [requestType, setRequestType] = useState<"received" | "sent">("received")
-    const searchParams = useSearchParams()
-    const pageType = searchParams.get("type");
-    const friendId = searchParams.get("friend_id");
     const [friendsLoading, setFriendsLoading] = useState(false)
     const [hasMore, setHasMore] = useState(true)
     const [offset, setOffset] = useState(0)
@@ -52,6 +60,8 @@ export default function FriendsPage() {
     const [totalCount, setTotalCount] = useState(0)
     const observerRef = useRef<HTMLDivElement>(null)
 
+    useTourIntegration('friends', [loading], !loading)
+    const tabContainerRef = useRef<HTMLDivElement>(null)
     // Check if this is profile detail friends view
     const isProfileDetailFriends = pageType === "profiledetailfriends"
 
@@ -60,7 +70,57 @@ export default function FriendsPage() {
         requests: requestType === "received" ? "friendreqlist" : "friendreqsentlist",
         suggested: "suggested_friends",
         starred: "friendslist",
+        contacts: "contactfriendlist"
     }
+
+    useEffect(() => {
+        Cookies.set('friends-active-tab', activeTab, { expires: 30 });
+    }, [activeTab]);
+
+    // Add this function before the return statement
+    const getTabOrder = () => {
+        if (pageType === "new_login") {
+            return ["contacts", "friends", "suggested", "requests", "starred"];
+        }
+        if (totalCount < 20) {
+            return ["friends", "suggested", "contacts", "requests", "starred"];
+        }
+        return ["friends", "requests", "suggested", "starred", "contacts"];
+    };
+
+    const scrollToActiveTab = useCallback(() => {
+        if (tabContainerRef.current) {
+            const container = tabContainerRef.current
+            const activeTabElement = container.querySelector(`[data-tab="${activeTab}"]`) as HTMLElement
+
+            if (activeTabElement) {
+                const containerRect = container.getBoundingClientRect()
+                const tabRect = activeTabElement.getBoundingClientRect()
+
+                // Calculate if tab is outside visible area
+                const isTabOutsideLeft = tabRect.left < containerRect.left
+                const isTabOutsideRight = tabRect.right > containerRect.right
+
+                if (isTabOutsideLeft || isTabOutsideRight) {
+                    // Calculate scroll position to center the tab
+                    const tabCenter = activeTabElement.offsetLeft + activeTabElement.offsetWidth / 2
+                    const containerCenter = container.offsetWidth / 2
+                    const scrollPosition = tabCenter - containerCenter
+
+                    container.scrollTo({
+                        left: Math.max(0, scrollPosition),
+                        behavior: 'smooth'
+                    })
+                }
+            }
+        }
+    }, [activeTab])
+
+    useEffect(() => {
+        // Small delay to ensure DOM has updated
+        const timeoutId = setTimeout(scrollToActiveTab, 100)
+        return () => clearTimeout(timeoutId)
+    }, [activeTab, scrollToActiveTab])
 
     const handleFavoriteClick = async (friendId: number) => {
         const userId = Cookies.get("userID");
@@ -96,6 +156,13 @@ export default function FriendsPage() {
     };
 
     const fetchFriends = useCallback(async (currentOffset: number = 0, isLoadMore: boolean = false) => {
+
+        if (activeTab === "suggested" && user?.payment_status !== 1) {
+            setLoading(false);
+            setFriendsLoading(false);
+            setInitialLoad(false);
+            return;
+        }
         // Determine which user_id to use based on pageType
         let userId;
         if (isProfileDetailFriends && friendId) {
@@ -127,7 +194,7 @@ export default function FriendsPage() {
 
             // Handle paginated responses (friendslist and suggested_friends and starred)
             if (activeTab === "friends" || activeTab === "suggested" || activeTab === "starred") {
-                const fetchedFriends = data?.data || []
+                const fetchedFriends = (data?.data || []).filter((friend: Friend) => friend.name && friend.name.trim() !== '')
 
                 // Set total count from API response
                 if (data?.total_count !== undefined) {
@@ -169,8 +236,9 @@ export default function FriendsPage() {
             }
             // Handle non-paginated responses (requests)
             else if (Array.isArray(data)) {
-                setFriends(data);
-                setHasMore(false); // No pagination for requests
+                const filteredData = data.filter((friend: Friend) => friend.name && friend.name.trim() !== '')
+                setFriends(filteredData);
+                setHasMore(false);
             } else {
                 setFriends([])
                 if (activeTab === "friends" as Tab) {
@@ -198,6 +266,7 @@ export default function FriendsPage() {
         }
     }, [requestType])
 
+
     const searchUsers = async (searchQuery: string) => {
         if (!searchQuery.trim()) {
             setSearchResults([])
@@ -211,7 +280,8 @@ export default function FriendsPage() {
             const data = await res.json()
 
             if (Array.isArray(data)) {
-                setSearchResults(data)
+                const filteredResults = data.filter((user: SearchUser) => user.name && user.name.trim() !== '')
+                setSearchResults(filteredResults)
             } else {
                 setSearchResults([])
             }
@@ -232,9 +302,10 @@ export default function FriendsPage() {
 
         setIsSearching(true)
         const filtered = friends.filter(friend =>
-            friend.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (friend.genre && friend.genre.toLowerCase().includes(searchQuery.toLowerCase())) ||
-            (friend.common_genres && friend.common_genres.toLowerCase().includes(searchQuery.toLowerCase()))
+            friend.name && friend.name.trim() !== '' && // Add this condition first
+            (friend.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (friend.genre && friend.genre.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                (friend.common_genres && friend.common_genres.toLowerCase().includes(searchQuery.toLowerCase())))
         )
         setFilteredFriends(filtered)
     }
@@ -251,7 +322,12 @@ export default function FriendsPage() {
             const starredFriends = allFriends.filter(friend => friend.is_starred === 1);
             setFriends(starredFriends);
             setLoading(false);
-            setHasMore(false); // No pagination needed for starred from existing data
+            setHasMore(false);
+        } else if (activeTab === "suggested" && user?.payment_status !== 1) {
+            // For non-paid users on suggested tab, don't call API
+            setFriends([]);
+            setLoading(false);
+            setHasMore(false);
         } else if (step === "list") {
             fetchFriends(0, false);
         }
@@ -378,7 +454,9 @@ export default function FriendsPage() {
                 <div className="mt-16">
                     <NotFound
                         imageSrc={FriendsNotFound}
-                        title="No users found" />
+                        title="No users found"
+                        description="Try searching with a different name or genre."
+                    />
                 </div>
             )
         }
@@ -466,6 +544,7 @@ export default function FriendsPage() {
                                 <Search className="h-5 w-5 text-gray-400" />
                             </div>
                             <input
+                                data-tour-target="search-friends"
                                 type="text"
                                 value={searchText}
                                 onChange={(e) => setSearchText(e.target.value)}
@@ -476,49 +555,40 @@ export default function FriendsPage() {
 
                         {/* Tab Buttons - Hide when it's profile detail friends */}
                         {!isProfileDetailFriends && (
-                            <div className="flex space-x-2 px-4 overflow-x-auto pb-2 mb-6 no-scrollbar">
-                                <button
-                                    onClick={() => setActiveTab("friends")}
-                                    className={`flex items-center justify-center px-6 py-2 rounded-full text-sm whitespace-nowrap ${activeTab === "friends"
-                                        ? "bg-gradient-to-r from-[#B3EB50] to-[#1ea896] text-white"
-                                        : "bg-transparent text-gray-300 border border-gray-600"
-                                        }`}
-                                >
-                                    Friends
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab("requests")}
-                                    className={`flex items-center justify-center px-6 py-2 rounded-full text-sm whitespace-nowrap ${activeTab === "requests"
-                                        ? "bg-gradient-to-r from-[#B3EB50] to-[#1ea896] text-white"
-                                        : "bg-transparent text-gray-300 border border-gray-600"
-                                        }`}
-                                >
-                                    Request List
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab("suggested")}
-                                    className={`flex items-center justify-center px-6 py-2 rounded-full text-sm whitespace-nowrap ${activeTab === "suggested"
-                                        ? "bg-gradient-to-r from-[#B3EB50] to-[#1ea896] text-white"
-                                        : "bg-transparent text-gray-300 border border-gray-600"
-                                        }`}
-                                >
-                                    Suggested Friends
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab("starred")}
-                                    className={`flex items-center justify-center px-6 py-2 rounded-full text-sm whitespace-nowrap ${activeTab === "starred"
-                                        ? "bg-gradient-to-r from-[#B3EB50] to-[#1ea896] text-white"
-                                        : "bg-transparent text-gray-300 border border-gray-600"
-                                        }`}
-                                >
-                                    Starred
-                                </button>
+                            <div
+                                ref={tabContainerRef}
+                                className="flex space-x-2 overflow-x-auto pb-2 mb-6 no-scrollbar"
+                                data-tour-target="friends-tabs"
+                            >
+                                {getTabOrder().map((tab) => {
+                                    const tabLabels = {
+                                        friends: "Friends",
+                                        requests: "Request List",
+                                        suggested: "Suggested Friends",
+                                        starred: "Starred",
+                                        contacts: "Contacts"
+                                    };
+
+                                    return (
+                                        <button
+                                            key={tab}
+                                            data-tab={tab} // Add this data attribute
+                                            onClick={() => setActiveTab(tab as Tab)}
+                                            className={`flex items-center justify-center px-6 py-2 rounded-full text-sm whitespace-nowrap ${activeTab === tab
+                                                ? "bg-gradient-to-r from-[#B3EB50] to-[#1ea896] text-white"
+                                                : "bg-transparent text-gray-300 border border-gray-600"
+                                                }`}
+                                        >
+                                            {tabLabels[tab as keyof typeof tabLabels]}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         )}
 
                         {/* Request type selector - Hide when it's profile detail friends */}
                         {activeTab === "requests" && !isProfileDetailFriends && (
-                            <div className="mb-6 px-4 flex items-center justify-end">
+                            <div className="mb-6 px-4 flex items-center justify-end" data-tour-target="request-type-filter">
                                 <div className="flex items-center gap-2">
                                     <Select
                                         value={requestType}
@@ -555,11 +625,38 @@ export default function FriendsPage() {
                         ) : (isSearching && filteredFriends.length === 0 && searchText) ? (
                             <NotFound
                                 imageSrc={FriendsNotFound}
-                                title="No matching friends found" />
+                                title="No matching friends found"
+                                description="Try searching with a different name or genre."
+                            />
                         ) : (isSearching ? filteredFriends : friends).length === 0 && !isSearching ? (
-                            <NotFound
-                                imageSrc={FriendsNotFound}
-                                title={activeTab === "starred" ? "No starred friends yet" : "No data found :("} />
+                            // Add this condition for suggested tab
+                            activeTab === "suggested" && user?.payment_status !== 1 ? (
+                                <div className="flex flex-col items-center justify-center h-64 text-center px-4">
+                                    <div className="mb-6">
+                                        <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-[#B3EB50] to-[#1ea896] rounded-full flex items-center justify-center">
+                                            <UserPlus className="w-8 h-8 text-white" />
+                                        </div>
+                                        <h2 className="text-xl font-semibold text-white mb-2">
+                                            Premium Feature
+                                        </h2>
+                                        <p className="text-gray-400 text-sm max-w-md">
+                                            Get personalized friend suggestions based on your interests and preferences with our premium plan.
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => router.push('/premium')}
+                                        className="bg-gradient-to-r from-[#B3EB50] to-[#1ea896] hover:from-[#a3db40] hover:to-[#189086] text-white font-medium px-6 py-3 rounded-full transition-all duration-200 transform hover:scale-105"
+                                    >
+                                        Upgrade to Premium
+                                    </button>
+                                </div>
+                            ) : (
+                                <NotFound
+                                    imageSrc={FriendsNotFound}
+                                    title={activeTab === "starred" ? "No starred friends yet" : "No data found :("}
+                                    description={activeTab === "starred" ? "Star your favorite friends to see them here." : "You haven't added any friends yet."}
+                                />
+                            )
                         ) : (
                             <div className="space-y-4">
                                 {(isSearching ? filteredFriends : friends).map((friend) => {
@@ -576,6 +673,7 @@ export default function FriendsPage() {
                                                     handleViewProfile(friend.friend_id);
                                                 }
                                             }}
+                                            data-tour-target="friend-card"
                                             className="flex items-center justify-between px-2 py-2 bg-[#2b2b2b] rounded-2xl shadow-md"
                                         >
                                             <div className="flex items-center gap-4">
@@ -702,6 +800,7 @@ export default function FriendsPage() {
                     {/* Floating Action Button - Hide when it's profile detail friends */}
                     {!isProfileDetailFriends && (
                         <motion.button
+                            data-tour-target="add-friends-button"
                             className="fixed bottom-20 right-4 w-14 h-14 rounded-full bg-gradient-to-r from-[#B3EB50] to-[#1ea896] flex items-center justify-center shadow-lg"
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}

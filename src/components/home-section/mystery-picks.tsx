@@ -2,7 +2,8 @@
 
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
-import { Star, Users } from "lucide-react"
+import { HelpCircle, Star, } from "lucide-react"
+import DefaultMoviePoster from "@/assets/default-movie-poster.jpg"
 
 type Movie = {
     movie_id: string | number
@@ -29,10 +30,10 @@ export const MysteryWeekendPicks = ({
     }
 
     return (
-        <div className="px-4 mb-6">
+        <div className="px-4 mb-6" data-tour-target="mystery-picks">
             <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-2">
-                    <Users className="w-5 h-5 text-[#9370ff]" />
+                    <HelpCircle className="w-5 h-5 text-white" />
                     <h2 className="text-lg font-semibold">{title}</h2>
                 </div>
             </div>
@@ -50,11 +51,7 @@ export const MysteryWeekendPicks = ({
                             onClick={() => router.push(`/movie-detail-page?movie_id=${movie.movie_id}`)}
                         >
                             <img
-                                src={
-                                    movie.backdrop_path.startsWith("http")
-                                        ? movie.backdrop_path
-                                        : `https://suggesto.xyz/App/${movie.backdrop_path}`
-                                }
+                                src={movie.backdrop_path ? `https://suggesto.xyz/App/${movie.backdrop_path}` : DefaultMoviePoster.src}
                                 alt={movie.title}
                                 className="w-full h-full object-cover"
                             />

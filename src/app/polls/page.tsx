@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { Calendar, User, ThumbsUp, ArrowRight, ArrowLeft, Lightbulb, CheckCircle, BarChart3, Eye, Users, Trash2, Plus, X } from "lucide-react"
+import { Calendar, User, ThumbsUp, ArrowRight, ArrowLeft, Lightbulb, CheckCircle, BarChart3, Eye, Users, Trash2, Plus, X, ChevronDown } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import NotFound from "@/components/notfound"
 import Cookies from "js-cookie"
@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation"
 import toast from "react-hot-toast"
 import { motion } from "framer-motion"
 import CreatePollDialog from "./_componets/craete-poll"
-import { Movie, Poll, users } from "@/app/polls/type"
+import {  Poll } from "@/app/polls/type"
 import PollCardSkeleton from "@/app/polls/_componets/poll-loading"
 import CoinAnimation from "@/components/coin-animation";
 
@@ -18,6 +18,7 @@ export default function PollPage() {
     const [allPolls, setAllPolls] = useState<Poll[]>([])
     const [myPolls, setMyPolls] = useState<Poll[]>([])
     const [loading, setLoading] = useState(true)
+    const [myPollsLoading, setMyPollsLoading] = useState(true)
     const [selectedPoll, setSelectedPoll] = useState<Poll | null>(null)
     const [currentTab, setCurrentTab] = useState<string>("all-polls")
     const [selectedMovies, setSelectedMovies] = useState<{ [pollId: number]: number }>({})
@@ -37,6 +38,25 @@ export default function PollPage() {
     const userId = Cookies.get("userID")
     const [showCoinAnimation, setShowCoinAnimation] = useState(false)
     const [coinsEarned, setCoinsEarned] = useState(0)
+    const [myPollsTab, setMyPollsTab] = useState<"active" | "closed">("active")
+    const [isMyPollsDropdownOpen, setIsMyPollsDropdownOpen] = useState(false)
+
+    const activePolls = myPolls.filter(poll => poll.status === 1)
+    const closedPolls = myPolls.filter(poll => poll.status !== 1)
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (isMyPollsDropdownOpen) {
+                const target = event.target as HTMLElement
+                if (!target.closest('.relative')) {
+                    setIsMyPollsDropdownOpen(false)
+                }
+            }
+        }
+
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [isMyPollsDropdownOpen])
 
     // Fetch poll results
     const fetchPollResults = async (pollId: number): Promise<Poll | null> => {
@@ -84,17 +104,6 @@ export default function PollPage() {
         }
     }
 
-    // Fetch user details
-    const fetchUserDetails = async (userId: number): Promise<users | null> => {
-        try {
-            const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=userget&user_id=${userId}`)
-            const data = await response.json()
-            return data
-        } catch (error) {
-            console.error('Error fetching user details:', error)
-            return null
-        }
-    }
 
     // Delete poll
     const deletePoll = async (pollId: number) => {
@@ -233,31 +242,28 @@ export default function PollPage() {
                     setTotalCount(data.total_count)
                 }
 
-                // Process polls and add user details
-                const pollsWithUserDetails = await Promise.all(
-                    fetchedPolls.map(async (poll: Poll) => {
-                        const userDetails = await fetchUserDetails(poll.user_id)
+                // Process polls - user details now come directly from API
+                const processedPolls = fetchedPolls.map((poll: Poll) => {
+                    // Mark voted polls in state
+                    if (poll.is_voted === 1) {
+                        setVotedPolls(prev => new Set([...prev, poll.poll_id]))
+                    }
 
-                        // Mark voted polls in state
-                        if (poll.is_voted === 1) {
-                            setVotedPolls(prev => new Set([...prev, poll.poll_id]))
+                    return {
+                        ...poll,
+                        user_has_voted: poll.is_voted === 1,
+                        // User details now come directly from the API response
+                        created_by: {
+                            name: poll.user_name,
+                            imgname: poll.user_img || ""
                         }
-
-                        return {
-                            ...poll,
-                            user_has_voted: poll.is_voted === 1,
-                            created_by: userDetails ? {
-                                name: userDetails.name,
-                                imgname: userDetails.imgname || ""
-                            } : { name: "Unknown User", imgname: "" }
-                        }
-                    })
-                )
+                    }
+                })
 
                 if (isLoadMore) {
-                    setAllPolls(prev => [...prev, ...pollsWithUserDetails])
+                    setAllPolls(prev => [...prev, ...processedPolls])
                 } else {
-                    setAllPolls(pollsWithUserDetails)
+                    setAllPolls(processedPolls)
                 }
 
                 // Check if there are more polls to load
@@ -277,38 +283,38 @@ export default function PollPage() {
         }
     }, [userId])
 
-    // Fetch user's polls
+    // Update the fetchMyPolls function
     const fetchMyPolls = async () => {
         try {
+            setMyPollsLoading(true) // Set loading to true when starting fetch
             const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=userpolllist&user_id=${userId}`)
             const data = await response.json()
 
             if (data.status === 'success') {
-                const pollsWithUserDetails = await Promise.all(
-                    data.data.map(async (poll: Poll) => {
-                        const userDetails = await fetchUserDetails(poll.user_id)
-                        // Use total_votes from API response instead of calculating manually
-                        return {
-                            ...poll,
-                            total_votes: poll.total_votes, // Use API value directly
-                            created_by: userDetails ? {
-                                name: userDetails.name,
-                                imgname: userDetails.imgname || ""
-                            } : { name: "Unknown User", imgname: "" }
+                const processedPolls = data.data.map((poll: Poll) => {
+                    return {
+                        ...poll,
+                        total_votes: poll.total_votes,
+                        created_by: {
+                            name: poll.user_name,
+                            imgname: poll.user_img || ""
                         }
-                    })
-                )
-                setMyPolls(pollsWithUserDetails)
-                setUserPollCount(pollsWithUserDetails.length)
+                    }
+                })
+                setMyPolls(processedPolls)
+                setUserPollCount(processedPolls.length)
             }
         } catch (error) {
             console.error('Error fetching my polls:', error)
+        } finally {
+            setMyPollsLoading(false) // Set loading to false when done
         }
     }
 
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true)
+            setMyPollsLoading(true)
             await Promise.all([fetchAllPolls(0, false), fetchMyPolls()])
             setLoading(false)
         }
@@ -529,67 +535,54 @@ export default function PollPage() {
 
     const renderMyPollCard = (poll: Poll) => {
         const totalVotes = poll.total_votes || 0
-        const isActive = poll.status === 1
 
         return (
             <div
                 key={poll.poll_id}
-                className="rounded-xl bg-white/5 border border-white/10 hover:shadow-xl transition-shadow"
+                className="rounded-xl bg-[#2b2b2b] border border-white/10 hover:shadow-xl transition-shadow"
             >
                 <div className="p-4 space-y-4">
                     {/* Poll Header */}
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-center justify-between">
                         <div className="flex-1">
-                            <div className="flex items-center justify-between gap-2 mb-2">
-                                <h3 className="font-semibold text-white">{poll.question}</h3>
-                                <p className={`px-2 py-1 text-xs rounded-full ${isActive
-                                    ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                                    : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
-                                    }`}>
-                                    {isActive ? 'Active' : 'Closed'}
-                                </p>
-                            </div>
+                            <h3 className="font-semibold text-white mb-2">{poll.question}</h3>
+
 
                             {/* Poll Stats */}
-                            <div className="flex items-center space-x-4 text-sm text-gray-400 mb-3">
-                                <div className="flex items-center space-x-1">
-                                    <Users className="h-4 w-4" />
-                                    <span>{totalVotes} votes</span>
-                                </div>
-                                <div className="flex items-center space-x-1">
-                                    <BarChart3 className="h-4 w-4" />
-                                    <span>{poll.movies?.length || 0} options</span>
-                                </div>
-                                {poll.created_at && (
+                            <div className="flex items-center justify-between space-x-4 text-sm text-gray-400 mb-2">
+                                <div className="flex items-center space-x-3">
                                     <div className="flex items-center space-x-1">
-                                        <Calendar className="h-4 w-4" />
-                                        <span>{new Date(poll.created_at).toLocaleDateString()}</span>
+                                        <Users className="h-4 w-4" />
+                                        <span>{totalVotes} votes</span>
                                     </div>
-                                )}
-                            </div>
-
-                            {/* Action Buttons */}
-                            <div className="flex items-center justify-between">
-                                <button
-                                    onClick={() => handlePollClick(poll, true)}
-                                    className="flex items-center space-x-2 text-sm font-medium transition-colors group" >
-
-                                    <Eye className="w-4 h-4 text-[#b56bbc] transition-colors" />
-                                    <span className="bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text text-transparent">
-                                        View Results
-                                    </span>
-                                </button>
-
-                                <div className="flex items-center space-x-2">
+                                    <div className="flex items-center space-x-1">
+                                        <BarChart3 className="h-4 w-4" />
+                                        <span>{poll.movies?.length || 0} options</span>
+                                    </div>
+                                    {poll.created_at && (
+                                        <div className="flex items-center space-x-1">
+                                            <Calendar className="h-4 w-4" />
+                                            <span>{new Date(poll.created_at).toLocaleDateString()}</span>
+                                        </div>
+                                    )}
+                                </div>
+                                {/* View Results aligned right */}
+                                <div className="flex justify-end">
                                     <button
-                                        onClick={() => setShowDeleteConfirm(poll.poll_id)}
-                                        className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
-                                        title="Delete Poll"
+                                        onClick={() => handlePollClick(poll, true)}
+                                        className="flex items-center space-x-2 text-sm font-medium transition-colors group"
                                     >
-                                        <Trash2 className="h-4 w-4" />
+                                        <span className="bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text text-transparent">
+                                            View Results
+                                        </span>
+                                        <Eye className="w-4 h-4 text-[#b56bbc] transition-colors" />
                                     </button>
                                 </div>
                             </div>
+
+
+
+
                         </div>
                     </div>
                 </div>
@@ -598,9 +591,10 @@ export default function PollPage() {
     }
 
     const renderPollList = (polls: Poll[], isMyPolls: boolean = false) => {
-        if (loading) {
+        // Show skeleton loading for initial load OR when my polls are loading
+        if (loading || (isMyPolls && myPollsLoading)) {
             return (
-                <div className="space-y-6">
+                <div className="space-y-6 px-4">
                     {[...Array(3)].map((_, index) => (
                         <PollCardSkeleton key={index} />
                     ))}
@@ -654,11 +648,11 @@ export default function PollPage() {
                                                     <div className="flex items-center space-x-2">
                                                         <span className="flex items-center space-x-2">
                                                             <img
-                                                                src={poll.created_by.imgname}
-                                                                alt={poll.created_by.name}
+                                                                src={poll.user_img}
+                                                                alt={poll.user_name}
                                                                 className="w-6 h-6 rounded-full object-cover"
                                                             />
-                                                            <span>{poll.created_by.name}</span>
+                                                            <span>{poll.user_name}</span>
                                                         </span>
                                                     </div>
                                                 )}
@@ -756,7 +750,66 @@ export default function PollPage() {
                 {hasMore && !pollsLoading && currentTab === "all-polls" && (
                     <div ref={observerRef} className="h-4 w-full" />
                 )}
-                <TabsContent value="my-polls">{renderPollList(myPolls, true)}</TabsContent>
+                <TabsContent value="my-polls">
+                    <div className="px-4 mb-4">
+                        <div className="flex justify-end">
+                            <div className="relative">
+                                <button
+                                    onClick={() => setIsMyPollsDropdownOpen(!isMyPollsDropdownOpen)}
+                                    className="flex items-center space-x-2 bg-[#2b2b2b] px-4 py-2 rounded-lg text-sm font-medium text-white border border-white/10 hover:bg-white/5 transition-colors"
+                                >
+                                    <span>
+                                        {myPollsTab === "active" ? "Active" : "Closed"}
+                                        {!myPollsLoading && ` (${myPollsTab === "active" ? activePolls.length : closedPolls.length})`}
+                                    </span>
+                                    <ChevronDown className={`w-4 h-4 transition-transform ${isMyPollsDropdownOpen ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                {isMyPollsDropdownOpen && (
+                                    <div className="absolute right-0 mt-2 w-48 bg-[#2b2b2b] border border-white/10 rounded-lg shadow-lg z-10">
+                                        <div className="py-1">
+                                            <button
+                                                onClick={() => {
+                                                    setMyPollsTab("active")
+                                                    setIsMyPollsDropdownOpen(false)
+                                                }}
+                                                className={`w-full text-left px-4 py-2 text-sm transition-colors ${myPollsTab === "active"
+                                                    ? "bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] text-white"
+                                                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                                                    }`}
+                                            >
+                                                Active {!myPollsLoading && `(${activePolls.length})`}
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setMyPollsTab("closed")
+                                                    setIsMyPollsDropdownOpen(false)
+                                                }}
+                                                className={`w-full text-left px-4 py-2 text-sm transition-colors ${myPollsTab === "closed"
+                                                    ? "bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] text-white"
+                                                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                                                    }`}
+                                            >
+                                                Closed {!myPollsLoading && `(${closedPolls.length})`}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Show skeleton loading until myPollsLoading is false */}
+                    {myPollsLoading ? (
+                        <div className="space-y-6 px-4">
+                            {[...Array(3)].map((_, index) => (
+                                <PollCardSkeleton key={index} />
+                            ))}
+                        </div>
+                    ) : (
+                        myPollsTab === "active" ? renderPollList(activePolls, true) : renderPollList(closedPolls, true)
+                    )}
+                </TabsContent>
             </Tabs>
 
             {/* Poll Detail Modal */}
@@ -765,18 +818,30 @@ export default function PollPage() {
                     <div className="bg-[#1f1f21] rounded-xl max-w-md w-full max-h-[80vh] overflow-y-auto">
                         <div className="p-6">
                             <div className="flex items-center justify-between mb-4">
-
                                 <h2 className="text-xl font-bold text-white ml-2">
                                     {currentTab === "my-polls" ? 'Poll Results' : 'Vote on Poll'}
                                 </h2>
-                                <button
-                                    onClick={() => setSelectedPoll(null)}
-                                    className="p-2"
-                                >
-                                    <X size={20} className="text-white" />
-                                </button>
+                                <div className="flex items-center space-x-2">
+                                    {/* Delete button inside modal for My Polls */}
+                                    {currentTab === "my-polls" && (
+                                        <button
+                                            onClick={() => setShowDeleteConfirm(selectedPoll.poll_id)}
+                                            className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
+                                            title="Delete Poll"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => setSelectedPoll(null)}
+                                        className="p-2"
+                                    >
+                                        <X size={20} className="text-white" />
+                                    </button>
+                                </div>
                             </div>
 
+                            {/* Rest of the modal content remains the same */}
                             <div className="space-y-4">
                                 <div>
                                     {selectedPoll.created_by && (

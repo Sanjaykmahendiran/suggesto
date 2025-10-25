@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react"
 import { Star, ThumbsUp, ArrowLeft } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { PageTransitionProvider, PageTransitionWrapper } from "@/components/PageTransition"
+import NotFound from "@/components/notfound"
 
 interface Review {
     rating_id: number
@@ -216,7 +217,11 @@ export default function RatingsPage() {
                         ))}
                     </div>
                 ) : ratings.length === 0 ? (
-                    <p className="text-center text-gray-500 mt-10">No reviews found.</p>
+                    
+                    <NotFound
+                        title="No Reviews Found"
+                        description="There are no reviews for this movie yet."
+                        />
                 ) : (
                     <div className="grid gap-4">
                         {ratings.map((rating) => (

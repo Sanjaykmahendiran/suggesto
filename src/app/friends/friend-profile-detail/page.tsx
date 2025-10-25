@@ -426,9 +426,11 @@ export default function ProfileDetailPage() {
                                 <Bell
                                     className={`w-5 h-5 text-white ${(user?.not_count ?? 0) > 0 ? "shake" : ""}`}
                                 />
-                                <span className="absolute -top-1 -right-1 bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold shadow-lg">
-                                    {user?.not_count}
-                                </span>
+                                {!loading && (user?.not_count ?? 0) > 0 && (
+                                    <span className="absolute -top-1 -right-1 bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold shadow-lg">
+                                        {user?.not_count}
+                                    </span>
+                                )}
                             </button>
                         </div>
                     </header>
@@ -451,7 +453,7 @@ export default function ProfileDetailPage() {
 
                         {/* Name & Info */}
                         <div>
-                            <h2 className="text-white font-semibold text-lg drop-shadow-lg">{userData?.name}</h2>
+                            <h2 className="text-white font-semibold text-xl drop-shadow-lg">{userData?.name}</h2>
                             <p className="text-gray-300 text-sm drop-shadow-lg">{userData?.mobilenumber}</p>
                         </div>
                     </div>
@@ -461,11 +463,11 @@ export default function ProfileDetailPage() {
                         <div className="rounded-3xl bg-transparent p-6 py-10">
                             <div className="flex justify-between text-white text-sm font-medium">
                                 <div className="flex flex-col items-center flex-1">
-                                    <Image src={genderIcon} alt="Gender" className="w-12 h-12" />
+                                    <Image src={genderIcon} alt="Gender" className="w-10 h-10" />
                                     <span className="mt-2">{userData?.gender}</span>
                                 </div>
                                 <div className="flex flex-col items-center flex-1">
-                                    <Image src={dobIcon} alt="DOB" className="w-12 h-12" />
+                                    <Image src={dobIcon} alt="DOB" className="w-10 h-10" />
                                     <span className="mt-2"> {new Date(userData?.dob ?? "").toLocaleDateString("en-GB", {
                                         day: "2-digit",
                                         month: "short",
@@ -473,7 +475,7 @@ export default function ProfileDetailPage() {
                                     })}</span>
                                 </div>
                                 <div className="flex flex-col items-center flex-1">
-                                    <Image src={locationIcon} alt="Location" className="w-12 h-12" />
+                                    <Image src={locationIcon} alt="Location" className="w-10 h-10" />
                                     <span className="mt-2">{userData?.location}</span>
                                 </div>
                             </div>
@@ -593,7 +595,7 @@ export default function ProfileDetailPage() {
                 </div>
 
                 {/* Friends */}
-                {(loading || (userData?.friends_count && userData.friends_count > 0)) && (
+                {(loading || (userData?.friends && userData.friends.length > 0)) && (
                     <div className="mb-10">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-xl font-bold text-transparent bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text mb-3 flex items-center gap-2">
@@ -643,11 +645,11 @@ export default function ProfileDetailPage() {
                 )}
 
 
-                <div className="grid grid-cols-2 gap-4 mt-8 mb-10">
+                <div className="grid grid-cols-2 gap-2 mt-8 mb-10">
                     {/* Suggestions */}
                     <div
                         onClick={handleSuggestionsClick}
-                        className="flex items-center justify-between rounded-full px-5 py-3 bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] cursor-pointer shadow-md hover:scale-105 transition-transform duration-200"
+                        className="flex items-center justify-between rounded-full px-3 py-3 bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] cursor-pointer shadow-md hover:scale-105 transition-transform duration-200"
                     >
                         <div className="flex items-center gap-2 text-white">
                             <Clapperboard className="w-5 h-5" />
@@ -682,7 +684,7 @@ export default function ProfileDetailPage() {
                 <div className="bg-white rounded-[60px] p-0 text-white max-w-md mx-auto">
                     {/* You & Name */}
                     <div className="text-center">
-                        <h2 className="text-2xl p-5 font-bold text-transparent bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text">
+                        <h2 className="text-2xl py-4 font-bold text-transparent bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text">
                             You & {userData?.name}
                         </h2>
                     </div>
@@ -692,7 +694,7 @@ export default function ProfileDetailPage() {
                         {!loading && userData?.commonality_percent !== undefined && (
                             <div className="flex flex-col items-center mb-10">
                                 {/* Heart-shaped compatibility display */}
-                                <div className="relative mb-4">
+                                <div className="relative">
                                     <svg width="120" height="120" viewBox="0 0 200 200" className="w-[150px] h-[150px]">
                                         <defs>
                                             {/* Gradient for the heart fill */}
@@ -786,7 +788,7 @@ export default function ProfileDetailPage() {
                                     userData.common_languages.map((language, index) => (
                                         <span
                                             key={index}
-                                            className="px-4 py-1 bg-[#a06bff]/20 border border-[#a06bff]/30 rounded-full text-sm font-medium text-white"
+                                            className="px-4 py-1 bg-[#b56bbc]/20 border border-[#b56bbc]/30 rounded-full text-sm font-medium text-white"
                                         >
                                             {language}
                                         </span>
@@ -815,13 +817,13 @@ export default function ProfileDetailPage() {
                                         {userData.common_interests.slice(0, 4).map((interest, index) => (
                                             <span
                                                 key={index}
-                                                className="px-4 py-1 bg-[#a06bff]/20 border border-[#a06bff]/30 rounded-full text-sm font-medium text-white"
+                                                className="px-4 py-1 bg-[#b56bbc]/20 border border-[#b56bbc]/30 rounded-full text-sm font-medium text-white"
                                             >
                                                 {interest}
                                             </span>
                                         ))}
                                         {userData.common_interests.length > 4 && (
-                                            <span className="px-4 py-1 bg-gradient-to-r from-[#a06bff] to-[#7a71c4] rounded-full text-sm font-medium text-white shadow-lg">
+                                            <span className="px-4 py-1 bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] rounded-full text-sm font-medium text-white shadow-lg">
                                                 +{userData.common_interests.length - 4} more
                                             </span>
                                         )}
@@ -928,7 +930,7 @@ export default function ProfileDetailPage() {
             {/* Suggestions Popup */}
             {showSuggestionsPopup && (
                 <div className="fixed inset-0  backdrop-blur-sm z-50 flex items-center justify-center ">
-                    <div className="bg-[#181826] p-1 rounded-3xl w-full max-w-md max-h-[80vh] overflow-hidden border border-[#2b2b2b]/20">
+                    <div className="bg-[#1f1f21] p-1 rounded-3xl w-full max-w-md max-h-[80vh] overflow-hidden border border-[#2b2b2b]/20">
                         {/* Header */}
                         <div className="flex items-center justify-between p-4 border-b border-[#2b2b2b]/20">
                             <h2 className="text-xl font-bold text-white">Suggestions</h2>

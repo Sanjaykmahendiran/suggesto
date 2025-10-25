@@ -5,23 +5,15 @@ import { useRouter } from "next/navigation"
 import Cookies from "js-cookie"
 import Link from "next/link"
 import {
-  Bell, ArrowLeft, Settings, Users,
-  Crown, Share2, Edit,
-  ArrowRight,
-  Gem,
-  UserPlus,
-  VenusAndMars,
-  CalendarDays,
-  Languages,
-  Drama,
-  Trophy,
+  Bell, ArrowLeft, Settings, Users, Crown, Share2, Edit, ArrowRight, Gem, UserPlus, Languages, Drama,
 } from "lucide-react"
 import { motion } from "framer-motion"
 import Image from "next/image";
 import { Card } from "@/components/ui/card"
 import { UserData } from "./type"
 import { Share } from '@capacitor/share';
-import { Capacitor } from '@capacitor/core';
+import { Capacitor } from "@capacitor/core";
+import { Filesystem, Directory } from '@capacitor/filesystem';
 import { PageTransitionWrapper } from "@/components/PageTransition"
 import toast from "react-hot-toast"
 import { BottomNavigation } from "@/components/bottom-navigation"
@@ -31,13 +23,17 @@ import locationIcon from "@/assets/location1.png";
 import Bookmark from "@/assets/bookmark.png";
 import Eye from "@/assets/eye.png";
 import User from "@/assets/users.png";
+import Heart from "@/assets/heart.png";
 import BackgroundImage from "@/assets/profile-banner.jpg"
-import Top10Wall from "@/components/home-section/top10wall-section"
 import DefaultImage from "@/assets/default-user.webp"
 import RewardSection from "./_components/reward-points-card"
+import Top10WallImage from "@/assets/top-10.png";
+import { useUser } from "@/contexts/UserContext"
+import ShareImage from "@/assets/app-share-banner.jpg"
 
 export default function ProfilePage() {
   const router = useRouter()
+  const { user, setUser } = useUser()
   const [userData, setUserData] = useState<UserData | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -55,7 +51,7 @@ export default function ProfilePage() {
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
 
         const data = await response.json()
-
+        setUser(data)
         // Filter out null watchlist entries
         data.watchlist = data.watchlist?.filter((item: any) => item !== null) ?? []
         data.watchlist_count = data.watchlist.length
@@ -72,25 +68,64 @@ export default function ProfilePage() {
     fetchUserData()
   }, [])
 
-  const handleShare = async () => {
+  async function handleShare() {
+    const isAndroid = /android/i.test(navigator.userAgent);
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+    const referralId = userData?.referral_code || "defaultRef";
+    const appUrl = isAndroid
+      ? `https://play.google.com/store/apps/details?id=com.suggesto.app&ref=${referralId}`
+      : `https://apps.apple.com/app/id1234567890?ref=${referralId}`;
+
     if (Capacitor.isNativePlatform()) {
-      // Native share via Capacitor
+      // ✅ fetch image using .src
+      const response = await fetch(ShareImage.src);
+      const blob = await response.blob();
+      const base64 = await blobToBase64(blob);
+
+      const fileName = "share-banner.jpg";
+      await Filesystem.writeFile({
+        path: fileName,
+        data: base64,
+        directory: Directory.Cache,
+      });
+
+      const { uri } = await Filesystem.getUri({
+        path: fileName,
+        directory: Directory.Cache,
+      });
+
       await Share.share({
-        title: 'Suggesto',
-        text: 'Check out Suggesto!',
-        url: 'https://suggesto.top',
+        title: "Suggesto",
+        text: "Check out Suggesto — discover amazing movies!",
+        url: appUrl,
+        files: [uri], 
       });
     } else if (navigator.share) {
-      // Web share
-      navigator.share({
-        title: 'Suggesto',
-        text: 'Check out Suggesto!',
-        url: 'https://suggesto.top',
+      await navigator.share({
+        title: "Suggesto",
+        text: "Check out Suggesto — discover amazing movies!",
+        url: appUrl,
       });
     } else {
-      alert('Sharing is not supported on this platform.');
+      await navigator.clipboard.writeText(appUrl);
+      alert("Link copied to clipboard!");
     }
-  };
+  }
+
+  function blobToBase64(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = reject;
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        resolve(result.split(",")[1]); // keep only base64 content
+      };
+      reader.readAsDataURL(blob);
+    });
+  }
+
+
 
   const defaultBadges = ["Cine Seed", "Newcomer", "Suggesto Starter", "Fresh Reeler"];
   const fallbackBadge = defaultBadges[(userData?.user_id ?? 0) % defaultBadges.length] || defaultBadges[0];
@@ -146,9 +181,9 @@ export default function ProfilePage() {
                 aria-label="Notifications"
               >
                 <Bell
-                  className={`w-5 h-5 text-white ${(userData?.not_count ?? 0) > 0 ? "shake" : ""}`}
+                  className={`w-5 h-5 text-white ${!loading && (userData?.not_count ?? 0) > 0 ? "shake" : ""}`}
                 />
-                {(userData?.not_count ?? 0) > 0 && (
+                {!loading && (userData?.not_count ?? 0) > 0 && (
                   <span className="absolute -top-1 -right-1 bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold shadow-lg">
                     {userData?.not_count}
                   </span>
@@ -163,13 +198,17 @@ export default function ProfilePage() {
 
           {/* Edit Profile Button */}
           <div className="absolute right-4 mt-4">
-            <button
-              onClick={handleEdit}
-              className="text-sm bg-[#2b2b2b]/80 backdrop-blur-sm text-white font-semibold px-3 py-1 rounded-2xl shadow-sm"
-              aria-label="Edit Profile"
-            >
-              Edit Profile
-            </button>
+            {loading ? (
+              <div className="w-24 h-8 bg-[#2b2b2b]/40 backdrop-blur-sm rounded-2xl animate-pulse" />
+            ) : (
+              <button
+                onClick={handleEdit}
+                className="text-sm bg-[#2b2b2b]/80 backdrop-blur-sm text-white font-semibold px-3 py-1 rounded-2xl shadow-sm"
+                aria-label="Edit Profile"
+              >
+                Edit Profile
+              </button>
+            )}
           </div>
 
           {/* Profile Header */}
@@ -196,62 +235,109 @@ export default function ProfilePage() {
 
             {/* Name & Info */}
             <div>
-              <h2 className="text-white font-semibold text-lg drop-shadow-lg">{userData?.name}</h2>
-              <p className="text-gray-300 text-sm drop-shadow-lg">{userData?.mobilenumber}</p>
+              {loading ? (
+                <div className="space-y-2">
+                  <div className="w-32 h-6 bg-white/20 rounded animate-pulse" />
+                  <div className="w-24 h-4 bg-white/20 rounded animate-pulse" />
+                </div>
+              ) : (
+                <>
+                  <h2 className="text-white font-semibold text-xl drop-shadow-lg">{userData?.name}</h2>
+                  <p className="text-gray-300 text-sm drop-shadow-lg">{userData?.mobilenumber}</p>
+                </>
+              )}
             </div>
           </div>
 
           {/* Info Box with Gender, DOB, Location */}
           <div className="relative mt-6 mx-4 rounded-3xl border-2 border-primary bg-transparent">
-            <div className="rounded-3xl bg-transparent p-6 py-10">
+            <div className="rounded-3xl bg-transparent p-6 py-8 mb-2">
               <div className="flex justify-between text-white text-sm font-medium">
-                <div className="flex flex-col items-center flex-1">
-                  <Image src={genderIcon} alt="Gender" className="w-12 h-12" />
-                  <span className="mt-2">{userData?.gender}</span>
-                </div>
-                <div className="flex flex-col items-center flex-1">
-                  <Image src={dobIcon} alt="DOB" className="w-12 h-12" />
-                  <span className="mt-2">
-                    {new Date(userData?.dob ?? "").toLocaleDateString("en-GB", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </span>
-                </div>
-                <div className="flex flex-col items-center flex-1">
-                  <Image src={locationIcon} alt="Location" className="w-12 h-12" />
-                  <span className="mt-2">{userData?.location}</span>
-                </div>
+                {loading ? (
+                  <>
+                    <div className="flex flex-col items-center flex-1">
+                      <div className="w-12 h-12 bg-white/20 rounded-full animate-pulse" />
+                      <div className="w-16 h-4 bg-white/20 rounded animate-pulse mt-2" />
+                    </div>
+                    <div className="flex flex-col items-center flex-1">
+                      <div className="w-12 h-12 bg-white/20 rounded-full animate-pulse" />
+                      <div className="w-20 h-4 bg-white/20 rounded animate-pulse mt-2" />
+                    </div>
+                    <div className="flex flex-col items-center flex-1">
+                      <div className="w-12 h-12 bg-white/20 rounded-full animate-pulse" />
+                      <div className="w-16 h-4 bg-white/20 rounded animate-pulse mt-2" />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex flex-col items-center flex-1">
+                      <Image src={genderIcon} alt="Gender" className="w-12 h-12" />
+                      <span className="mt-2">{userData?.gender}</span>
+                    </div>
+                    <div className="flex flex-col items-center flex-1">
+                      <Image src={dobIcon} alt="DOB" className="w-12 h-12" />
+                      <span className="mt-2">
+                        {new Date(userData?.dob ?? "").toLocaleDateString("en-GB", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </span>
+                    </div>
+                    <div className="flex flex-col items-center flex-1">
+                      <Image src={locationIcon} alt="Location" className="w-12 h-12" />
+                      <span className="mt-2">{userData?.location}</span>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Floating Badge */}
-              <div className="absolute left-1/2 -bottom-5 transform -translate-x-1/2 bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] p-[1px] rounded-full">
-                <div className="bg-white px-4 py-2 rounded-full flex items-center gap-2">
-                  <div className="w-8 h-8 bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] rounded-xl flex items-center justify-center">
-                    <Crown className="w-5 h-5 text-white" />
+              <div className="absolute left-1/2 -bottom-7 transform -translate-x-1/2 bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] p-[1px] rounded-full">
+                {loading ? (
+                  <div className="bg-white px-4 py-2 rounded-full">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] rounded-xl animate-pulse" />
+                      <div className="w-24 h-4 bg-gray-300 rounded animate-pulse" />
+                    </div>
                   </div>
-                  <span className="whitespace-nowrap text-transparent bg-clip-text bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] font-bold text-sm">
-                    {badgeToDisplay}
-                  </span>
-                </div>
+                ) : (
+                  <div className="bg-white px-4 py-2 rounded-full flex items-center gap-2">
+                    <div className="w-8 h-8 bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] rounded-xl flex items-center justify-center">
+                      <Crown className="w-5 h-5 text-white" />
+                    </div>
+                    <span className="whitespace-nowrap text-transparent bg-clip-text bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] font-bold text-sm">
+                      {badgeToDisplay}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
-
-
         </div>
       </div>
-
 
       {/* Stats Section */}
       <div className="mt-12 flex gap-4 px-4 overflow-x-auto no-scrollbar">
         {loading ? (
           Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="h-28 bg-[#2b2b2b]/20 animate-pulse rounded-2xl" />
+            <div key={index} className="min-w-[200px] h-20 bg-[#2b2b2b]/40 animate-pulse rounded-[80px]" />
           ))
         ) : (
           <>
+            <div
+              onClick={() => router.push("/favorite-list")}
+              className="bg-[#2b2b2b] rounded-[80px] px-2 py-3 gap-3 text-center shadow-lg hover:scale-105 transition-all duration-300 flex items-center justify-center"
+            >
+              <div className="p-3 rounded-full bg-white w-12 h-12">
+                <Image src={Heart} alt="Heart" width={48} height={48} />
+              </div>
+              <div className="text-2xl font-semibold text-white">
+                {(userData?.favmov_count || 0).toString().padStart(2, "0")}
+              </div>
+              <div className="text-sm text-white font-medium mr-2">Favorites</div>
+            </div>
+
             <div
               onClick={() => router.push("/watch-list")}
               className="bg-[#2b2b2b] rounded-[80px] px-2 py-3 gap-3 text-center shadow-lg hover:scale-105 transition-all duration-300 flex items-center justify-center"
@@ -298,17 +384,24 @@ export default function ProfilePage() {
         {/* Languages */}
         <div className="mb-10 mt-10">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xl font-bold text-transparent bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text mb-3 flex items-center gap-2">
-              <Languages className="text-xl text-[#b56bbc]" />
-              Languages
-            </h3>
-            <Link href={"/language"}>
-              <Edit className="w-5 h-5 text-[#b56bbc]" /></Link>
+            {loading ? (
+              <div className="w-32 h-6 bg-[#2b2b2b]/40 animate-pulse rounded" />
+            ) : (
+              <h3 className="text-xl font-bold text-transparent bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text mb-3 flex items-center gap-2">
+                <Languages className="text-xl text-[#b56bbc]" />
+                Languages
+              </h3>
+            )}
+            {!loading && (
+              <Link href={"/language"}>
+                <Edit className="w-5 h-5 text-[#b56bbc]" />
+              </Link>
+            )}
           </div>
           <div className="flex flex-wrap gap-2">
             {loading ? (
               Array.from({ length: 3 }).map((_, index) => (
-                <div key={index} className="h-8 w-20 bg-[#2b2b2b] animate-pulse rounded-full" />
+                <div key={index} className="h-8 w-20 bg-[#2b2b2b]/40 animate-pulse rounded-full" />
               ))
             ) : userData?.languages && userData.languages.length > 0 ? (
               userData.languages.map((language: string, index: number) => (
@@ -328,30 +421,35 @@ export default function ProfilePage() {
         {/* Genre Interests */}
         <div className="mb-10">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xl font-bold text-transparent bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text mb-3 flex items-center gap-2">
-              <Drama className="text-xl text-[#b56bbc]" />
-              Favorite Genres
-            </h3>
-            <Link href={"/genres-interests"}>
-              <Edit className="w-5 h-5 text-[#b56bbc]" /></Link>
+            {loading ? (
+              <div className="w-40 h-6 bg-[#2b2b2b]/40 animate-pulse rounded" />
+            ) : (
+              <h3 className="text-xl font-bold text-transparent bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text mb-3 flex items-center gap-2">
+                <Drama className="text-xl text-[#b56bbc]" />
+                Favorite Genres
+              </h3>
+            )}
+            {!loading && (
+              <Link href={"/genres-interests"}>
+                <Edit className="w-5 h-5 text-[#b56bbc]" />
+              </Link>
+            )}
           </div>
           <div className="flex flex-wrap gap-2">
             {loading ? (
               Array.from({ length: 4 }).map((_, index) => (
-                <div key={index} className="h-8 w-20 bg-[#2b2b2b] animate-pulse rounded-full" />
+                <div key={index} className="h-8 w-20 bg-[#2b2b2b]/40 animate-pulse rounded-full" />
               ))
             ) : userData?.interests && userData.interests.length > 0 ? (
-              <>
-                {userData.interests.map((genre, index) => (
-                  <span
-                    key={index}
-                    className="px-4 py-2 bg-[#2b2b2b] rounded-full text-sm font-medium text-white">
-                    {genre}
-                  </span>
-                ))}
-              </>
+              userData.interests.map((genre, index) => (
+                <span
+                  key={index}
+                  className="px-4 py-2 bg-[#2b2b2b] rounded-full text-sm font-medium text-white">
+                  {genre}
+                </span>
+              ))
             ) : (
-              <p className="text-sm text-gray-400">No Languages</p>
+              <p className="text-sm text-gray-400">No Genres</p>
             )}
           </div>
         </div>
@@ -359,21 +457,27 @@ export default function ProfilePage() {
         {/* Friends */}
         <div className="mb-10">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold text-transparent bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text mb-3 flex items-center gap-2">
-              <Users className="text-xl text-[#b56bbc]" />
-              Friends
-            </h3>
-            <button
-              onClick={handleFriends}
-              className="text-sm font-medium text-[#b56bbc] hover:underline"
-            >
-              See All
-            </button>
+            {loading ? (
+              <div className="w-24 h-6 bg-[#2b2b2b]/40 animate-pulse rounded" />
+            ) : (
+              <h3 className="text-xl font-bold text-transparent bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text mb-3 flex items-center gap-2">
+                <Users className="text-xl text-[#b56bbc]" />
+                Friends
+              </h3>
+            )}
+            {!loading && (
+              <button
+                onClick={handleFriends}
+                className="text-sm font-medium text-[#b56bbc] hover:underline"
+              >
+                See All
+              </button>
+            )}
           </div>
           {loading ? (
             <div className="flex gap-3">
               {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="w-16 h-16 bg-[#2b2b2b] rounded-full animate-pulse" />
+                <div key={i} className="w-16 h-16 bg-[#2b2b2b]/40 rounded-full animate-pulse" />
               ))}
             </div>
           ) : userData?.friends_count && userData.friends_count > 0 ? (
@@ -413,67 +517,116 @@ export default function ProfilePage() {
 
         <div className="mt-8 mb-2">
           {/* Reward section */}
-          <RewardSection
-            key="rewardsection"
-            coins={userData?.coins ?? ""}
-          />
+          {loading ? (
+            <div className="w-full h-32 bg-[#2b2b2b]/40 animate-pulse rounded-3xl" />
+          ) : (
+            <RewardSection
+              key="rewardsection"
+              coins={userData?.coins ?? ""}
+              user={{ payment_status: userData?.payment_status }} />
+          )}
         </div>
-        
+
         <div className="mt-8 mb-2">
           {/* Top 10 Movie Wall */}
-          <Top10Wall key="top10wall" />
+          <div className="px-2 mb-10">
+            {loading ? (
+              <div className="w-full h-32 bg-[#2b2b2b]/40 animate-pulse rounded-3xl" />
+            ) : (
+              <div className="p-[2px] rounded-3xl bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] hover:scale-105 transition-transform duration-200 shadow-xl">
+                <div
+                  onClick={() => router.push(`/top-10-wall`)}
+                  className="relative rounded-3xl bg-[#121214] text-white flex flex-row justify-between items-center px-6 py-5 cursor-pointer"
+                >
+                  <div className="flex flex-col">
+                    <h3 className="text-lg font-semibold leading-tight">
+                      My Top 10 Wall
+                    </h3>
+                    <p className="text-xs text-white/70">
+                      Discover top 10 movies that I prefer & love the most.
+                    </p>
+                  </div>
+
+                  <div className="flex-shrink-0 ml-4">
+                    <Image
+                      src={Top10WallImage}
+                      alt="Top 10"
+                      width={60}
+                      height={60}
+                      className="object-contain w-16 h-16"
+                    />
+                  </div>
+
+                  <div className="absolute bottom-0 left-6 translate-y-1/2 bg-white shadow-[0_10px_25px_rgba(0,0,0,0.3)] rounded-full p-2">
+                    <ArrowRight className="h-6 w-6 text-[#b56bbc]" />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4 mt-8 mb-16">
-          {/* Premium Card with Purple Gradient */}
-          <Card
-            onClick={() => router.push('/premium')}
-            className="rounded-3xl bg-gradient-to-br from-[#7a71c4] to-[#b56bbc] text-white border-0 shadow-xl flex flex-col justify-between transition-transform hover:scale-105 duration-200 group">
-            <div className="text-center">
-              <Gem className="w-10 h-10 mx-auto mb-3 text-white/80" strokeWidth={2.5} />
-              <div className="font-bold text-lg">Premium</div>
-              <div className="text-sm text-white/80">Exclusive Features</div>
-              <div className="mt-2 flex justify-center items-center">
-                <ArrowRight className="bg-white text-[#b56bbc] rounded-full p-1 w-7 h-7 shadow-md transition-transform group-hover:translate-x-1" />
-              </div>
-            </div>
-          </Card>
+          {loading ? (
+            <>
+              <div className="h-32 bg-[#2b2b2b]/40 animate-pulse rounded-3xl" />
+              <div className="h-32 bg-[#2b2b2b]/40 animate-pulse rounded-3xl" />
+            </>
+          ) : (
+            <>
+              {/* Premium Card with Purple Gradient */}
+              <Card
+                onClick={() => router.push('/premium')}
+                className="rounded-3xl bg-gradient-to-br from-[#7a71c4] to-[#b56bbc] text-white border-0 shadow-xl flex flex-col justify-between transition-transform hover:scale-105 duration-200 group">
+                <div className="text-center">
+                  <Gem className="w-10 h-10 mx-auto mb-3 text-white/80" strokeWidth={2.5} />
+                  <div className="font-bold text-lg">Premium</div>
+                  <div className="text-sm text-white/80">Exclusive Features</div>
+                  <div className="mt-2 flex justify-center items-center">
+                    <ArrowRight className="bg-white text-[#b56bbc] rounded-full p-1 w-7 h-7 shadow-md transition-transform group-hover:translate-x-1" />
+                  </div>
+                </div>
+              </Card>
 
-          {/* Refer a Friend Card with Lighter Purple Gradient */}
-          <Card
-            onClick={() => router.push('/invite-friend')}
-            className="rounded-3xl bg-white text-white border-0 shadow-xl flex flex-col justify-between transition-transform hover:scale-105 duration-200 group">
-            <div className="text-center">
-              <UserPlus className="w-10 h-10 mx-auto mb-3 text-[#b56bbc]" strokeWidth={2.5} />
-              <div className="font-bold text-lg bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text text-transparent">
-                Refer a Friend
-              </div>
-              <div className="text-sm text-black/80">Earn Rewards</div>
-              <div className="mt-2 flex justify-center items-center">
-                <ArrowRight className="bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] text-white rounded-full p-1 w-7 h-7 shadow-md transition-transform group-hover:translate-x-1" />
-              </div>
-            </div>
-          </Card>
+              {/* Refer a Friend Card with Lighter Purple Gradient */}
+              <Card
+                onClick={() => router.push('/invite-friend')}
+                className="rounded-3xl bg-white text-white border-0 shadow-xl flex flex-col justify-between transition-transform hover:scale-105 duration-200 group">
+                <div className="text-center">
+                  <UserPlus className="w-10 h-10 mx-auto mb-3 text-[#b56bbc]" strokeWidth={2.5} />
+                  <div className="font-bold text-lg bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text text-transparent">
+                    Refer a Friend
+                  </div>
+                  <div className="text-sm text-black/80">Earn Rewards</div>
+                  <div className="mt-2 flex justify-center items-center">
+                    <ArrowRight className="bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] text-white rounded-full p-1 w-7 h-7 shadow-md transition-transform group-hover:translate-x-1" />
+                  </div>
+                </div>
+              </Card>
+            </>
+          )}
         </div>
       </div>
 
       {/* Floating Share Button */}
-      <motion.button
-        className="fixed bottom-24 right-4 w-14 h-14 rounded-full bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] flex items-center justify-center shadow-lg"
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        animate={{ scale: [1, 1.1, 1] }}
-        transition={{
-          duration: 1.5,
-          repeat: Infinity,
-          repeatType: "loop",
-          ease: "easeInOut",
-        }}
-        onClick={handleShare}
-        aria-label="Share Profile"
-      >
-        <Share2 className="h-6 w-6 text-white" />
-      </motion.button>
+      {!loading && (
+        <motion.button
+          className="fixed bottom-24 right-4 w-14 h-14 rounded-full bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] flex items-center justify-center shadow-lg"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          animate={{ scale: [1, 1.1, 1] }}
+          transition={{
+            duration: 1.5,
+            repeat: Infinity,
+            repeatType: "loop",
+            ease: "easeInOut",
+          }}
+          onClick={handleShare}
+          aria-label="Share Profile"
+        >
+          <Share2 className="h-6 w-6 text-white" />
+        </motion.button>
+      )}
 
       <BottomNavigation currentPath="/profile" />
     </div>

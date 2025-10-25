@@ -19,6 +19,7 @@ export default function PollCard() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
             className="w-full  px-2 mb-10  cursor-pointer relative"
+            data-tour-target="poll-section"
         >
             {/* Title Section */}
             <div className="flex items-center justify-center mb-6 gap-4">

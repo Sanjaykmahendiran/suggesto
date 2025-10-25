@@ -38,13 +38,13 @@ export default function ReviewSection({ viewer_id, movie_id }: ReviewSectionProp
                 `https://suggesto.xyz/App/api.php?gofor=ratinglist&viewer_id=${viewer_id}&movie_id=${movie_id}`
             )
             const data = await res.json()
-            
+
             // Handle the actual response structure where ratings are in data.ratings
             if (data.ratings && Array.isArray(data.ratings)) {
                 // You can categorize reviews here if needed based on some criteria
                 // For now, treating all as "other" since the API doesn't specify friend/other distinction
-                const processedReviews = data.ratings.map((r: any) => ({ 
-                    ...r, 
+                const processedReviews = data.ratings.map((r: any) => ({
+                    ...r,
                     source: "other" as const // You can add logic here to determine friend vs other
                 }))
                 setReviews(processedReviews)
@@ -105,11 +105,13 @@ export default function ReviewSection({ viewer_id, movie_id }: ReviewSectionProp
     const renderReviewCard = (review: Review) => (
         <div
             key={review.rating_id}
-            className="flex-shrink-0 w-70 bg-[#2b2b2b] backdrop-blur-sm border  rounded-xl p-4 shadow-md flex flex-col justify-between"
+            className="flex-shrink-0 w-70 bg-[#2b2b2b] backdrop-blur-sm  rounded-xl p-4 shadow-md flex flex-col justify-between"
         >
             <div>
                 <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center">
+                    <div className="flex items-center"
+                        onClick={() => router.push(`/friends/friend-profile-detail?profile_id=${review.user.user_id}`)}
+                    >
                         <img
                             src={review.user.imgname}
                             alt={review.user.name}
@@ -171,9 +173,6 @@ export default function ReviewSection({ viewer_id, movie_id }: ReviewSectionProp
                         className="flex items-center text-sm text-[#b56bbc] font-medium cursor-pointer hover:underline"
                     >
                         <span className="mr-1">See All</span>
-                        <span className="bg-[#b56bbc]/10 text-[#b56bbc] px-2 py-0.5 rounded-full text-xs">
-                            {reviews.length}
-                        </span>
                     </div>
                 )}
             </div>

@@ -2,59 +2,68 @@
 
 import { useState, useRef, useEffect, useCallback } from "react"
 import Image from "next/image"
-import { ArrowLeft, ArrowRight } from "lucide-react"
+import { ArrowLeft, ArrowRight, CheckCircle, Calendar, Users, Clock, Heart, Star, TrendingUp, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import namelogo from "@/assets/suggesto-name-logo.png"
+import namelogo from "@/assets/Premium-crown.png"
 import logo from "@/assets/suggesto-logo.png"
 import Cookies from 'js-cookie'
 import { useRouter } from "next/navigation"
-
-// Feature Images
-import topWallImg from "@/assets/Top wall.png"
-import suggestoAIImg from "@/assets/Suggesto AI.png"
-import autoListsImg from "@/assets/Auto-list.png"
-import cineCardImg from "@/assets/Cine-card.png"
-import streakRoomImg from "@/assets/Streak Room.png"
-import influencerWallImg from "@/assets/Influencer wall.png"
 import { PageTransitionProvider, PageTransitionWrapper } from "@/components/PageTransition"
 import toast from "react-hot-toast"
-import Link from "next/link"
+import { Capacitor } from '@capacitor/core'
+import { UserData, Package, features, statsMessages } from "./type"
+import PremiumSkeleton from "./_components/PremiumSkeleton"
+import { AnimatePresence, motion } from "framer-motion"
 
-const features = [
-    {
-        img: topWallImg,
-        title: "Top Wall",
-        description: "Post your Top 10 lists for all. Let everyone see your top movie tastes.",
-    },
-    {
-        img: suggestoAIImg,
-        title: "Suggesto AI",
-        description: "Smart daily picks based on your taste. Get AI-powered movie suggestions just for you.",
-    },
-    {
-        img: autoListsImg,
-        title: "Auto Lists",
-        description: "Curated watchlists for your mood, vibe. Suggesto builds lists based on what you love.",
-    },
-    {
-        img: cineCardImg,
-        title: "Cine Card",
-        description: "Your movie taste as a shareable card. Show off your cinema persona to friends.",
-    },
-    {
-        img: streakRoomImg,
-        title: "Streak Room",
-        description: "Challenge friends, unlock rewards, and earn badges with movie streaks.",
-    },
-    {
-        img: influencerWallImg,
-        title: "Influencer Wall",
-        description: "See top users, their lists and impact. Pro-only access to influencers and their picks.",
+
+interface StatMessage {
+    icon: React.ComponentType<any>;
+    text: string;
+    color: string;
+}
+
+// Razorpay interfaces from DeliveryAndPayment
+interface RazorpayResponse {
+    razorpay_payment_id: string
+    razorpay_order_id: string
+    razorpay_signature: string
+}
+
+interface RazorpayOptions {
+    key: string
+    currency: string
+    name: string
+    description: string
+    order_id: string
+    handler: (response: RazorpayResponse) => void
+    prefill: {
+        name: string
+        email: string
+        contact: string
     }
-]
+    theme: {
+        color: string
+    }
+    modal: {
+        ondismiss: () => void
+    }
+}
+
+declare global {
+    interface Window {
+        Razorpay: new (options: RazorpayOptions) => {
+            on(arg0: string, arg1: (response: any) => void): unknown;
+            open: () => void;
+        };
+    }
+}
+
+const FIXED_MRP = 500;
+const MAX_COIN_USAGE = 375;
 
 export default function Premium() {
+    const router = useRouter()
     const [index, setIndex] = useState(0)
     const [imagesLoaded, setImagesLoaded] = useState(false)
     const [isChecked, setIsChecked] = useState(false)
@@ -62,9 +71,15 @@ export default function Premium() {
     const [isTransitioning, setIsTransitioning] = useState(false)
     const [dragOffset, setDragOffset] = useState(0)
     const [isDragging, setIsDragging] = useState(false)
-    const [notified, setNotified] = useState(false)
+    const [isProcessing, setIsProcessing] = useState(false)
+    const [userData, setUserData] = useState<UserData | null>(null)
+    const [isLoading, setIsLoading] = useState(true)
+    const [packages, setPackages] = useState<Package[]>([])
+    const [selectedPackage, setSelectedPackage] = useState<Package | null>(null)
+    const [currentStat, setCurrentStat] = useState(0)
+    const [statsMessages, setStatsMessages] = useState<StatMessage[]>([])
+    const [isStatsLoading, setIsStatsLoading] = useState(true)
 
-    const router = useRouter()
     const carouselRef = useRef(null)
     const touchStartX = useRef(0)
     const touchStartTime = useRef(0)
@@ -74,13 +89,57 @@ export default function Premium() {
     const minSwipeDistance = 30
     const minSwipeVelocity = 0.3
 
+    // Razorpay Keys - Using test key from DeliveryAndPayment
+    const RAZORPAY_KEY_ID = 'rzp_test_28UhRPu2GtFse3'
+
     useEffect(() => {
-        checkNotificationStatus()
+        getUserData()
+        getPackages()
+        getStatsMessages()
     }, [])
 
-    const checkNotificationStatus = async () => {
+    // Load Razorpay script (from DeliveryAndPayment)
+    useEffect(() => {
+        // Load Razorpay script if it's not already loaded
+        if (!document.getElementById('razorpay-checkout-js')) {
+            const script = document.createElement('script');
+            script.id = 'razorpay-checkout-js';
+            script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+            script.async = true;
+            script.onload = () => {
+                console.log("Razorpay script loaded successfully");
+            };
+            script.onerror = () => {
+                console.error("Failed to load Razorpay script");
+            };
+            document.head.appendChild(script);
+        }
+    }, []);
+
+    const getPackages = async () => {
+        try {
+            const response = await fetch('https://suggesto.xyz/App/api.php?gofor=packageslist')
+
+            if (response.ok) {
+                const data = await response.json()
+                console.log('Packages data:', data)
+                setPackages(data)
+                // Automatically select the first package if available
+                if (data.length > 0) {
+                    setSelectedPackage(data[0])
+                }
+            }
+        } catch (error) {
+            console.error("Error fetching packages:", error)
+        }
+    }
+
+    const getUserData = async () => {
         const userId = Cookies.get("userID")
-        if (!userId) return
+        if (!userId) {
+            setIsLoading(false)
+            return
+        }
 
         try {
             const response = await fetch(
@@ -89,56 +148,208 @@ export default function Premium() {
 
             if (response.ok) {
                 const data = await response.json()
-                if (data.pronotify === "yes") {
-                    setNotified(true)
-                }
+                setUserData(data)
             }
         } catch (error) {
-            console.error("Error checking notification status:", error)
+            console.error("Error fetching user data:", error)
+        } finally {
+            setIsLoading(false)
         }
     }
 
-    const handleNotify = async () => {
+    const userCoins = userData?.coins || 0;
+    const coinsUsed = Math.min(userCoins, MAX_COIN_USAGE);
+    const payable = FIXED_MRP - coinsUsed;
+
+    const formatDate = (dateString: string) => {
+        if (!dateString) return ""
+        const date = new Date(dateString)
+        return date.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        })
+    }
+
+    const isPremiumActive = () => {
+        if (!userData?.payment_status || !userData?.paid_upto) return false
+
+        const paidUptoDate = new Date(userData.paid_upto)
+        const currentDate = new Date()
+
+        // Only check payment_status = 1, don't check if date is expired
+        return Number(userData.payment_status) === 1 && paidUptoDate > currentDate
+    }
+
+    // Add new function to check if user has ever paid (for showing renew button)
+    const hasPaidBefore = () => {
+        return Number(userData?.payment_status) === 1
+    }
+
+    // Razorpay payment initiation (adapted from DeliveryAndPayment)
+    const initiateRazorpayPayment = async (order_id: string, finalAmount: number, coinsUsed: number) => {
+        try {
+            if (!window.Razorpay) {
+                console.error("Razorpay SDK not loaded");
+                toast.error("Payment system is not available. Please try again later.");
+                setIsProcessing(false);
+                return;
+            }
+
+            const response = await fetch("https://suggesto.xyz/App/razorpay.php", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    user_id: Cookies.get("userID"),
+                    package_id: selectedPackage?.id || selectedPackage?.package_id || selectedPackage?.pid || selectedPackage?.packageId,
+                    final_amount: finalAmount, // Send the calculated amount
+                    coins_used: coinsUsed, // Send coins used for backend processing
+                }),
+            });
+
+            const razorPayData = await response.json();
+            console.log("Razorpay API response:", razorPayData);
+
+            if (!razorPayData.order_id) {
+                throw new Error("Invalid order_id received from server");
+            }
+
+            const options: RazorpayOptions = {
+                key: RAZORPAY_KEY_ID,
+                currency: "INR",
+                name: "Suggesto",
+                description: `${selectedPackage?.name || 'Premium'} - ₹${finalAmount} (${coinsUsed} coins used)`,
+                order_id: razorPayData.order_id,
+                handler: function (response: RazorpayResponse) {
+                    console.log("Payment successful:", response);
+                    verifyPayment(response, razorPayData.order_id);
+                },
+                theme: {
+                    color: "#b56bbc",
+                },
+                modal: {
+                    ondismiss: function () {
+                        console.log("Payment modal dismissed");
+                        setIsProcessing(false);
+                        toast.error("Payment canceled");
+                    },
+                },
+                prefill: {
+                    name: userData?.name || "",
+                    email: userData?.email || "",
+                    contact: userData?.phone || ""
+                }
+            };
+
+            const razorpayInstance = new window.Razorpay(options);
+
+            razorpayInstance.on("payment.failed", function (response: any) {
+                console.error("Payment failed:", response.error);
+                setIsProcessing(false);
+                toast.error(response.error.description || "Payment failed");
+            });
+
+            razorpayInstance.open();
+
+        } catch (error) {
+            console.error("Error initiating Razorpay payment:", error);
+            setIsProcessing(false);
+            toast.error("Failed to initiate payment. Please try again.");
+        }
+    }
+
+
+    // Payment verification (adapted from DeliveryAndPayment)
+    const verifyPayment = async (razorpayResponse: RazorpayResponse, order_id: string) => {
+        try {
+            const response = await fetch("https://suggesto.xyz/App/verify.php", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    razorpay_payment_id: razorpayResponse.razorpay_payment_id,
+                    razorpay_order_id: razorpayResponse.razorpay_order_id,
+                    razorpay_signature: razorpayResponse.razorpay_signature,
+                }),
+            })
+
+            const data = await response.json()
+
+            if (data.response === "Payment Successful & User Upgraded" || data.success) {
+                toast.success('Payment successful! Welcome to Premium!')
+                // Refresh user data to get updated premium status
+                await getUserData()
+                // Redirect to thanks page
+                router.push('/thanks')
+            } else {
+                setIsProcessing(false)
+                toast.error("Payment Verification Failed")
+            }
+        } catch (error) {
+            setIsProcessing(false)
+            console.error("Error during payment verification:", error)
+            toast.error("An error occurred during payment verification. Please contact support.")
+        }
+    }
+
+    // Main payment handler
+    const handlePayment = async () => {
+        if (!isChecked) {
+            setShowCheckError(true)
+            return
+        }
+
+        if (!selectedPackage) {
+            toast.error("Please select a package first.")
+            return
+        }
+
+        const packageId = selectedPackage.id || selectedPackage.package_id || selectedPackage.pid || selectedPackage.packageId
+
+        if (!packageId) {
+            toast.error("Package ID is missing. Please try again.")
+            return
+        }
+
+        setIsProcessing(true)
+
         const userId = Cookies.get("userID")
         if (!userId) {
             toast.error("User ID not found.")
+            setIsProcessing(false)
             return
         }
 
         try {
-            const response = await fetch(
-                `https://suggesto.xyz/App/api.php?gofor=pronotify&user_id=${userId}`
-            )
-
-            if (response.ok) {
-                const data = await response.json()
-                console.log("Notification registered:", data)
-                toast.success("You’ve been notified!")
-                setNotified(true)
-            } else {
-                toast.error("Something went wrong. Please try again.")
-            }
+            // Pass the calculated payable amount and coins used to the payment API
+            await initiateRazorpayPayment(packageId.toString(), payable, coinsUsed)
         } catch (error) {
-            console.error("Error:", error)
-            toast.error("An error occurred. Please check your connection.")
+            console.error('Payment error:', error)
+            toast.error(`Payment initialization failed: ${error instanceof Error ? error.message : String(error)}`)
+            setIsProcessing(false)
         }
     }
 
     // Preload all feature images
     useEffect(() => {
+        if (typeof window === 'undefined') return;
+
         const imagePromises = features.map((feature) => {
             return new Promise((resolve, reject) => {
-                const img = new window.Image()
-                img.onload = resolve
-                img.onerror = reject
-                img.src = typeof feature.img === "string" ? feature.img : feature.img.src
-            })
-        })
+                const img = new window.Image();
+                img.onload = resolve;
+                img.onerror = reject;
+                img.src = typeof feature.img === "string" ? feature.img : feature.img.src;
+            });
+        });
 
         Promise.all(imagePromises)
             .then(() => setImagesLoaded(true))
-            .catch(() => setImagesLoaded(true))
-    }, [])
+            .catch(() => setImagesLoaded(true));
+    }, []);
 
     // Divide features into chunks of 2
     const chunkedFeatures = []
@@ -172,7 +383,7 @@ export default function Premium() {
 
         const interval = setInterval(() => {
             nextSlide()
-        }, 4000) // Auto-advance every 4 seconds
+        }, 4000)
 
         return () => clearInterval(interval)
     }, [nextSlide, isDragging, isTransitioning])
@@ -186,7 +397,6 @@ export default function Premium() {
         velocity.current = 0
         setIsDragging(true)
 
-        // Cancel any ongoing animations
         if (animationRef.current) {
             cancelAnimationFrame(animationRef.current)
         }
@@ -200,17 +410,13 @@ export default function Premium() {
         const deltaX = currentX - touchStartX.current
         const deltaTime = Date.now() - touchStartTime.current
 
-        // Calculate velocity for momentum
         velocity.current = (currentX - lastTouchX.current) / Math.max(deltaTime, 1)
         lastTouchX.current = currentX
 
-        // Limit drag offset to prevent over-scrolling
         const maxOffset = window.innerWidth * 0.3
         const clampedOffset = Math.max(-maxOffset, Math.min(maxOffset, deltaX))
 
         setDragOffset(clampedOffset)
-
-        // Prevent default to avoid scrolling
         e.preventDefault()
     }
 
@@ -223,7 +429,6 @@ export default function Premium() {
         const deltaTime = Date.now() - touchStartTime.current
         const swipeVelocity = Math.abs(deltaX) / deltaTime
 
-        // Determine if it's a valid swipe based on distance and velocity
         const isValidSwipe = Math.abs(deltaX) > minSwipeDistance || swipeVelocity > minSwipeVelocity
 
         if (isValidSwipe) {
@@ -233,11 +438,9 @@ export default function Premium() {
                 nextSlide()
             }
         } else {
-            // Snap back to current position
             setDragOffset(0)
         }
 
-        // Reset values
         touchStartX.current = 0
         lastTouchX.current = 0
         velocity.current = 0
@@ -288,6 +491,65 @@ export default function Premium() {
         }
     }, [isDragging])
 
+    const getStatsMessages = async () => {
+        try {
+            setIsStatsLoading(true)
+            const response = await fetch('https://suggesto.xyz/App/api.php?gofor=protweetlist')
+
+            if (response.ok) {
+                const data = await response.json()
+                console.log('Stats data:', data)
+
+                // Transform API data to match your existing structure
+                const transformedStats = data
+                    .filter((item: { status: number }) => item.status === 1) // Only active stats
+                    .map((item: { notes: any }, index: any) => ({
+                        text: item.notes,
+                        icon: getRandomIcon(), // Function to assign random icons
+                        color: getRandomColor(index) // Function to assign colors
+                    }))
+
+                setStatsMessages(transformedStats)
+            }
+        } catch (error) {
+            console.error("Error fetching stats:", error)
+        } finally {
+            setIsStatsLoading(false)
+        }
+    }
+
+    // 3. Helper functions for icons and colors
+    const getRandomIcon = () => {
+        const icons = [Users, Zap, Clock, Heart, TrendingUp, Star]
+        return icons[Math.floor(Math.random() * icons.length)]
+    }
+
+    const getRandomColor = (index: number) => {
+        const colors = [
+            "text-green-400",
+            "text-blue-400",
+            "text-purple-400",
+            "text-pink-400",
+            "text-yellow-400",
+            "text-orange-400"
+        ]
+        return colors[index % colors.length]
+    }
+
+    // Stats rotation effect - only for non-premium users
+    useEffect(() => {
+        if (isPremiumActive() || isStatsLoading || statsMessages.length === 0) return
+
+        // Set random initial stat
+        setCurrentStat(Math.floor(Math.random() * statsMessages.length))
+
+        const interval = setInterval(() => {
+            setCurrentStat((prev) => (prev + 1) % statsMessages.length)
+        }, 3000)
+
+        return () => clearInterval(interval)
+    }, [isPremiumActive(), isStatsLoading, statsMessages.length])
+
     // Calculate transform with drag offset
     const getTransform = () => {
         const baseTransform = -index * 100
@@ -295,36 +557,59 @@ export default function Premium() {
         return `translateX(${baseTransform + dragPercentage}%)`
     }
 
+    if (isLoading) {
+        return <PremiumSkeleton />
+    }
+
     return (
-        // <PageTransitionWrapper>
-        <div className="fixed inset-0 max-w-sm mx-auto min-h-screen">
+        <div className="fixed inset-0  mx-auto min-h-screen">
             {/* Header */}
             <div className="flex items-center px-4 py-2 pt-8">
                 <button onClick={() => router.back()} className="p-2.5" aria-label="Go back">
                     <ArrowLeft size={20} className="text-white" />
                 </button>
-            </div>
 
-            {/* Logo */}
-            <div className="relative px-6 py-2">
-                <div className="w-full max-w-xs mx-auto relative h-24">
-                    <Image
-                        src={namelogo}
-                        alt="Suggesto Logo"
-                        fill
-                        className="object-contain"
-                    />
-                </div>
+                {/* Logo Centered */}
+                {!isPremiumActive() && (
+                    <div className="relative h-24 flex-1 flex justify-center">
+                        <div className="relative w-full max-w-xs h-24">
+                            <Image
+                                src={namelogo}
+                                alt="Suggesto Logo"
+                                fill
+                                className="object-contain"
+                            />
+                        </div>
+                    </div>
+                )}
+                <div className="w-10" />
+
             </div>
+            {isPremiumActive() && (
+                <div className="relative h-24 flex-1 flex justify-center mt-4 mb-4">
+                    <div className="relative w-full max-w-xs h-24">
+                        <Image
+                            src={namelogo}
+                            alt="Suggesto Logo"
+                            fill
+                            className="object-contain"
+                        />
+                    </div>
+                </div>
+            )}
 
             {/* Title */}
             <div className="text-center px-6 mb-8">
-                <h1 className="text-xl font-bold text-white mb-1">Upgrade to Suggesto premium</h1>
-                <p className="text-gray-300 text-sm">Premium perks. A sweet upgrade!</p>
+                <h1 className="text-xl font-bold text-white mb-1">
+                    {isPremiumActive() ? "Premium Membership" : "Upgrade to Suggesto premium"}
+                </h1>
+                <p className="text-gray-300 text-sm">
+                    {isPremiumActive() ? "You're enjoying premium features!" : "Premium perks. A sweet upgrade!"}
+                </p>
             </div>
 
             {/* Feature Cards Carousel */}
-            <div className="px-6 mb-6 relative">
+            <div className="px-6 mb-3 relative">
                 {!imagesLoaded && (
                     <>
                         {/* Skeleton Loader */}
@@ -332,7 +617,7 @@ export default function Premium() {
                             {[1, 2].map((item) => (
                                 <div
                                     key={item}
-                                    className="bg-gradient-to-br from-[#2b2b2b]/10 to-[#2b2b2b]/5 backdrop-blur-sm border border-[#2b2b2b]/20 rounded-xl p-3 text-center shadow flex flex-col items-center justify-start max-h-[180px] h-[180px] animate-pulse"
+                                    className="bg-gradient-to-br from-[#2b2b2b]/10 to-[#2b2b2b]/5 backdrop-blur-sm border border-[#2b2b2b]/20 rounded-xl p-2 text-center shadow flex flex-col items-center justify-start max-h-[180px] h-[180px] animate-pulse"
                                 >
                                     <div className="w-16 h-16 rounded-lg bg-gray-300/20 mb-3 shimmer"></div>
                                     <div className="w-full space-y-2">
@@ -379,9 +664,9 @@ export default function Premium() {
                                             {chunk.map((feature, i) => (
                                                 <div
                                                     key={i}
-                                                    className={`bg-gradient-to-br from-[#2b2b2b] to-[#2b2b2b]/50  border border-[#2b2b2b]/20 rounded-xl p-3 text-center  flex flex-col items-center justify-start max-h-[180px] h-[180px] transform transition-all duration-300 ${!isDragging ? 'hover:scale-105' : ''}`}
+                                                    className={`bg-gradient-to-br from-[#2b2b2b] to-[#2b2b2b]/50 border border-[#2b2b2b]/20 rounded-xl p-2 text-center flex flex-col items-center justify-start max-h-[180px] h-[180px] transform transition-all duration-300 ${!isDragging ? 'hover:scale-105' : ''}`}
                                                 >
-                                                    <div className="w-16 h-16 rounded-lg flex items-center justify-center mb-3 relative">
+                                                    <div className="w-16 h-16 rounded-lg flex items-center justify-center mb-2 relative">
                                                         <Image
                                                             src={feature.img}
                                                             alt={feature.title}
@@ -391,18 +676,19 @@ export default function Premium() {
                                                             priority={slideIndex === 0}
                                                             loading={slideIndex === 0 ? "eager" : "lazy"}
                                                             placeholder="blur"
-                                                            blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
+                                                            blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD..."
                                                         />
                                                     </div>
+                                                    <h3 className="text-sm font-semibold text-white mb-1">{feature.title}</h3>
                                                     <p className="text-xs text-gray-200 leading-tight">{feature.description}</p>
                                                 </div>
                                             ))}
+
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         </div>
-
 
                         {/* Enhanced Dots Indicator */}
                         <div className="flex justify-center gap-2 mt-4">
@@ -425,82 +711,169 @@ export default function Premium() {
 
             {/* Pricing Card */}
             <div className="px-6 mb-6">
-                <div className="bg-gradient-to-br from-[#2b2b2b]/50 to-[#2b2b2b] backdrop-blur-sm border border-[#2b2b2b]/20 rounded-full p-4 text-white flex items-center justify-between shadow-lg w-full max-w-md mx-auto">
-                    <div className="flex items-center gap-2">
-                        <div className="rounded-full">
-                            <Image
-                                src={logo}
-                                alt="Heart"
-                                width={40}
-                                height={40}
-                                className="object-contain"
-                            />
-                        </div>
-                        <div>
-                            <div className="text-xs font-medium leading-tight opacity-90">1 Month</div>
-                            <div className="text-sm font-semibold leading-tight">NXT Membership</div>
+                {isPremiumActive() ? (
+                    // Premium Active Card
+                    <div className="bg-white rounded-xl p-4 text-white shadow-lg w-full max-w-md mx-auto">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-green-500/20 rounded-full p-2">
+                                    <CheckCircle size={24} className="text-green-700" />
+                                </div>
+                                <div>
+                                    <div className="text-sm font-semibold text-green-700">Premium Active</div>
+                                    <div className="text-xs text-gray-700">
+                                        {selectedPackage?.name || 'Premium'} Membership
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <div className="flex items-center gap-1 text-sm font-medium">
+                                    <Calendar size={16} className="text-green-500" />
+                                    <span className="text-green-700">Till {formatDate(userData?.paid_upto || '')}</span>
+                                </div>
+                                <div className="text-xs text-gray-700">Valid until</div>
+                            </div>
                         </div>
                     </div>
-                    <div className="text-right">
-                        <div className="text-lg font-bold leading-tight">125.00 INR</div>
-                        <div className="text-xs opacity-75">
-                            <span className="line-through">500 INR</span> | Save 75%
+                ) : (
+                    // Regular Pricing Card
+                    <div className="relative w-full mx-auto">
+                        <div className="bg-gradient-to-br from-[#2b2b2b]/50 to-[#2b2b2b] backdrop-blur-sm border border-[#2b2b2b]/20 rounded-xl p-2 text-white flex flex-col gap-1 shadow-lg w-full">
+                            {/* Top - Package Info */}
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Image
+                                        src={logo}
+                                        alt="Coin Logo"
+                                        width={36}
+                                        height={36}
+                                        className="object-contain rounded-full"
+                                    />
+                                    <div>
+                                        <div className="text-sm font-medium opacity-90 leading-tight">
+                                            {selectedPackage?.duration_days || 90} Days
+                                        </div>
+                                        <div className="text-sm font-semibold leading-snug">
+                                            {selectedPackage?.name || 'Premium'} Membership
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-xl font-bold text-primary leading-tight">₹{payable}</div>
+                                    <div className="text-xs text-gray-300 leading-none">
+                                        <span className="line-through">₹{FIXED_MRP}</span> | Save ₹{coinsUsed}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Middle - Coin Message */}
+                            {coinsUsed > 0 && (
+                                <>
+                                    <div className="text-xs text-green-300 font-semibold text-center leading-tight mt-1">
+                                        🎉 You used <span className="text-white">{coinsUsed} coins</span> to reduce the price!
+                                    </div>
+                                    <div className="text-xs text-gray-400 text-center leading-tight">
+                                        (Coins reduce MRP up to max {MAX_COIN_USAGE})
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
-                </div>
+
+
+                )}
             </div>
 
-            {/* Terms Checkbox */}
-            <div className="px-6 mb-6">
-                <div className="flex items-center gap-3">
-                    <Checkbox
-                        id="terms"
-                        className="mt-1"
-                        checked={isChecked}
-                        onCheckedChange={(value) => setIsChecked(!!value)}
-                    />
-                    <label htmlFor="terms" className="text-sm text-gray-600 leading-tight">
-                        I Accept all <span className="text-primary underline">T & C</span> and{" "}
-                        <span className="text-primary underline">Privacy Policies</span>
-                    </label>
-                </div>
-            </div>
 
-            {/* Continue Button */}
+            {/* Terms Checkbox - Only show if not premium */}
+            {!hasPaidBefore() && (
+                <div className="px-6 mb-2">
+                    <div className="flex items-center gap-3">
+                        <Checkbox
+                            id="terms"
+                            className="mt-1"
+                            checked={isChecked}
+                            onCheckedChange={(value) => setIsChecked(!!value)}
+                        />
+                        <label htmlFor="terms" className="text-sm text-gray-600 leading-tight">
+                            I Accept all <span className="text-primary underline">T & C</span> and{" "}
+                            <span className="text-primary underline">Privacy Policies</span>
+                        </label>
+                    </div>
+                </div>
+            )}
+
+            {/* Action Button */}
             <div className="px-6 mb-4">
-                {!isChecked && showCheckError && (
-                    <p className="text-red-500 text-sm mb-2 text-center">
+                {!isPremiumActive() && !isChecked && showCheckError && (
+                    <p className="text-red-500 text-sm mb-1 text-center">
                         Please check the box to continue.
                     </p>
                 )}
                 <Button
-                    disabled={notified}
-                    className={`w-full text-white rounded-full mx-auto flex items-center justify-center ${notified ? "" : ""
-                        }`}
-                    onClick={() => {
-                        if (isChecked) {
-                            handleNotify()
-                            setShowCheckError(false)
-                        } else {
-                            setShowCheckError(true)
-                        }
-                    }}
+                    disabled={isProcessing}
+                    className="w-full text-white rounded-full mx-auto flex items-center justify-center"
+                    onClick={handlePayment}
                 >
-                    {notified ? "Notified" : "Notify Me"}{" "}
-                    {!notified && <ArrowRight className="w-6 h-6 ml-2" />}
+                    {isProcessing ? (
+                        <div className="flex items-center gap-2">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            Processing...
+                        </div>
+                    ) : (
+                        <>
+                            {hasPaidBefore() ? "Renew Now" : "Pay Now"}
+                            <ArrowRight className="w-6 h-6 ml-2" />
+                        </>
+                    )}
                 </Button>
             </div>
 
-            {/* Contact Us */}
-            <div className="text-center px-6 mb-6">
-                <p className="text-sm text-gray-500">
-                    Need Help?
-                    <Link href="/contactus">
-                        <span className="text-primary underline pl-1">Contact Us</span></Link>
-                </p>
-            </div>
+            {/* Dynamic Stats Section - Only for free users */}
+            {!isPremiumActive() && !isStatsLoading && statsMessages.length > 0 && (
+                <div className="px-6 mb-6">
+                    <div className="relative overflow-hidden bg-white backdrop-blur-md border border-white/10 rounded-2xl p-2 shadow-[0_0_30px_#00000050] transition-transform duration-300 hover:scale-[1.02] group">
+                        {/* Glowing gradient background */}
+                        <div className="absolute inset-0 z-0 rounded-2xl bg-gradient-to-br from-[#ffffff0d] to-[#ffffff05] pointer-events-none group-hover:scale-105 transition duration-700 ease-out" />
+
+                        {/* Icon + Message Row */}
+                        <div className="relative z-10 flex items-start gap-3 h-[40px] overflow-hidden">
+                            <AnimatePresence mode="wait">
+                                <motion.div
+                                    key={currentStat}
+                                    initial={{ y: 20, opacity: 0 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    exit={{ y: -20, opacity: 0 }}
+                                    transition={{ duration: 0.5 }}
+                                    className="flex items-start gap-3"
+                                >
+                                    {/* Icon Circle */}
+                                    <div className="relative w-10 h-10 flex-shrink-0 rounded-full flex items-center justify-center">
+                                        <div className="absolute inset-0 rounded-full animate-pulse-slow" />
+                                        {(() => {
+                                            const IconComponent = statsMessages[currentStat].icon || getRandomIcon()
+                                            return (
+                                                <IconComponent
+
+                                                    className={`${statsMessages[currentStat].color || getRandomColor(currentStat)} relative z-10`}
+                                                />
+                                            )
+                                        })()}
+                                    </div>
+
+                                    {/* Text */}
+                                    <div className="text-black text-sm font-medium leading-snug opacity-90">
+                                        <span className="block drop-shadow-[0_0_4px_rgba(255,255,255,0.3)]">
+                                            {statsMessages[currentStat].text}
+                                        </span>
+                                    </div>
+                                </motion.div>
+                            </AnimatePresence>
+                        </div>
+                    </div>
+                </div>
+            )}
 
         </div>
-        // </PageTransitionWrapper>
     )
 }

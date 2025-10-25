@@ -208,35 +208,48 @@ export default function ManageRoomDialog({
                                     getFilteredAvailableFriends().length > 0 ? (
                                         getFilteredAvailableFriends().map((friend) => (
                                             <div
-                                                key={`add-${friend.friend_id}`}
-                                                className={`flex items-center justify-between p-2 rounded-md cursor-pointer min-w-0 ${selectedFriends.some((f) => f.friend_id === friend.friend_id)
-                                                    ? "bg-green-600/20 border border-green-600/50"
-                                                    : "hover:bg-[#2b2b2b]"
+                                                key={`add-${friend.friend_id}`} // or `remove-${friend.friend_id}`
+                                                className={`flex items-center justify-between w-full p-2 rounded-md cursor-pointer transition-all border ${selectedFriends.some((f) => f.friend_id === friend.friend_id)
+                                                        ? managementMode === "add"
+                                                            ? "bg-green-600/20 border-green-600/50"
+                                                            : "bg-red-600/20 border-red-600/50"
+                                                        : "hover:bg-[#2b2b2b] border-transparent"
                                                     }`}
                                                 onClick={() => !isUpdating && toggleFriendSelection(friend)}
                                             >
-                                                <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
-                                                    <Avatar className="h-8 w-8 flex-shrink-0">
+                                                <div className="flex items-center gap-3 w-full min-w-0 overflow-hidden">
+                                                    <Avatar className="h-9 w-9 shrink-0">
                                                         <AvatarImage
                                                             src={formatImageUrl(friend.profile_pic || "")}
                                                             alt={friend.name}
-                                                            className="w-full h-full object-cover"
+                                                            className="object-cover"
                                                         />
                                                         <AvatarFallback>{friend.name[0]}</AvatarFallback>
                                                     </Avatar>
-                                                    <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
-                                                        <span className="text-sm truncate whitespace-nowrap">{friend.name}</span>
-                                                        {friend.genre && (
-                                                            <span className="text-xs text-gray-400 truncate whitespace-nowrap">{friend.genre}</span>
+
+                                                    <div className="flex flex-col min-w-0 overflow-hidden">
+                                                        <span className="text-sm font-medium text-white truncate">{friend.name}</span>
+                                                        {managementMode === "add" && friend.genre && (
+                                                            <span className="text-xs text-gray-400 truncate">
+                                                                {friend.genre.split(',').slice(0, 3).join(', ')}
+                                                            </span>
                                                         )}
+
                                                     </div>
+
+                                                    {selectedFriends.some((f) => f.friend_id === friend.friend_id) && (
+                                                        <Badge
+                                                            className={`ml-auto text-xs shrink-0 ${managementMode === "add"
+                                                                    ? "bg-green-600/20 text-green-400 border-green-600/50"
+                                                                    : "bg-red-600/20 text-red-400 border-red-600/50"
+                                                                }`}
+                                                        >
+                                                            {managementMode === "add" ? "Selected" : "Remove"}
+                                                        </Badge>
+                                                    )}
                                                 </div>
-                                                {selectedFriends.some((f) => f.friend_id === friend.friend_id) && (
-                                                    <Badge className="bg-green-600/20 text-green-400 border-green-600/50 ml-2 flex-shrink-0 text-xs">
-                                                        Selected
-                                                    </Badge>
-                                                )}
                                             </div>
+
                                         ))
                                     ) : (
                                         <div className="text-center py-8 text-gray-400">
@@ -265,7 +278,7 @@ export default function ManageRoomDialog({
                                                 <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
                                                     <Avatar className="h-8 w-8 flex-shrink-0">
                                                         <AvatarImage
-                                                            src={formatImageUrl(friend.profile_pic )}
+                                                            src={formatImageUrl(friend.profile_pic)}
                                                             alt={friend.name}
                                                             className="w-full h-full object-cover"
                                                         />

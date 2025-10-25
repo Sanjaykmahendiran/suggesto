@@ -3,7 +3,7 @@
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
 import { Star, Users } from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import DefaultMoviePoster from "@/assets/default-movie-poster.jpg"
 
 type Movie = {
   movie_id: string | number
@@ -30,7 +30,7 @@ export const PopularWithFriendsSection = ({
   }
 
   return (
-    <div className="px-4 mb-6">
+    <div className="px-4 mb-6" data-tour-target="popular-friends">
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-2">
           <Users className="w-5 h-5" />
@@ -52,11 +52,7 @@ export const PopularWithFriendsSection = ({
               onClick={() => router.push(`/movie-detail-page?movie_id=${movie.movie_id}`)}
             >
               <img
-                src={
-                  movie.poster_path.startsWith("http")
-                    ? movie.poster_path
-                    : `https://suggesto.xyz/App/${movie.poster_path}`
-                }
+                src={movie.poster_path ? `https://suggesto.xyz/App/${movie.poster_path}` : DefaultMoviePoster.src}
                 alt={movie.title}
                 className="w-full h-full object-cover"
               />

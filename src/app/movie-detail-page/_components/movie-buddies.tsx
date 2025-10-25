@@ -28,7 +28,7 @@ const MovieBuddiesSection: React.FC<MovieBuddiesSectionProps> = ({ movies = [] }
                     <div
                         key={index}
                         onClick={() =>
-                            router.push(`/movie-buddies/profile-detail?profile_id=${buddy.user_id}`)
+                            router.push(`/friends/friend-profile-detail?profile_id=${buddy.user_id}`)
                         }
                         className="text-center min-w-16 cursor-pointer"
                     >

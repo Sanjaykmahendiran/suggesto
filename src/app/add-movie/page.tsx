@@ -15,7 +15,6 @@ import { Movie, Genre, Language, OTT, MovieResult, Mood } from "@/app/add-movie/
 import { SearchResultsSkeleton, FilteredResultsSkeleton } from "@/app/add-movie/_components/loading"
 import { PageTransitionProvider, PageTransitionWrapper } from "@/components/PageTransition"
 import Cookies from "js-cookie"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 const AddMoviePage = () => {
   const router = useRouter()
@@ -477,7 +476,7 @@ const AddMoviePage = () => {
                   setYearSearch("")
                   setShowYearPopup(false)
                 }}
-                className="w-full text-left p-3 hover:bg-[#3a3a4a] rounded-lg text-white transition-colors"
+                className="w-full text-left p-3  rounded-lg text-white transition-colors"
               >
                 {yearObj.year}
               </button>

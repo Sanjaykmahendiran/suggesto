@@ -14,6 +14,16 @@ export interface Movie {
   total_count: number;
 }
 
+export interface SuggestedMovie {
+    movie_id: number
+    title: string
+    poster_path: string
+    backdrop_path: string
+    release_date: string
+    rating: string
+}
+
+
 // Filtered movie interface from filter API
 export interface FilteredMovie {
   movie_id: number

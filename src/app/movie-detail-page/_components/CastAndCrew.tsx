@@ -1,6 +1,8 @@
 "use client";
 
 import defaultImage from "@/assets/default-user.webp"
+import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 type Actor = {
@@ -14,7 +16,6 @@ type CrewMember = {
     name: string;
     image: string;
 };
-
 
 type MovieData = {
     actors: {
@@ -32,10 +33,13 @@ type MovieData = {
 interface CastAndCrewProps {
     movieData?: MovieData;
     actorId: string;
+    movieId: number;
+    showSuggestButton?: boolean; // New prop to control button visibility
 }
 
-const CastAndCrew = ({ movieData, actorId }: CastAndCrewProps) => {
+const CastAndCrew = ({ movieData, movieId, showSuggestButton = true }: CastAndCrewProps) => {
     const router = useRouter();
+    
     if (!movieData) {
         return null;
     }
@@ -98,8 +102,10 @@ const CastAndCrew = ({ movieData, actorId }: CastAndCrewProps) => {
     }
 
     return (
-        <div className="w-full mt-6">
-            <h3 className="text-xl font-bold text-white mb-4">Cast & Crew</h3>
+        <div className="w-full mt-6 bg-[#2b2b2b] p-3 rounded-lg mb-2">
+            <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-white">Cast & Crew</h3>
+            </div>
             <div className="mb-2">
                 <div className="flex space-x-4 overflow-x-auto no-scrollbar pb-2">
                     {allMembers.map((person, index) => {
@@ -108,9 +114,10 @@ const CastAndCrew = ({ movieData, actorId }: CastAndCrewProps) => {
                             <div
                                 key={index}
                                 onClick={() => {
-                                    router.push(`/add-movie?actor_id=${person.actor_id}&actorname=${person.name}`);
+                                    router.push(
+                                        `/add-movie?actor_id=${person.actor_id}&actorname=${person.name}`
+                                    );
                                 }}
-
                                 className="flex-shrink-0 text-center cursor-pointer"
                             >
                                 <div className="w-20 h-20 rounded-full overflow-hidden bg-[#2b2b2b] mb-2">
@@ -123,14 +130,40 @@ const CastAndCrew = ({ movieData, actorId }: CastAndCrewProps) => {
                                         }}
                                     />
                                 </div>
-                                <p className="text-sm text-white font-medium max-w-[68px]">{person.name}</p>
-                                <p className="text-xs text-gray-400 max-w-[68px]">{person.role}</p>
+
+                                {/* Name with truncate */}
+                                <p
+                                    className="text-sm text-white font-medium max-w-[68px] truncate"
+                                    title={person.name}
+                                >
+                                    {person.name}
+                                </p>
+
+                                {/* Role with truncate */}
+                                <p
+                                    className="text-xs text-gray-400 max-w-[68px] truncate"
+                                    title={person.role}
+                                >
+                                    {person.role}
+                                </p>
                             </div>
                         );
                     })}
-
                 </div>
             </div>
+
+            {/* Conditionally render the Suggest a Cast & Vote button */}
+            {showSuggestButton && (
+                <Button
+                    className="w-full flex items-center justify-center"
+                    onClick={() => {
+                        router.push(`/submit-cast-suggestion?movie_id=${movieId}`);
+                    }}
+                >
+                    Suggest a Cast & Vote
+                    <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
+            )}
         </div>
     );
 };

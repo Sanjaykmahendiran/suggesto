@@ -3,9 +3,11 @@
 import {
     Bell, ChevronRight, LogOut,
     Settings, HelpCircle, Shield, Info,
-    ArrowLeft, Contact, Globe, Music, Crown, Users,
+    ArrowLeft, Contact, Globe, Music, Crown, Users, Map,
     CreditCard, Star, Trash2, Film, Lock,
-    Share2, X, AlertTriangle
+    Share2, X, AlertTriangle,
+    Compass,
+    Phone
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -20,15 +22,17 @@ import { motion } from "framer-motion"
 import logo from "@/assets/suggesto-name-logo.png"
 import { PageTransitionProvider, PageTransitionWrapper } from "@/components/PageTransition"
 import DefaultImage from "@/assets/default-user.webp"
+import { useUser } from "@/contexts/UserContext"
+import toast from "react-hot-toast"
 
 export default function ProfilePage() {
     const [isMovieDialogOpen, setIsMovieDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-    const [notificationCount, setNotificationCount] = useState(3)
     const [userData, setUserData] = useState<any>(null)
     const [loading, setLoading] = useState<boolean>(true)
     const router = useRouter()
+    const { user, setUser } = useUser()
 
     useEffect(() => {
         const userId = Cookies.get("userID")
@@ -72,26 +76,26 @@ export default function ProfilePage() {
     };
 
     const confirmDeleteAccount = async () => {
-        if (!userData?.mobilenumber) {
-            alert("Unable to delete account: Mobile number not found");
+        if (!user?.mobilenumber) {
+            toast.error("Unable to delete account: Mobile number not found");
             return;
         }
 
         setIsDeleting(true);
 
         try {
-            const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=deleteuser&mobilenumber=${userData.mobilenumber}`);
+            const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=deleteuser&mobilenumber=${user.mobilenumber}`);
             const result = await response.json();
 
             if (response.ok) {
                 Cookies.remove("userID");
                 router.push("/");
             } else {
-                alert("Failed to delete account. Please try again.");
+                toast.error("Failed to delete account. Please try again.");
             }
         } catch (error) {
             console.error("Error deleting account:", error);
-            alert("An error occurred while deleting your account. Please try again.");
+            toast.error("An error occurred while deleting your account. Please try again.");
         } finally {
             setIsDeleting(false);
             setIsDeleteDialogOpen(false);
@@ -159,7 +163,7 @@ export default function ProfilePage() {
     }
 
     // Show error state if no user data and not loading
-    if (!userData && !loading) {
+    if (!user && !loading) {
         return (
             <div className="flex items-center justify-center min-h-screen text-white">
                 <div className="text-center">
@@ -184,8 +188,8 @@ export default function ProfilePage() {
                     </button>
                     <h1 className="text-xl font-bold text-white">Settings</h1>
                 </div>
-                <div className="flex items-center gap-4">
-                    <Link href="/pro" className="border bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] text-white rounded-full w-10 h-10 flex items-center justify-center">
+                <div className="flex items-center gap-2">
+                    <Link href="/premium" className="border bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] text-white rounded-full w-10 h-10 flex items-center justify-center">
                         <Crown className="w-5 h-5" />
                     </Link>
                     <button
@@ -194,11 +198,11 @@ export default function ProfilePage() {
                         aria-label="Notifications"
                     >
                         <Bell
-                            className={`w-5 h-5 text-white ${(userData?.not_count ?? 0) > 0 ? "shake" : ""}`}
+                            className={`w-5 h-5 text-white ${(user?.not_count ?? 0) > 0 ? "shake" : ""}`}
                         />
-                        {(userData?.not_count ?? 0) > 0 && (
+                        {(user?.not_count ?? 0) > 0 && (
                             <span className="absolute -top-1 -right-1 bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold shadow-lg">
-                                {userData?.not_count}
+                                {user?.not_count}
                             </span>
                         )}
                     </button>
@@ -212,7 +216,7 @@ export default function ProfilePage() {
                     <div className="h-16 w-16 rounded-full p-[2px] bg-gradient-to-tr from-[#b56bbc] to-[#7a71c4]">
                         <div className="h-full w-full rounded-full overflow-hidden bg-black">
                             <Image
-                                src={userData?.imgname || DefaultImage }
+                                src={user?.imgname || DefaultImage}
                                 alt="Profile"
                                 width={56}
                                 height={56}
@@ -222,12 +226,12 @@ export default function ProfilePage() {
                     </div>
 
                     <div>
-                        <h2 className="font-semibold text-2xl">{userData?.name || 'User'}</h2>
-                        <p className="text-sm text-gray-400">{userData?.mobilenumber || 'No phone number'}</p>
+                        <h2 className="font-semibold text-2xl">{user?.name || 'User'}</h2>
+                        <p className="text-sm text-gray-400">{user?.mobilenumber || 'No phone number'}</p>
                         <div className="flex gap-4 mt-2 text-xs text-gray-400">
-                            <span>Watchlisted: {userData?.watchlist_count || 0}</span>
-                            <span>Watched: {userData?.watchedlist_count || 0}</span>
-                            <span>Suggested: {userData?.suggestedlist_count || 0}</span>
+                            <span>Watchlisted: {user?.watchlist_count || 0}</span>
+                            <span>Watched: {user?.watchedlist_count || 0}</span>
+                            <span>Suggested: {user?.suggestedlist_count || 0}</span>
                         </div>
                     </div>
                 </div>
@@ -239,6 +243,12 @@ export default function ProfilePage() {
                     <div className="space-y-1">
                         {/* Account & Services */}
                         <MenuItem
+                            icon={<Compass className="h-5 w-5 text-indigo-400" />}
+                            label="App Tour"
+                            link="/app-tour"
+                            iconBg="bg-indigo-500/20"
+                        />
+                        <MenuItem
                             icon={<Film className="h-5 w-5 text-blue-400" />}
                             label="Request a Movie"
                             onClick={() => setIsMovieDialogOpen(true)}
@@ -249,6 +259,12 @@ export default function ProfilePage() {
                             label="Notifications"
                             link="/notifications"
                             iconBg="bg-purple-500/20"
+                        />
+                        <MenuItem
+                            icon={<Phone className="h-5 w-5 text-rose-400" />}
+                            label="Contacts"
+                            link="/Contacts"
+                            iconBg="bg-rose-500/20"
                         />
 
                         {/* Support & Info */}
@@ -272,12 +288,14 @@ export default function ProfilePage() {
                             link="/policies"
                             iconBg="bg-indigo-500/20"
                         />
-                        {/* <MenuItem
-                            icon={<Lock className="h-5 w-5 text-gray-400" />}
-                            label="Privacy"
-                            link="/privacy"
-                            iconBg="bg-gray-500/20"
-                        /> */}
+                        {/* Uncomment this if you want to show Privacy separately
+      <MenuItem
+        icon={<Lock className="h-5 w-5 text-gray-400" />}
+        label="Privacy"
+        link="/privacy"
+        iconBg="bg-gray-500/20"
+      />
+      */}
                         <MenuItem
                             icon={<Info className="h-5 w-5 text-teal-400" />}
                             label="About"
@@ -310,23 +328,20 @@ export default function ProfilePage() {
                         />
                     </div>
                 </div>
+
                 {/* Footer */}
                 <div className="mt-8 text-left">
-                    <div className="">
-                        <Image
-                            src={logo || '/placeholder.svg?height=32&width=32'}
-                            alt="Suggesto Logo"
-                            width={120}
-                            height={24}
-                            className="object-contain"
-                        />
-                    </div>
+                    <Image
+                        src={logo || "/placeholder.svg?height=32&width=32"}
+                        alt="Suggesto Logo"
+                        width={120}
+                        height={24}
+                        className="object-contain"
+                    />
                     <p className="text-sm text-white/60">V1.0.0</p>
                 </div>
             </main>
 
-            {/* Bottom Navigation */}
-            <BottomNavigation currentPath="/profile" />
             <MovieRequestDialog isOpen={isMovieDialogOpen} onClose={() => setIsMovieDialogOpen(false)} />
 
             {/* Delete Account Confirmation Dialog */}
@@ -403,9 +418,17 @@ export default function ProfilePage() {
                 className="fixed bottom-24 right-4 w-14 h-14 rounded-full bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] flex items-center justify-center shadow-lg"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{
+                    duration: 1.5,
+                    repeat: Infinity,
+                    repeatType: "loop",
+                    ease: "easeInOut",
+                }}
                 onClick={handleShare}
+                aria-label="Share Profile"
             >
-                <Share2 className="h-6 w-6" />
+                <Share2 className="h-6 w-6 text-white" />
             </motion.button>
         </div>
         // {/* </PageTransitionWrapper> */}

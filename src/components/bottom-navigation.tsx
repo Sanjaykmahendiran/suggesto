@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { usePageTransition } from "./PageTransition";
 
-interface BottomNavigationProps { 
+interface BottomNavigationProps {
   currentPath: string;
 }
 
@@ -19,7 +19,7 @@ const navItems = [
   { href: "/home", label: "Home", icon: Home },
   { href: "/watch-list", label: "Watch List", icon: PlayCircle },
   { href: "/watch-room", label: "Watch Room", icon: Clapperboard },
-  { href: "/suggest", label: "Suggest", icon: Sparkles },
+  { href: "/suggestions-page", label: "Suggest", icon: Sparkles },
   { href: "/friends", label: "Friends", icon: Users },
 ];
 
@@ -31,8 +31,16 @@ const labelColorMap: Record<
   "/home": { from: "#b56bbc", to: "#7a71c4" },
   "/watch-list": { from: "#ff968b", to: "#ff2251" },
   "/watch-room": { from: "#15F5FD ", to: "#036CDA" },
-  "/suggest": { from: "#ff7db8", to: "#ee2a7b" },
+  "/suggestions-page": { from: "#ff7db8", to: "#ee2a7b" },
   "/friends": { from: "#B3EB50", to: "#1ea896" },
+};
+
+const iconColorMap: Record<string, string> = {
+  "/home": "#b56bbc",
+  "/watch-list": "#ff968b",
+  "/watch-room": "#15F5FD",
+  "/suggestions-page": "#ee2a7b",
+  "/friends": "#B3EB50",
 };
 
 // "/watch-list": { from: "#FBF362", to: "#F3CE42" },
@@ -50,13 +58,7 @@ const labelColorMap: Record<
 // "/watch-room": { from: "#2dffeb", to: "#9bffb7" },
 // from-[#b56bbc] to-[#7a71c4]
 // Separate solid colors for icons
-const iconColorMap: Record<string, string> = {
-  "/home": "#b56bbc",
-  "/watch-list": "#ff968b",
-  "/watch-room": "#15F5FD",
-  "/suggest": "#ee2a7b",
-  "/friends": "#B3EB50",
-};
+
 
 export function BottomNavigation({ currentPath }: BottomNavigationProps) {
   const router = useRouter();

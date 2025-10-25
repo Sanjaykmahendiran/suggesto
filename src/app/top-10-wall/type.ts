@@ -8,6 +8,7 @@ export type Top10MovieEntry = {
     is_saved: boolean
     movie: Movie
     isMockData?: boolean
+    is_guessed?: boolean
 }
 
 export type Movie = {

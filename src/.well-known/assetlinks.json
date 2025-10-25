@@ -1,0 +1,5 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target" : { "namespace": "android_app", "package_name": "com.suggesto.app",
+               "sha256_cert_fingerprints": ["92:32:86:B9:01:AD:B8:D3:76:13:61:83:34:6C:CA:BB:FA:EB:5D:88:A0:D6:29:6A:6E:5C:E5:98:A0:15:1A:91"] }
+}]

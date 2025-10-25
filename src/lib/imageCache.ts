@@ -1,4 +1,18 @@
+interface ImageData {
+  url: string;
+  blob: Blob;
+  timestamp: number;
+  size: number;
+}
+
 class ImageCacheManager {
+  private dbName: string;
+  private storeName: string;
+  private version: number;
+  private maxCacheSize: number;
+  private maxCacheAge: number;
+  private dbPromise: Promise<IDBDatabase> | null;
+
   constructor() {
     this.dbName = 'ImageCacheDB';
     this.storeName = 'images';
@@ -8,7 +22,7 @@ class ImageCacheManager {
     this.dbPromise = null;
   }
 
-  async openDB() {
+  async openDB(): Promise<IDBDatabase> {
     if (this.dbPromise) {
       return this.dbPromise;
     }
@@ -23,7 +37,7 @@ class ImageCacheManager {
 
       request.onsuccess = () => resolve(request.result);
 
-      request.onupgradeneeded = (event) => {
+      request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
         const db = event.target.result;
         if (!db.objectStoreNames.contains(this.storeName)) {
           const store = db.createObjectStore(this.storeName, { keyPath: 'url' });
@@ -35,7 +49,7 @@ class ImageCacheManager {
     return this.dbPromise;
   }
 
-  async getCachedImage(url) {
+  async getCachedImage(url: string): Promise<Blob | null> {
     try {
       const db = await this.openDB();
       const transaction = db.transaction([this.storeName], 'readonly');
@@ -74,7 +88,7 @@ class ImageCacheManager {
     }
   }
 
-  async cacheImage(url, blob) {
+  async cacheImage(url: string, blob: Blob): Promise<void> {
     try {
       // Don't cache if blob is too large (> 10MB)
       if (blob.size > 10 * 1024 * 1024) {
@@ -124,7 +138,7 @@ class ImageCacheManager {
     }
   }
 
-  async deleteImage(url) {
+  async deleteImage(url: string): Promise<void> {
     try {
       const db = await this.openDB();
       const transaction = db.transaction([this.storeName], 'readwrite');
@@ -143,12 +157,12 @@ class ImageCacheManager {
     }
   }
 
-  isImageValid(imageData) {
+  isImageValid(imageData: ImageData): boolean {
     const now = Date.now();
     return (now - imageData.timestamp) < this.maxCacheAge;
   }
 
-  async cleanupIfNeeded() {
+  async cleanupIfNeeded(): Promise<void> {
     try {
       const db = await this.openDB();
 
@@ -205,7 +219,7 @@ class ImageCacheManager {
     }
   }
 
-  async deleteBatch(images) {
+  async deleteBatch(images: ImageData[]): Promise<void> {
     try {
       const db = await this.openDB();
       const transaction = db.transaction([this.storeName], 'readwrite');
@@ -243,7 +257,7 @@ class ImageCacheManager {
     }
   }
 
-  async clearCache() {
+  async clearCache(): Promise<void> {
     try {
       const db = await this.openDB();
       const transaction = db.transaction([this.storeName], 'readwrite');
@@ -262,7 +276,12 @@ class ImageCacheManager {
     }
   }
 
-  async getCacheStats() {
+  async getCacheStats(): Promise<{
+    totalImages: number;
+    validImages: number;
+    totalSize: number;
+    formattedSize: string;
+  }> {
     try {
       const db = await this.openDB();
       const transaction = db.transaction([this.storeName], 'readonly');
@@ -297,7 +316,7 @@ class ImageCacheManager {
     }
   }
 
-  formatBytes(bytes) {
+  formatBytes(bytes: number): string {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];

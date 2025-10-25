@@ -4,21 +4,23 @@ import Image from "next/image"
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { Search, SlidersHorizontal, Clock, Star, Plus, Play, X, ArrowLeft, Heart, Shuffle, Film } from "lucide-react"
+import { Search, SlidersHorizontal, Clock, Star, Plus, Play, X, ArrowLeft, Heart, Shuffle, Film, Sparkles } from "lucide-react"
 import { BottomNavigation } from "@/components/bottom-navigation"
 import WatchNowFilterComponent from "@/components/watchnow-filter"
 import { Skeleton } from "@/components/ui/skeleton"
 import Cookies from 'js-cookie'
 import Link from "next/link"
 import { useUser } from "@/contexts/UserContext"
-import { Movie, FilteredMovie } from "@/app/watch-list/type"
+import { Movie, FilteredMovie, SuggestedMovie } from "@/app/watch-list/type"
 import { PageTransitionProvider, PageTransitionWrapper } from "@/components/PageTransition"
 import NotFound from "@/components/notfound"
 import WatchListNotFound from "@/assets/not-found-watchlist.png"
 import toast from "react-hot-toast"
 import DefaultImage from "@/assets/default-user.webp"
-import CachedImage from "@/components/CachedImage"
-import { useImagePreloader } from "@/hooks/useCachedImage"
+import GenieLamp from "@/assets/genie-lamp.png"
+import Genie from "@/assets/genie.png"
+import { useTourIntegration } from "@/hooks/useTourIntegration"
+import { r } from "node_modules/framer-motion/dist/types.d-DSjX-LJB"
 
 type SearchState = "initial" | "results" | "not-found"
 
@@ -38,6 +40,9 @@ export default function Watchlist() {
   const [suggestion, setSuggestion] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [showWatchlist, setShowWatchlist] = useState(false)
+  const [loadingGenie, setLoadingGenie] = useState(false)
+  const [suggestedMovie, setSuggestedMovie] = useState<SuggestedMovie | null>(null)
+  const [showGeniePopup, setShowGeniePopup] = useState(false)
 
   // Pagination states
   const [watchlistMovies, setWatchlistMovies] = useState<Movie[]>([])
@@ -59,18 +64,41 @@ export default function Watchlist() {
   const [lastSearches, setLastSearches] = useState<string[]>([])
   const { user, setUser } = useUser()
   const [totalCount, setTotalCount] = useState(0)
-  const { preloadImages } = useImagePreloader()
+  const userId = Cookies.get('userID') || ''
+
+  useTourIntegration('watchlist', [loading], !loading)
+
+  const handleShuffleWatchlist = () => {
+    if (watchlistMovies.length > 0) {
+      const shuffled = [...watchlistMovies].sort(() => Math.random() - 0.5)
+      setWatchlistMovies(shuffled)
+      setCurrentIndex(0) // Reset to first card
+      // toast.success("Watchlist shuffled!")
+    }
+  }
+
+  useEffect(() => {
+    if (user?.payment_status !== 1 && !loading && watchlistMovies.length > 0) {
+      const timer = setTimeout(() => {
+        setShowGeniePopup(true)
+      }, 2000) // Show popup after 2 seconds
+
+      return () => clearTimeout(timer)
+    }
+  }, [user?.payment_status, loading, watchlistMovies.length])
 
   // Fetch watchlist movies with pagination
   const fetchWatchlistMovies = useCallback(async (offset: number = 0, isLoadMore: boolean = false) => {
+    const currentUserId = Cookies.get('userID') || ''
+    if (!currentUserId) return
     try {
       if (!isLoadMore) {
         setWatchlistLoading(true)
       }
 
-      const userId = Cookies.get('userID') || ''
+
       const response = await fetch(
-        `https://suggesto.xyz/App/api.php?gofor=watchlist&user_id=${userId}&status=planned&limit=10&offset=${offset}`
+        `https://suggesto.xyz/App/api.php?gofor=watchlist&user_id=${currentUserId}&status=planned&limit=10&offset=${offset}`
       )
 
       if (!response.ok) {
@@ -110,15 +138,19 @@ export default function Watchlist() {
 
   // Load initial watchlist movies when component mounts
   useEffect(() => {
-    fetchWatchlistMovies(0, false)
-  }, [fetchWatchlistMovies])
+    if (userId) {
+      fetchWatchlistMovies(0, false)
+    }
+  }, [userId])
 
   // Intersection Observer for movie cards stack
+  // Replace the existing intersection observer useEffect
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         const target = entries[0]
-        if (target.isIntersecting && !watchlistLoading && watchlistHasMore && !showWatchlist && !watchlistInitialLoad) {
+
+        if (target.isIntersecting && !watchlistLoading && watchlistHasMore && showWatchlist && !watchlistInitialLoad) {
           fetchWatchlistMovies(watchlistOffset, true)
         }
       },
@@ -128,13 +160,17 @@ export default function Watchlist() {
       }
     )
 
-    const cardStackObserver = document.getElementById('card-stack-observer')
-    if (cardStackObserver) {
-      observer.observe(cardStackObserver)
+    // Only observe when in watchlist view
+    if (showWatchlist) {
+      const cardStackObserver = document.getElementById('card-stack-observer')
+      if (cardStackObserver) {
+        observer.observe(cardStackObserver)
+      }
     }
 
     return () => observer.disconnect()
   }, [watchlistLoading, watchlistHasMore, watchlistOffset, showWatchlist, fetchWatchlistMovies, watchlistInitialLoad])
+
 
   // Search functionality
   useEffect(() => {
@@ -176,13 +212,14 @@ export default function Watchlist() {
     }
   }, [])
 
+  // Add this new logic in the handleSwipe function where you handle "left" swipe
   const handleSwipe = (direction: "left" | "right") => {
     if (direction === "left") {
       const newIndex = (currentIndex + 1) % watchlistMovies.length
       setCurrentIndex(newIndex)
 
-      // Load more movies when we're near the end (within last 3 movies)
-      if (newIndex >= watchlistMovies.length - 3 && watchlistHasMore && !watchlistLoading) {
+      // Load more movies when we're near the end (within last 3 movies) AND not in watchlist view
+      if (!showWatchlist && newIndex >= watchlistMovies.length - 3 && watchlistHasMore && !watchlistLoading) {
         fetchWatchlistMovies(watchlistOffset, true)
       }
     } else {
@@ -258,12 +295,35 @@ export default function Watchlist() {
   }
 
   // Handle random movie suggestion
-  const handleSuggestMovie = () => {
-    if (watchlistMovies.length > 0) {
-      const randomIndex = Math.floor(Math.random() * watchlistMovies.length)
-      setCurrentIndex(randomIndex)
+  const handleSuggestMovie = async () => {
+    // Clear previous suggestion immediately
+    setSuggestedMovie(null)
+    setLoadingGenie(true)
+
+    try {
+      const response = await fetch("https://suggesto.xyz/App/api.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gofor: "suggenieai", user_id: userId }),
+      })
+
+      const data = await response.json()
+
+      if (data?.status === "success" && data?.movie) {
+        setSuggestedMovie(data.movie)
+        toast.success("Genie Suggestion fetched successfully!")
+      } else {
+        console.error("Suggestion failed:", data)
+        toast.error(data?.message || "Failed to get genie suggestion")
+      }
+    } catch (error) {
+      console.error("API error:", error)
+      toast.error("Something went wrong. Please try again.")
+    } finally {
+      setLoadingGenie(false)
     }
   }
+
 
   // Handle filter results
   const handleApplyFilters = (filterResults: FilteredMovie[]) => {
@@ -299,20 +359,6 @@ export default function Watchlist() {
       watchlist_id: movie.watch_id || movie.movie_id.toString()
     }))
   }
-
-  useEffect(() => {
-    if (watchlistMovies.length > 0) {
-      // Preload next batch of images in background
-      const imagesToPreload = watchlistMovies
-        .slice(currentIndex + 1, currentIndex + 6) // Preload next 5 images
-        .map(movie => getPosterUrl(movie.poster_path))
-        .filter(url => url !== getPosterUrl("/placeholder.svg"))
-
-      if (imagesToPreload.length > 0) {
-        preloadImages(imagesToPreload)
-      }
-    }
-  }, [watchlistMovies, currentIndex, preloadImages])
 
   // If search is open, show search interface
   if (showSearch) {
@@ -385,13 +431,11 @@ export default function Watchlist() {
                       className="relative w-full h-[200px] rounded-lg overflow-hidden cursor-pointer"
                       whileHover={{ scale: 1.05 }}
                     >
-                      <CachedImage
+                      <Image
                         src={getPosterUrl(movie.poster_path)}
                         alt={movie.title}
                         fill
                         className="object-cover"
-                        width={0}
-                        height={0}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
                       <div className="absolute top-2 right-2 bg-gradient-to-r from-[#ff968b] to-[#ff2251] text-white text-xs px-1.5 py-0.5 rounded flex items-center gap-1">
@@ -413,22 +457,20 @@ export default function Watchlist() {
             <div>
               <h2 className="text-lg font-medium mb-4">Found ({searchFilteredMovies.length})</h2>
 
-              <div className="space-y-4">
+              <div className="space-y-4 ">
                 {searchFilteredMovies.map((movie) => (
-                  <Link href={`/movie-detail-page?movie_id=${movie.movie_id}`} key={movie.watchlist_id}>
-                    <div className="flex bg-[#2b2b2b] rounded-lg overflow-hidden hover:bg-[#333342] transition-colors">
+                  <Link href={`/movie-detail-page?movie_id=${movie.movie_id}`} key={movie.watchlist_id} className="block">
+                    <div className="flex bg-[#2b2b2b]  rounded-lg overflow-hidden space-x-2 transition-colors">
                       <div className="relative w-24 h-32 flex-shrink-0">
-                        <CachedImage
+                        <Image
                           src={getPosterUrl(movie.poster_path)}
                           alt={movie.title}
                           fill
                           className="object-cover"
-                          width={0}
-                          height={0}
                         />
                         <div className="absolute top-2 right-2 bg-gradient-to-r from-[#ff968b] to-[#ff2251] text-white text-xs px-1.5 py-0.5 rounded flex items-center gap-1">
                           <Star className="w-3 h-3 text-white" />
-                          {movie.rating}
+                          {Number(movie.rating).toFixed(1)}
                         </div>
                       </div>
                       <div className="flex-1 p-3">
@@ -438,7 +480,7 @@ export default function Watchlist() {
                             <Heart size={20} />
                           </button>
                         </div>
-                        <p className="text-xs text-[#9370ff] mb-1">{formatReleaseYear(movie.release_date)}</p>
+                        <p className="text-xs bg-gradient-to-r from-[#ff968b] to-[#ff2251] text-transparent bg-clip-text mb-1">{formatReleaseYear(movie.release_date)}</p>
                         <p className="text-xs text-gray-300 mb-2 line-clamp-2">
                           {movie.overview || "No description available"}
                         </p>
@@ -482,13 +524,13 @@ export default function Watchlist() {
   return (
     <div className="min-h-screen  text-white">
       {/* Header */}
-      <header className="p-4 flex items-center justify-between pt-8">
+      <header className="p-4 flex items-center justify-between pt-8" data-tour-target="header-section">
         <div className="flex items-center gap-2">
           <button className="mr-2 p-2 rounded-full bg-[#2b2b2b]" onClick={() => router.back()}>
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-white">
+            <h1 className="text-xl font-bold text-white">
               Watch List
             </h1>
             <p className="text-xs text-gray-400">
@@ -500,12 +542,14 @@ export default function Watchlist() {
           <button
             className="text-gray-300 rounded-full"
             onClick={openSearch}
+            data-tour-target="search-button"
           >
             <Search size={20} />
           </button>
           <button
             className={`text-gray-300 ${showWatchlist ? "bg-[#2b2b2b] rounded-full p-2" : ""}`}
             onClick={togglePlaylist}
+            data-tour-target="list-toggle"
           >
             {showWatchlist ? (
               <svg
@@ -544,11 +588,11 @@ export default function Watchlist() {
             )}
           </button>
           {!showWatchlist && (
-            <button className="text-gray-300" onClick={() => setShowFilter(true)}>
+            <button className="text-gray-300" onClick={() => setShowFilter(true)} data-tour-target="filter-button">
               <SlidersHorizontal className="w-5 h-5" />
             </button>
           )}
-          <Link href="/profile">
+          <Link href="/profile" data-tour-target="profile-button">
             <div className="h-10 w-10 rounded-full p-[2px] bg-gradient-to-tr from-[#ff968b] to-[#ff2251]">
               <div className="h-full w-full rounded-full overflow-hidden bg-black">
                 <Image
@@ -603,13 +647,11 @@ export default function Watchlist() {
                     whileHover={{ scale: 1.05 }}
                     className="relative flex w-full h-[230px] rounded-lg overflow-hidden cursor-pointer"
                   >
-                    <CachedImage
+                    <Image
                       src={getPosterUrl(movie.poster_path)}
                       alt={movie.title}
                       fill
                       className="object-cover"
-                      width={0}
-                      height={0}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
                     <div className="absolute top-2 right-2 bg-gradient-to-r from-[#ff968b] to-[#ff2251] text-white text-xs px-1.5 py-0.5 rounded flex items-center gap-1">
@@ -687,7 +729,7 @@ export default function Watchlist() {
                   <p className="text-sm text-gray-200">{suggestion}</p>
                 </div>
               )}
-              <div className="ml-auto flex items-center gap-1 bg-gradient-to-r from-[#ff968b] to-[#ff2251] text-white px-2 py-1.5 rounded-xl shadow-md">
+              <div className="ml-auto flex items-center gap-1 bg-gradient-to-r from-[#ff968b] to-[#ff2251] text-white px-2 py-1.5 rounded-xl shadow-md " data-tour-target="movie-count">
                 <Film className="w-4 h-4" />
                 <span className="text-white font-semibold text-xs flex items-center gap-1">
                   {totalCount || watchlistMovies.length}
@@ -698,7 +740,7 @@ export default function Watchlist() {
           </div>
 
           {/* Movie Cards Stack */}
-          <div className="relative h-[450px] px-4 mb-6">
+          <div className="relative h-[450px] px-4 mb-6" data-tour-target="movie-cards">
             {loading ? (
               <div className="absolute inset-x-4 rounded-xl overflow-hidden bg-[#2b2b2b] shadow-lg" style={{ top: "10px", bottom: "10px" }}>
                 <Skeleton className="h-3/5 w-full" />
@@ -714,89 +756,157 @@ export default function Watchlist() {
               </div>
             ) : (
               <AnimatePresence>
-                {watchlistMovies.length > 0 ? (
-                  [2, 1, 0].map((offset) => {
-                    const index = (currentIndex + offset) % watchlistMovies.length
-                    return (
-                      <motion.div
-                        key={watchlistMovies[index].movie_id}
-                        initial={offset === 0 ? { scale: 0.8, y: 20, opacity: 0 } : {}}
-                        animate={{
-                          scale: 1 - offset * 0.05,
-                          y: offset * 22,
-                          opacity: 1 - offset * 0.2,
-                          zIndex: 10 - offset,
+                {suggestedMovie ? (
+                  // Show suggested movie card
+                  <motion.div
+                    key="suggested-movie"
+                    initial={{ scale: 0.8, y: 20, opacity: 0 }}
+                    animate={{ scale: 1, y: 0, opacity: 1 }}
+                    exit={{ scale: 0.8, y: -20, opacity: 0 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    className="absolute inset-x-4 h-[500px] rounded-xl overflow-hidden bg-gradient-to-br from-[#ff968b]/20 to-[#ff2251]/20 border-2 border-[#ff968b]/30 shadow-lg"
+                    style={{ top: "10px", bottom: "10px" }}
+                    onClick={() => handleViewDetail(suggestedMovie.movie_id)}
+                  >
+                    {/* Genie Header */}
+                    <div className="absolute inset-x-0 top-4 z-20 flex justify-between items-center px-4">
+                      <div className="bg-black/50 backdrop-blur-sm text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-2">
+                        <Image
+                          src={GenieLamp}
+                          alt="Genie Lamp Icon"
+                          width={16}
+                          height={16}
+                          className="w-6 h-6"
+                        />
+                        <span>Genie Suggests</span>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setSuggestedMovie(null)
                         }}
-                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        className="absolute inset-x-4 h-[500px] rounded-xl overflow-hidden bg-[#2b2b2b] shadow-lg"
-                        style={{ top: "10px", bottom: "10px" }}
-                        onClick={() => offset === 0 && handleViewDetail(watchlistMovies[index].movie_id)}
-                        drag={offset === 0 ? "x" : false}
-                        dragConstraints={{ left: 0, right: 0 }}
-                        dragElastic={0.7}
-                        onDragEnd={(e, { offset, velocity }) => {
-                          if (offset.x < -100) handleSwipe("left")
-                          else if (offset.x > 100) handleSwipe("right")
-                        }}
+                        className="bg-black/50 backdrop-blur-sm text-white p-1.5 rounded-full hover:bg-black/70"
                       >
-                        {offset === 0 && (
-                          <div className="absolute inset-x-0 top-4 z-20 flex justify-center">
-                            <div className="bg-black/50 backdrop-blur-sm text-white text-xs px-3 py-1.5 rounded-full">
-                              Swipe left to skip • Swipe right or tap to watch
-                            </div>
-                          </div>
-                        )}
-                        <div className="relative h-full">
-                          <CachedImage
-                            src={getPosterUrl(watchlistMovies[index].poster_path || watchlistMovies[index].backdrop_path || "/placeholder.svg")}
-                            alt={watchlistMovies[index].title}
-                            fill
-                            className="object-cover"
-                            width={0}
-                            height={0}
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-[#2b2b2b] via-transparent to-transparent"></div>
+                        <X size={16} />
+                      </button>
+                    </div>
 
-                          <div className="absolute inset-x-0 bottom-0 p-4">
-                            <h2 className="text-xl font-bold mb-2">{watchlistMovies[index].title}</h2>
-                            <div className="flex items-center gap-3 mb-3">
-                              <div className="flex items-center">
-                                <Star className="w-4 h-4 text-yellow-400 mr-1" fill="rgb(250 204 21)" />
-                                <span className="text-sm">{watchlistMovies[index].rating}</span>
-                              </div>
-                              <span className="text-sm bg-[#9370ff]/20 text-[#9370ff] text-white px-2 py-0.5 rounded">
-                                {formatReleaseYear(watchlistMovies[index].release_date)}
-                              </span>
-                            </div>
+                    <div className="relative h-full">
+                      <Image
+                        src={getPosterUrl(suggestedMovie.poster_path || suggestedMovie.backdrop_path || "/placeholder.svg")}
+                        alt={suggestedMovie.title}
+                        fill
+                        className="object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#2b2b2b] via-transparent to-transparent"></div>
+
+                      <div className="absolute inset-x-0 bottom-0 p-4">
+                        <h2 className="text-xl font-bold mb-2">{suggestedMovie.title}</h2>
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="flex items-center">
+                            <Star className="w-4 h-4 text-yellow-400 mr-1" fill="rgb(250 204 21)" />
+                            <span className="text-sm">{suggestedMovie.rating}</span>
                           </div>
+                          <span className="text-sm bg-[#9370ff]/20 text-[#9370ff] px-2 py-0.5 rounded">
+                            {formatReleaseYear(suggestedMovie.release_date)}
+                          </span>
                         </div>
-                      </motion.div>
-                    )
-                  })
+                        <div className="flex items-center gap-2 text-[#ff968b] text-sm">
+                          <Play className="w-4 h-4" />
+                          <span>Tap to watch • Swipe to dismiss</span>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-full bg-[#2b2b2b] rounded-xl p-4 text-center">
-                    <NotFound
-                      imageSrc={WatchListNotFound}
-                      title="No Movies Planned"
-                      description="Your watchlist is empty. Start adding movies to plan your next watch!" />
-                    <button
-                      className="mt-4 font-medium bg-gradient-to-r from-[#ff968b] to-[#ff2251] text-transparent bg-clip-text"
-                      onClick={() => router.push("/add-movie")}
-                    >
-                      Find movies to add
-                    </button>
+                  // Show regular movie stack
+                  watchlistMovies.length > 0 ? (
+                    [2, 1, 0].map((offset) => {
+                      const index = (currentIndex + offset) % watchlistMovies.length
+                      return (
+                        <motion.div
+                          key={watchlistMovies[index].movie_id}
+                          initial={offset === 0 ? { scale: 0.8, y: 20, opacity: 0 } : {}}
+                          animate={{
+                            scale: 1 - offset * 0.05,
+                            y: offset * 22,
+                            opacity: 1 - offset * 0.2,
+                            zIndex: 10 - offset,
+                          }}
+                          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                          className="absolute inset-x-4 h-[500px] rounded-xl overflow-hidden bg-[#2b2b2b] shadow-lg"
+                          style={{ top: "10px", bottom: "10px" }}
+                          onClick={() => offset === 0 && handleViewDetail(watchlistMovies[index].movie_id)}
+                          drag={offset === 0 ? "x" : false}
+                          dragConstraints={{ left: 0, right: 0 }}
+                          dragElastic={0.7}
+                          onDragEnd={(e, { offset, velocity }) => {
+                            if (offset.x < -100) handleSwipe("left")
+                            else if (offset.x > 100) handleSwipe("right")
+                          }}
+                        >
+                          {offset === 0 && (
+                            <div className="absolute inset-x-0 top-4 z-20 flex justify-center">
+                              <div className="bg-black/50 backdrop-blur-sm text-white text-xs px-3 py-1.5 rounded-full">
+                                Swipe left to skip • Swipe right or tap to watch
+                              </div>
+                            </div>
+                          )}
+                          <div className="relative h-full">
+                            <Image
+                              src={getPosterUrl(watchlistMovies[index].poster_path || watchlistMovies[index].backdrop_path || "/placeholder.svg")}
+                              alt={watchlistMovies[index].title}
+                              fill
+                              className="object-cover"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#2b2b2b] via-transparent to-transparent"></div>
 
-                  </div>
+                            <div className="absolute inset-x-0 bottom-0 p-4">
+                              <h2 className="text-xl font-bold mb-2">{watchlistMovies[index].title}</h2>
+                              <div className="flex items-center gap-3 mb-3">
+                                <div className="flex items-center">
+                                  <Star className="w-4 h-4 text-yellow-400 mr-1" fill="rgb(250 204 21)" />
+                                  <span className="text-sm">{watchlistMovies[index].rating}</span>
+                                </div>
+                                <span className="text-sm bg-[#9370ff]/20 text-[#9370ff] text-white px-2 py-0.5 rounded">
+                                  {formatReleaseYear(watchlistMovies[index].release_date)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )
+                    })
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full bg-[#2b2b2b] rounded-xl p-4 text-center">
+                      <NotFound
+                        imageSrc={WatchListNotFound}
+                        title="No Movies Planned"
+                        description="Your watchlist is empty. Start adding movies to plan your next watch!"
+                      />
+                      <button
+                        className="mt-4 font-medium bg-gradient-to-r from-[#ff968b] to-[#ff2251] text-transparent bg-clip-text"
+                        onClick={() => router.push("/add-movie")}
+                      >
+                        Find movies to add
+                      </button>
+                    </div>
+                  )
                 )}
               </AnimatePresence>
             )}
+
+            {watchlistHasMore && !watchlistLoading && !watchlistInitialLoad && (
+              <div
+                id="card-stack-observer"
+                className="h-4 w-full col-span-2"
+              />
+            )}
           </div>
-          {!showWatchlist && watchlistHasMore && !watchlistLoading && !watchlistInitialLoad && (
-            <div id="card-stack-observer" className="h-4 w-full" />
-          )}
+
 
           {/* Bottom Navigation */}
-          <BottomNavigation currentPath="/watch-list" />
+          <BottomNavigation currentPath="/watch-list" data-tour-target="bottom-nav" />
 
           {/* Filter Panel */}
           <AnimatePresence>
@@ -827,23 +937,139 @@ export default function Watchlist() {
 
       {/* Floating Action Buttons */}
       <div className="fixed bottom-24 left-4 right-4 flex justify-between items-end z-40">
-        {/* Left Side: Suggest Movie Button */}
-        <div>
+        {/* Left Side: Genie Button (Premium) or Shuffle Button (Free) */}
+        <div className="relative w-14 h-14">
           {!loading && watchlistMovies.length > 0 && !showWatchlist && (
-            <motion.button
-              className="w-14 h-14 rounded-full bg-gradient-to-r from-[#ff968b] to-[#ff2251] flex items-center justify-center shadow-lg"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleSuggestMovie}
-            >
-              <Shuffle className="w-6 h-6 text-white" />
-            </motion.button>
+            <>
+              {user?.payment_status === 1 ? (
+                // Premium User - Show Genie
+                <motion.button
+                  disabled={loadingGenie}
+                  onClick={handleSuggestMovie}
+                  className="w-full h-full rounded-full bg-gradient-to-r from-[#ff968b] to-[#ff2251] flex items-center justify-center shadow-lg relative z-10"
+                  data-tour-target="genie-button"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  {loadingGenie ? (
+                    <motion.div
+                      className="w-6 h-6 text-white"
+                      animate={{
+                        rotate: [0, 360],
+                        scale: [1, 1.3, 1],
+                        opacity: [0.6, 1, 0.6],
+                      }}
+                      transition={{
+                        repeat: Infinity,
+                        duration: 1.2,
+                        ease: "easeInOut",
+                      }}
+                    >
+                      <Sparkles className="w-6 h-6 text-white" />
+                    </motion.div>
+                  ) : (
+                    <Image
+                      src={Genie}
+                      alt="Genie Icon"
+                      width={24}
+                      height={24}
+                      className="w-full h-full object-contain text-white p-1"
+                    />
+                  )}
+                </motion.button>
+              ) : (
+                // Free User - Show Shuffle
+                <motion.button
+                  onClick={handleShuffleWatchlist}
+                  className="w-full h-full rounded-full bg-gradient-to-r from-[#ff968b] to-[#ff2251] flex items-center justify-center shadow-lg relative z-10"
+                  data-tour-target="shuffle-button"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Shuffle className="w-6 h-6 text-white" />
+                </motion.button>
+              )}
+            </>
           )}
+
+          {/* Genie Aura - Only show for premium users */}
+          {loadingGenie && user?.payment_status === 1 && (
+            <motion.div
+              className="absolute inset-0 rounded-full bg-pink-400 opacity-30 blur-md z-0"
+              animate={{
+                scale: [1, 1.3, 1],
+                opacity: [0.3, 0.6, 0.3],
+              }}
+              transition={{
+                repeat: Infinity,
+                duration: 1.5,
+                ease: "easeInOut",
+              }}
+            />
+          )}
+
+          {/* Genie Magic Popup for Premium Users */}
+          <AnimatePresence>
+            {showGeniePopup && user?.payment_status !== 1 && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.3, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.3, y: 20 }}
+                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                className="absolute bottom-16 left-1/2 transform -translate-x-[10%] w-64 z-50 "
+              >
+                <div className="relative bg-[#1f1f21] rounded-2xl p-4 shadow-2xl">
+
+                  {/* Magic sparkles */}
+                  <div className="absolute -top-2 -right-2 w-4 h-4 bg-yellow-300 rounded-full animate-pulse"></div>
+                  <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-white/80 rounded-full animate-bounce"></div>
+                  <div className="absolute top-1 left-1/3 w-2 h-2 bg-white/60 rounded-full animate-ping"></div>
+
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 bg-gradient-to-r from-[#ff968b] to-[#ff2251] rounded-full flex items-center justify-center">
+                      <Image
+                        src={Genie}
+                        alt="Genie"
+                        width={20}
+                        height={20}
+                        className="w-5 h-5"
+                      />
+                    </div>
+                    <span className="text-white font-bold text-sm">✨ I'm your Genie!</span>
+                  </div>
+
+                  <p className="text-white/90 text-xs mb-3 leading-relaxed">
+                    I can magically suggest the perfect movie from your watchlist!
+                    <span className="font-semibold text-yellow-200"> Pro feature - Try me once!</span>
+                  </p>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setShowGeniePopup(false)
+                        router.push("/premium")
+                      }}
+                      className="flex-1 bg-gradient-to-r from-[#ff968b] to-[#ff2251] text-white text-xs py-2 px-3 rounded-lg transition-colors font-semibold"
+                    >
+                      ✨ Try Now
+                    </button>
+                    <button
+                      onClick={() => setShowGeniePopup(false)}
+                      className="bg-white/20 hover:bg-white/30 text-white/90 text-xs py-2 px-3 rounded-lg transition-colors font-medium"
+                    >
+                      Later
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Right Side: Add Movie Button */}
         <div>
           <motion.button
+            data-tour-target="add-button"
             className="w-14 h-14 rounded-full bg-gradient-to-r from-[#ff968b] to-[#ff2251] flex items-center justify-center shadow-lg "
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -853,6 +1079,7 @@ export default function Watchlist() {
           </motion.button>
         </div>
       </div>
+
     </div>
     // {/* </PageTransitionWrapper> */}
 

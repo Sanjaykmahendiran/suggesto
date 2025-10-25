@@ -111,8 +111,6 @@ const SuggestionRequestPage = () => {
         }
 
         setIsSubmitting(true);
-        const loadingToast = toast.loading('Sending your request...');
-
         try {
             const requestData = {
                 gofor: "createSuggestionRequest",
@@ -139,7 +137,6 @@ const SuggestionRequestPage = () => {
                     setShowCoinAnimation(true)
                 }
 
-                toast.dismiss(loadingToast);
                 toast.success('Request sent successfully! 🎉');
 
                 // Reset form
@@ -153,12 +150,10 @@ const SuggestionRequestPage = () => {
                     router.back();
                 }, 3000);
             } else {
-                toast.dismiss(loadingToast);
                 toast.error(result.message || 'Failed to send request');
                 console.error('Error submitting request:', result);
             }
         } catch (error) {
-            toast.dismiss(loadingToast);
             toast.error('Network error. Please try again.');
             console.error('Error submitting request:', error);
         } finally {

@@ -14,6 +14,10 @@ import type { PluginListenerHandle } from "@capacitor/core"
 import Cookies from "js-cookie"
 import { Skeleton } from "@/components/ui/skeleton"
 import { registerServiceWorker } from "@/lib/serviceWorker"
+import { SplashScreen } from '@capacitor/splash-screen'
+import { LottieSplashScreen } from '@awesome-cordova-plugins/lottie-splash-screen'
+import { Capacitor } from "@capacitor/core";
+import { App as CapacitorApp } from "@capacitor/app";
 
 const carouselData = [
   {
@@ -42,8 +46,6 @@ const carouselData = [
   }
 ]
 
-
-
 const RedirectLoading = () => (
   <div className="px-4">
     {/* Movie Carousel Skeleton */}
@@ -69,15 +71,57 @@ const RedirectLoading = () => (
   </div>
 );
 
-
-
 export default function RootPage() {
-  const { user, loading, isPageValid, isRedirecting } = useFetchUserDetails()
+  const { loading, } = useFetchUserDetails()
   const [index, setIndex] = useState(0)
   const router = useRouter()
   const containerRef = useRef<HTMLDivElement>(null)
-  const [sliderWidth, setSliderWidth] = useState(320) // Set a default width
+  const [sliderWidth, setSliderWidth] = useState(320)
   const [userId, setUserId] = useState<string | undefined>()
+
+  useEffect(() => {
+    const hideSplash = async () => {
+      if (typeof window !== 'undefined' && (window as any).cordova) {
+        document.addEventListener('deviceready', async () => {
+          await new Promise((res) => setTimeout(res, 3000))
+          try {
+            await SplashScreen.hide({ fadeOutDuration: 1500 })
+            await LottieSplashScreen.hide()
+          } catch (err) {
+            console.warn('Failed to hide splash screen:', err)
+          }
+        })
+      }
+    }
+    hideSplash()
+  }, [])
+
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      CapacitorApp.addListener("appUrlOpen", (event) => {
+        try {
+          const url = new URL(event.url);
+
+          // Example: https://suggesto.xyz/open/movie/123
+          if (url.pathname.startsWith("/open/movie")) {
+            const movieId = url.pathname.split("/").pop();
+            if (movieId) {
+              router.push(`/movie-detail-page?movie_id=${movieId}`);
+            }
+          }
+        } catch (err) {
+          console.error("Deep link error:", err);
+        }
+      });
+    }
+
+    return () => {
+      if (Capacitor.isNativePlatform()) {
+        CapacitorApp.removeAllListeners();
+      }
+    };
+  }, [router]);
+
 
   useEffect(() => {
     registerServiceWorker()

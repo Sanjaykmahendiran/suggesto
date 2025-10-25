@@ -19,4 +19,7 @@ export type UserData = {
   badge?: string
   dob: string
   coins: string
+  payment_status?: number
+  referral_code?: string
+  favmov_count?: number
 }

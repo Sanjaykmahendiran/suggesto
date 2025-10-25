@@ -13,7 +13,9 @@ export default function NotificationCard({ notificationCount }: NotificationCard
     return (
         <div
             onClick={() => router.push('/notifications')}
-            className="w-full px-2 mb-10">
+            className="w-full px-2 mb-10"
+            data-tour-target="notifications-card"
+            >
             <div className="relative rounded-3xl bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] px-3 py-4 text-white shadow-lg ">
                 <div className="flex items-center justify-center gap-4 h-full">
                     <div className="h-full flex items-center justify-center">

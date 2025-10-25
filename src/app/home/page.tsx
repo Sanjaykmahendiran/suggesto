@@ -17,7 +17,6 @@ import NotificationsCard from "@/components/home-section/notifications-card"
 import Image from 'next/image';
 import premiumImage from "@/assets/Premium-content.png"
 import { useRouter } from "next/navigation"
-import { PageTransitionWrapper } from "@/components/PageTransition"
 import React from "react"
 import GenresSection from "@/components/home-section/genres-section"
 import toast from "react-hot-toast"
@@ -27,16 +26,25 @@ import PollCard from "@/components/home-section/poll-section"
 import Top10Wall from "@/components/home-section/top10wall-section"
 import { App } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
-import ExitDialog from "@/components/exit-dialog"
+import ExitDialog from "@/components/exit-app-dialog"
 import CoinAnimation from "@/components/coin-animation"
+import { useTourIntegration } from "@/hooks/useTourIntegration"
+import RewardSection from "../profile/_components/reward-points-card"
 
+// Define data structure
 type HomeData = {
+  activebanners?: any[];
   recentSuggestions?: any[];
+  homemoods?: any[];
+  homegenres?: any[];
   longtimeWatchlist?: any[];
   trendingThisWeek?: any[];
+  topRated?: any[];
   popularAmongFriends?: any[];
+  PeopleNearWatching?: any[];
   aiRandomizer?: any[];
   mysteryweekendpick?: any[];
+  classicHits?: any[];
   [key: string]: any;
 };
 
@@ -58,18 +66,17 @@ const getSectionType = (key: string): string => {
 
 export default function HomePage() {
   const router = useRouter()
-  const [userData, setUserData] = useState<HomeData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isDataLoaded, setIsDataLoaded] = useState(false)
-  const [isContentReady, setIsContentReady] = useState(false)
   const { user, setUser } = useUser()
 
-  // Pagination states
-  const [currentPage, setCurrentPage] = useState(1)
-  const [isLoadingMore, setIsLoadingMore] = useState(false)
-  const [hasMoreData, setHasMoreData] = useState(true)
-  const [allSectionsData, setAllSectionsData] = useState<React.ReactNode[]>([])
-  const [visibleSections, setVisibleSections] = useState<React.ReactNode[]>([])
+  // Core states
+  const [section1Data, setSection1Data] = useState<HomeData | null>(null)
+  const [section2Data, setSection2Data] = useState<HomeData | null>(null)
+  const [section3Data, setSection3Data] = useState<HomeData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [section2Loading, setSection2Loading] = useState(false)
+  const [section3Loading, setSection3Loading] = useState(false)
+  const [section2Loaded, setSection2Loaded] = useState(false)
+  const [section3Loaded, setSection3Loaded] = useState(false)
   const [showCoinAnimation, setShowCoinAnimation] = useState(false)
   const [coinsEarned, setCoinsEarned] = useState(0)
 
@@ -83,36 +90,80 @@ export default function HomePage() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [pullDistance, setPullDistance] = useState(0)
 
+  // Refs
   const containerRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
   const movieCarouselRef = useRef<HTMLDivElement>(null)
+  const section1EndRef = useRef<HTMLDivElement>(null)
+  const section2EndRef = useRef<HTMLDivElement>(null)
+  const observer = useRef<IntersectionObserver | null>(null)
+
+  // Pull to refresh refs
   const startY = useRef(0)
-  const currentY = useRef(0)
   const isDragging = useRef(false)
   const isAtTop = useRef(true)
-  const hasStartedPull = useRef(false)
-  const isInPullZone = useRef(true)
+  const lastTouchY = useRef(0)
 
-  // Long press specific refs
+  const scrollVelocity = useRef(0)
+  const lastScrollTime = useRef(0)
   const touchStartTime = useRef(0)
-  const longPressTimer = useRef<NodeJS.Timeout | null>(null)
-  const hasLongPressed = useRef(false)
-  const isLongPressActive = useRef(false)
-  const touchStartPosition = useRef({ x: 0, y: 0 })
-  const isTouchingPullZone = useRef(false)
-
-  // Scroll detection for pagination
-  const lastScrollTop = useRef(0)
-  const scrollThreshold = 200 // Load more when 200px from bottom
-
+  // Constants
   const PULL_THRESHOLD = 80
   const MAX_PULL = 120
-  const LONG_PRESS_DURATION = 10
-  const LONG_PRESS_MOVEMENT_THRESHOLD = 15
   const BACK_PRESS_TIMEOUT = 2000
-  const SECTIONS_PER_PAGE = 3
 
-  // Handle hardware back button
+  useTourIntegration('home', [section1Data], !!section1Data && !isLoading)
+
+  // Fetch individual section data
+  const fetchSectionData = useCallback(async (section: number) => {
+    try {
+      const user_id = Cookies.get("userID");
+      const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=homepage&user_id=${user_id}&section=${section}`);
+
+      if (!response.ok) {
+        throw new Error(`API responded with status ${response.status} for section ${section}`);
+      }
+
+      const data = await response.json();
+      console.log(`Section ${section} data loaded:`, data);
+      return data;
+    } catch (err) {
+      console.error(`Error fetching section ${section} data:`, err);
+      return null;
+    }
+  }, []);
+
+  // Fetch user data
+  const fetchUserData = useCallback(async () => {
+    const user_id = Cookies.get('userID');
+    if (!user_id) return;
+
+    try {
+      const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=userget&user_id=${user_id}`);
+      const data = await response.json();
+
+      if (data && data.user_id) {
+        const oldCoins = parseInt(Cookies.get('old_coins') || '0', 10);
+        const newCoins = parseInt(data.coins || '0', 10);
+        const today = new Date().toISOString().split('T')[0];
+        const lastShownDate = Cookies.get('coin_animation_date');
+
+        if (newCoins > oldCoins && lastShownDate !== today) {
+          const earnedCoins = newCoins - oldCoins;
+          setCoinsEarned(earnedCoins);
+          setShowCoinAnimation(true);
+          Cookies.set('coin_animation_date', today);
+        }
+
+        Cookies.set('old_coins', newCoins.toString());
+        setUser(data);
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    }
+  }, [setUser]);
+
+  // Handle back button
   const handleBackButton = useCallback(() => {
     backPressCount.current += 1
 
@@ -124,10 +175,7 @@ export default function HomePage() {
       toast("Press back again to exit", {
         duration: 2000,
         icon: "⬅️",
-        style: {
-          background: '#333',
-          color: '#fff',
-        },
+        style: { background: '#333', color: '#fff' },
       })
 
       backPressTimer.current = setTimeout(() => {
@@ -158,567 +206,345 @@ export default function HomePage() {
         toast("App cannot be closed programmatically on iOS", {
           duration: 3000,
           icon: "ℹ️",
-          style: {
-            background: '#333',
-            color: '#fff',
-          },
+          style: { background: '#333', color: '#fff' },
         })
       }
     }
   }, [])
 
-  const fetchUserData = useCallback(async () => {
-    const user_id = Cookies.get('userID');
-    if (!user_id) return;
-
-    try {
-      const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=userget&user_id=${user_id}`)
-      const data = await response.json()
-      if (data && data.user_id) {
-        // Get old coins from cookies
-        const oldCoins = parseInt(Cookies.get('old_coins') || '0', 10);
-        const newCoins = parseInt(data.coins || '0', 10);
-
-        // Check if coins increased
-        if (newCoins > oldCoins) {
-          const earnedCoins = newCoins - oldCoins;
-          setCoinsEarned(earnedCoins);
-          setShowCoinAnimation(true);
-        }
-
-        // Update cookies with new coins value
-        if (data.coins) {
-          Cookies.set('old_coins', data.coins, { expires: 7 });
-        }
-
-        setUser(data)
-      }
-    } catch (error) {
-      console.error('Error fetching user data:', error)
-    }
-  }, [setUser])
-
-  const fetchHomeData = useCallback(async (page: number = 1, isRefresh: boolean = false) => {
-    try {
-      const user_id = Cookies.get("userID")
-
-      const response = await fetch("https://suggesto.xyz/App/api.php", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          gofor: "homepage",
-          user_id: user_id,
-          page: page,
-          limit: SECTIONS_PER_PAGE
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`API responded with status ${response.status}`)
-      }
-
-      const data = await response.json()
-      console.log(`Homepage data page ${page}:`, data)
-
-      if (isRefresh || page === 1) {
-        setUserData(data)
-        setCurrentPage(1)
-        setHasMoreData(true)
-      } else {
-        // Merge new data with existing data
-        setUserData(prevData => {
-          if (!prevData) return data
-
-          const mergedData = { ...prevData }
-          Object.keys(data).forEach(key => {
-            if (Array.isArray(data[key]) && Array.isArray(prevData[key])) {
-              mergedData[key] = [...prevData[key], ...data[key]]
-            } else if (Array.isArray(data[key])) {
-              mergedData[key] = data[key]
-            }
-          })
-          return mergedData
-        })
-      }
-
-      // Check if there's more data
-      const hasData = Object.values(data).some(value =>
-        Array.isArray(value) && value.length > 0
-      )
-
-      if (!hasData) {
-        setHasMoreData(false)
-      }
-
-      setIsDataLoaded(true)
-    } catch (err) {
-      console.error("Error fetching homepage data:", err)
-      toast.error(err instanceof Error ? err.message : String(err))
-      setIsDataLoaded(true)
-    }
-  }, [])
-
-  const loadMoreData = useCallback(async () => {
-    if (isLoadingMore || !hasMoreData) return
-
-    setIsLoadingMore(true)
-    const nextPage = currentPage + 1
-    await fetchHomeData(nextPage, false)
-    setCurrentPage(nextPage)
-    setIsLoadingMore(false)
-  }, [currentPage, isLoadingMore, hasMoreData, fetchHomeData])
-
+  // Handle refresh
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true)
-    setCurrentPage(1)
-    setHasMoreData(true)
-    await Promise.all([fetchUserData(), fetchHomeData(1, true)])
+    setSection2Loaded(false)
+    setSection3Loaded(false)
+    setSection2Loading(false)
+    setSection3Loading(false)
+    setSection2Data(null)
+    setSection3Data(null)
+
+    try {
+      await Promise.all([
+        fetchUserData(),
+        fetchSectionData(1).then(data => setSection1Data(data))
+      ])
+    } catch (error) {
+      console.error('Error refreshing data:', error)
+    }
+
     setIsRefreshing(false)
-  }, [fetchUserData, fetchHomeData])
+  }, [fetchUserData, fetchSectionData])
 
-  // Detect scroll position for pagination
-  const handleScrollForPagination = useCallback(() => {
-    if (!containerRef.current || isLoadingMore || !hasMoreData) return
-
-    const { scrollTop, scrollHeight, clientHeight } = containerRef.current
-
-    // Check if user scrolled down and is near bottom
-    if (scrollTop > lastScrollTop.current) {
-      const distanceFromBottom = scrollHeight - scrollTop - clientHeight
-
-      if (distanceFromBottom < scrollThreshold) {
-        loadMoreData()
-      }
-    }
-
-    lastScrollTop.current = scrollTop
-  }, [isLoadingMore, hasMoreData, loadMoreData])
-
-  // Build all sections from data
-  const buildAllSections = useCallback(() => {
-    if (!userData) return [];
-
-    const allSections: React.ReactNode[] = [];
-    let mysteryWeekendData: any[] | undefined;
-
-    Object.keys(userData).forEach((key) => {
-      const sectionData = userData[key];
-
-      if (!Array.isArray(sectionData) || sectionData.length === 0) {
-        return;
-      }
-
-      if (key === 'mysteryweekendpick') {
-        mysteryWeekendData = sectionData;
-        return;
-      }
-
-      if (key === 'recentSuggestions') {
-        allSections.push(
-          <SuggestionsSection
-            key={key}
-            suggestions={sectionData}
-            title="Recent Suggestions"
-          />
-        );
-      } else if (key === 'popularAmongFriends') {
-        allSections.push(
-          <div
-            key="premium"
-            onClick={() => router.push('/premium')}
-            className="w-full h-[200px] relative mb-8">
-            <Image
-              src={premiumImage}
-              alt="Bell"
-              width={0}
-              height={0}
-              sizes="100vw"
-              className="w-full h-full object-contain"
-            />
-          </div>
-        );
-
-        allSections.push(
-          <PopularWithFriendsSection
-            key={key}
-            movies={sectionData}
-            title="Popular Among Friends"
-          />
-        );
-      } else if (key === 'aiRandomizer') {
-        allSections.push(<ShareSuggestionCard key="share" />);
-
-        allSections.push(
-          <AiRandomizerSection
-            key={key}
-            movies={sectionData}
-            title="AI Recommendations"
-            sectionKey={key} />
-        );
-      } else {
-        const title = camelCaseToTitle(key);
-        const sectionType = getSectionType(key);
-
-        allSections.push(
-          <DynamicMovieSection
-            key={key}
-            movies={sectionData}
-            title={title}
-            sectionType={sectionType}
-            sectionKey={key}
-          />
-        );
-      }
-    });
-
-    const finalSections: React.ReactNode[] = [];
-
-    finalSections.push(
-      <NotificationsCard
-        notificationCount={user?.not_count ?? 0}
-        key="notifications"
-      />
-    );
-
-    finalSections.push(<MoodsSection key="moods" />);
-
-    if (allSections.length > 0) {
-      finalSections.push(allSections[0]);
-    }
-
-    finalSections.push(<GenresSection key="genres" />);
-
-    if (allSections.length > 1) {
-      finalSections.push(allSections[1]);
-    }
-
-    finalSections.push(<PollCard key="poll" />);
-
-    if (allSections.length > 2) {
-      for (let i = 2; i < allSections.length - 1; i++) {
-        finalSections.push(allSections[i]);
-      }
-
-      finalSections.push(<Top10Wall key="top10wall" />);
-      finalSections.push(allSections[allSections.length - 1]);
-    } else {
-      finalSections.push(<Top10Wall key="top10wall" />);
-    }
-
-    if (mysteryWeekendData && mysteryWeekendData.length > 0) {
-      const centerIndex = Math.floor(finalSections.length / 2);
-      finalSections.splice(centerIndex, 0,
-        <MysteryWeekendPicks
-          key="mysteryweekendpick"
-          movies={mysteryWeekendData}
-          title="Mystery Weekend Picks"
-        />
-      );
-    }
-
-    return finalSections;
-  }, [userData, user, router]);
-
-  // Update visible sections based on current page
-  useEffect(() => {
-    const sections = buildAllSections()
-    setAllSectionsData(sections)
-
-    // Initially show first half of sections
-    const initialSectionsCount = Math.ceil(sections.length / 2)
-    setVisibleSections(sections.slice(0, initialSectionsCount))
-  }, [buildAllSections])
-
-  // Load more sections when scrolling
-  useEffect(() => {
-    if (currentPage > 1) {
-      const sectionsPerPage = Math.ceil(allSectionsData.length / 2)
-      const endIndex = Math.min(sectionsPerPage * currentPage, allSectionsData.length)
-      setVisibleSections(allSectionsData.slice(0, endIndex))
-
-      // Update hasMoreData based on visible sections
-      setHasMoreData(endIndex < allSectionsData.length)
-    }
-  }, [currentPage, allSectionsData])
-
-  // Check when all content is ready to display
-  useEffect(() => {
-    if (isDataLoaded && !isContentReady) {
-      const timer = setTimeout(() => {
-        setIsContentReady(true)
-        setTimeout(() => {
-          setIsLoading(false)
-        }, 300)
-      }, 100)
-
-      return () => clearTimeout(timer)
-    }
-  }, [isDataLoaded, isContentReady])
-
+  // Check if at top for pull to refresh
   const checkIfAtTop = useCallback(() => {
     if (containerRef.current) {
       const scrollTop = containerRef.current.scrollTop
-      isAtTop.current = scrollTop <= 0
+      // More strict top detection - only consider truly at top
+      isAtTop.current = scrollTop === 0
       return isAtTop.current
     }
     return false
   }, [])
 
-  const checkPullZoneVisibility = useCallback(() => {
-    if (!headerRef.current || !movieCarouselRef.current || !containerRef.current) return false
-
-    const headerRect = headerRef.current.getBoundingClientRect()
-    const carouselRect = movieCarouselRef.current.getBoundingClientRect()
-    const containerRect = containerRef.current.getBoundingClientRect()
-
-    const carouselMidpoint = carouselRect.top + (carouselRect.height / 2)
-    const pullZoneTop = headerRect.top
-    const pullZoneBottom = carouselMidpoint
-    const pullZoneVisible = pullZoneTop >= containerRect.top && pullZoneBottom <= containerRect.bottom
-
-    isInPullZone.current = pullZoneVisible
-    return pullZoneVisible
-  }, [])
-
-  const resetPullStates = useCallback(() => {
-    setPullDistance(0)
-    setIsPulling(false)
-    isDragging.current = false
-    hasStartedPull.current = false
-    hasLongPressed.current = false
-    isLongPressActive.current = false
-    isTouchingPullZone.current = false
-    touchStartTime.current = 0
-
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current)
-      longPressTimer.current = null
-    }
-  }, [])
-
-  const shouldAllowPullToRefresh = useCallback(() => {
-    const atTop = checkIfAtTop()
-    const pullZoneVisible = checkPullZoneVisibility()
-    return atTop && pullZoneVisible
-  }, [checkIfAtTop, checkPullZoneVisibility])
-
-  const isTouchInPullZone = useCallback((clientY: number) => {
-    if (!headerRef.current || !movieCarouselRef.current) return false
-
-    const headerRect = headerRef.current.getBoundingClientRect()
-    const carouselRect = movieCarouselRef.current.getBoundingClientRect()
-    const containerRect = containerRef.current?.getBoundingClientRect()
-
-    if (!containerRect) return false
-
-    const pullZoneTop = headerRect.top
-    const carouselMidpoint = carouselRect.top + (carouselRect.height / 2)
-    const pullZoneBottom = carouselMidpoint
-
-    const touchInPullZone = clientY >= pullZoneTop && clientY <= pullZoneBottom
-    const pullZoneVisible = pullZoneTop >= containerRect.top && pullZoneBottom <= containerRect.bottom
-
-    return touchInPullZone && pullZoneVisible
-  }, [])
-
-  // All touch and mouse handlers remain the same as original...
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    resetPullStates()
-    const canPullToRefresh = shouldAllowPullToRefresh()
-    if (!canPullToRefresh || isRefreshing) return
-
+  // Pull to refresh handlers - Fixed implementation
+  const handleTouchStart = useCallback((e: TouchEvent) => {
     const touch = e.touches[0]
-    const touchInPullZone = isTouchInPullZone(touch.clientY)
+    startY.current = touch.clientY
+    lastTouchY.current = touch.clientY
+    touchStartTime.current = Date.now()
 
-    if (touchInPullZone) {
-      isTouchingPullZone.current = true
-      startY.current = touch.clientY
-      touchStartPosition.current = { x: touch.clientX, y: touch.clientY }
-      touchStartTime.current = Date.now()
-      hasLongPressed.current = false
-      isLongPressActive.current = false
-
-      longPressTimer.current = setTimeout(() => {
-        if (isTouchingPullZone.current && !isDragging.current) {
-          hasLongPressed.current = true
-          isLongPressActive.current = true
-          if (navigator.vibrate) {
-            navigator.vibrate(50)
-          }
-        }
-      }, LONG_PRESS_DURATION)
+    // Only initialize pull-to-refresh if truly at top
+    if (checkIfAtTop() && !isRefreshing) {
+      isDragging.current = false
+      setPullDistance(0)
+      setIsPulling(false)
     }
-  }, [isRefreshing, shouldAllowPullToRefresh, isTouchInPullZone, resetPullStates])
+  }, [isRefreshing, checkIfAtTop])
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isTouchingPullZone.current) {
-      resetPullStates()
-      return
-    }
-
-    const canStillPullToRefresh = shouldAllowPullToRefresh()
-    if (!canStillPullToRefresh || isRefreshing) {
-      resetPullStates()
-      return
-    }
-
+  const handleTouchMove = useCallback((e: TouchEvent) => {
     const touch = e.touches[0]
-    currentY.current = touch.clientY
+    const currentY = touch.clientY
+    const deltaY = currentY - startY.current
+    const deltaTime = Date.now() - touchStartTime.current
 
-    const deltaX = Math.abs(touch.clientX - touchStartPosition.current.x)
-    const deltaY = Math.abs(touch.clientY - touchStartPosition.current.y)
-    const totalMovement = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+    // Calculate scroll velocity for better gesture detection
+    const velocity = Math.abs(currentY - lastTouchY.current) / Math.max(deltaTime - lastScrollTime.current, 1)
+    scrollVelocity.current = velocity
+    lastScrollTime.current = Date.now()
 
-    if (!hasLongPressed.current && totalMovement > LONG_PRESS_MOVEMENT_THRESHOLD) {
-      if (longPressTimer.current) {
-        clearTimeout(longPressTimer.current)
-        longPressTimer.current = null
-      }
-      resetPullStates()
-      return
-    }
+    // Only handle pull-to-refresh under very specific conditions
+    const shouldHandlePull = (
+      isAtTop.current &&
+      !isRefreshing &&
+      deltaY > 15 && // Minimum pull distance to start
+      currentY > lastTouchY.current && // Moving downward
+      velocity < 2 && // Not a fast scroll gesture
+      containerRef.current &&
+      containerRef.current.scrollTop === 0 // Absolutely at top
+    )
 
-    if (!hasLongPressed.current || !isLongPressActive.current) {
-      return
-    }
+    if (shouldHandlePull) {
+      isDragging.current = true
 
-    const diff = currentY.current - startY.current
-
-    if (diff > 0) {
-      if (!isDragging.current) {
-        isDragging.current = true
-        hasStartedPull.current = true
-      }
-
+      // Prevent default only when we're sure it's a pull gesture
       e.preventDefault()
-      const distance = Math.min(diff * 0.5, MAX_PULL)
+
+      // Calculate pull distance with resistance curve
+      const resistance = Math.max(0.3, 1 - (deltaY / 200))
+      const distance = Math.min(deltaY * resistance, MAX_PULL)
+
       setPullDistance(distance)
-      setIsPulling(distance > 20)
+      setIsPulling(distance > 25)
     } else {
-      resetPullStates()
+      // If not pulling, ensure we're not interfering with scroll
+      if (isDragging.current && (deltaY <= 0 || !isAtTop.current)) {
+        // Reset pull state if conditions no longer met
+        isDragging.current = false
+        setPullDistance(0)
+        setIsPulling(false)
+      }
     }
-  }, [isRefreshing, shouldAllowPullToRefresh, resetPullStates])
+
+    lastTouchY.current = currentY
+  }, [isRefreshing])
 
   const handleTouchEnd = useCallback(() => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current)
-      longPressTimer.current = null
-    }
+    const touchDuration = Date.now() - touchStartTime.current
 
-    if (!isDragging.current || !hasStartedPull.current || !hasLongPressed.current || !isTouchingPullZone.current) {
-      resetPullStates()
-      return
-    }
-
-    const canTriggerRefresh = shouldAllowPullToRefresh()
-    if (pullDistance >= PULL_THRESHOLD && !isRefreshing && canTriggerRefresh && hasStartedPull.current) {
+    // Only trigger refresh if we had a genuine pull gesture
+    if (
+      isDragging.current &&
+      pullDistance >= PULL_THRESHOLD &&
+      !isRefreshing &&
+      isAtTop.current &&
+      touchDuration > 100 // Minimum touch duration to avoid accidental triggers
+    ) {
       handleRefresh()
     }
 
-    setTimeout(() => {
-      resetPullStates()
-    }, 100)
-  }, [pullDistance, isRefreshing, handleRefresh, resetPullStates, shouldAllowPullToRefresh])
-
-  // Mouse handlers (same logic as touch handlers)...
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    resetPullStates()
-    const canPullToRefresh = shouldAllowPullToRefresh()
-    if (!canPullToRefresh || isRefreshing) return
-
-    const mouseInPullZone = isTouchInPullZone(e.clientY)
-    if (mouseInPullZone) {
-      isTouchingPullZone.current = true
-      startY.current = e.clientY
-      touchStartPosition.current = { x: e.clientX, y: e.clientY }
-      touchStartTime.current = Date.now()
-      hasLongPressed.current = false
-      isLongPressActive.current = false
-
-      longPressTimer.current = setTimeout(() => {
-        if (isTouchingPullZone.current && !isDragging.current) {
-          hasLongPressed.current = true
-          isLongPressActive.current = true
-        }
-      }, LONG_PRESS_DURATION)
-    }
-  }, [isRefreshing, shouldAllowPullToRefresh, isTouchInPullZone, resetPullStates])
-
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isTouchingPullZone.current || isRefreshing) return
-
-    const canStillPullToRefresh = shouldAllowPullToRefresh()
-    if (!canStillPullToRefresh) {
-      resetPullStates()
-      return
-    }
-
-    const deltaX = Math.abs(e.clientX - touchStartPosition.current.x)
-    const deltaY = Math.abs(e.clientY - touchStartPosition.current.y)
-    const totalMovement = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
-
-    if (!hasLongPressed.current && totalMovement > LONG_PRESS_MOVEMENT_THRESHOLD) {
-      if (longPressTimer.current) {
-        clearTimeout(longPressTimer.current)
-        longPressTimer.current = null
-      }
-      resetPullStates()
-      return
-    }
-
-    if (!hasLongPressed.current || !isLongPressActive.current) return
-
-    if (!isDragging.current && hasLongPressed.current) {
-      isDragging.current = true
-      hasStartedPull.current = true
-    }
-
-    currentY.current = e.clientY
-    const diff = currentY.current - startY.current
-
-    if (diff > 0) {
-      e.preventDefault()
-      const distance = Math.min(diff * 0.5, MAX_PULL)
-      setPullDistance(distance)
-      setIsPulling(distance > 20)
-    } else {
-      resetPullStates()
-    }
-  }, [isRefreshing, shouldAllowPullToRefresh, resetPullStates])
-
-  const handleMouseUp = useCallback(() => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current)
-      longPressTimer.current = null
-    }
-
-    if (!isDragging.current || !hasStartedPull.current || !hasLongPressed.current || !isTouchingPullZone.current) {
-      resetPullStates()
-      return
-    }
-
-    const canTriggerRefresh = shouldAllowPullToRefresh()
-    if (pullDistance >= PULL_THRESHOLD && !isRefreshing && canTriggerRefresh && hasStartedPull.current) {
-      handleRefresh()
-    }
+    // Quick reset for smooth transition
+    const resetDelay = isDragging.current ? 150 : 50
 
     setTimeout(() => {
-      resetPullStates()
-    }, 100)
-  }, [pullDistance, isRefreshing, handleRefresh, resetPullStates, shouldAllowPullToRefresh])
+      setPullDistance(0)
+      setIsPulling(false)
+      isDragging.current = false
+      scrollVelocity.current = 0
+    }, resetDelay)
+  }, [pullDistance, isRefreshing, handleRefresh])
 
+  // Load section 2 when section 1 end is reached
+  const loadSection2 = useCallback(async () => {
+    console.log('🔄 loadSection2 called - Current states:', {
+      section2Loading,
+      section2Loaded,
+      section1DataExists: !!section1Data
+    });
+
+    if (section2Loading || section2Loaded) {
+      console.log('⏭️ Skipping section 2 load - already loading or loaded');
+      return;
+    }
+
+    console.log('🚀 Starting section 2 load...');
+    setSection2Loading(true);
+
+    try {
+      const data = await fetchSectionData(2);
+      console.log('✅ Section 2 data received:', data);
+      setSection2Data(data);
+      setSection2Loaded(true);
+    } catch (error) {
+      console.error('❌ Error loading section 2:', error);
+    } finally {
+      setSection2Loading(false);
+      console.log('🏁 Section 2 loading complete');
+    }
+  }, [section2Loading, section2Loaded, fetchSectionData]);
+
+  // Load section 3 when section 2 end is reached
+  const loadSection3 = useCallback(async () => {
+    console.log('🔄 loadSection3 called - Current states:', {
+      section3Loading,
+      section3Loaded,
+      section2DataExists: !!section2Data
+    });
+
+    if (section3Loading || section3Loaded) {
+      console.log('⏭️ Skipping section 3 load - already loading or loaded');
+      return;
+    }
+
+    console.log('🚀 Starting section 3 load...');
+    setSection3Loading(true);
+
+    try {
+      const data = await fetchSectionData(3);
+      console.log('✅ Section 3 data received:', data);
+      setSection3Data(data);
+      setSection3Loaded(true);
+    } catch (error) {
+      console.error('❌ Error loading section 3:', error);
+    } finally {
+      setSection3Loading(false);
+      console.log('🏁 Section 3 loading complete');
+    }
+  }, [section3Loading, section3Loaded, fetchSectionData]);
+
+  // Handle scroll for pull to refresh detection AND manual section loading fallback
   const handleScroll = useCallback(() => {
     checkIfAtTop()
-    checkPullZoneVisibility()
-    handleScrollForPagination()
 
-    const canContinuePull = shouldAllowPullToRefresh()
-    if (!canContinuePull && (isPulling || isDragging.current)) {
-      resetPullStates()
+    // Reset pull state if user scrolled away from top
+    if (containerRef.current && containerRef.current.scrollTop > 0 && isDragging.current) {
+      isDragging.current = false
+      setPullDistance(0)
+      setIsPulling(false)
     }
-  }, [checkIfAtTop, checkPullZoneVisibility, handleScrollForPagination, shouldAllowPullToRefresh, isPulling, resetPullStates])
+
+    // Existing manual section loading fallback code remains the same...
+    if (containerRef.current && section1EndRef.current && !section2Loaded && !section2Loading && section1Data) {
+      const containerRect = containerRef.current.getBoundingClientRect()
+      const section1EndRect = section1EndRef.current.getBoundingClientRect()
+      const isVisible = section1EndRect.top < containerRect.bottom + 300
+
+      if (isVisible) {
+        console.log('📍 Manual scroll detection: Section 1 end is visible, loading section 2')
+        loadSection2()
+      }
+    }
+
+    if (containerRef.current && section2EndRef.current && section2Loaded && !section3Loaded && !section3Loading) {
+      const containerRect = containerRef.current.getBoundingClientRect()
+      const section2EndRect = section2EndRef.current.getBoundingClientRect()
+      const isVisible = section2EndRect.top < containerRect.bottom + 300
+
+      if (isVisible) {
+        console.log('📍 Manual scroll detection: Section 2 end is visible, loading section 3')
+        loadSection3()
+      }
+    }
+  }, [checkIfAtTop, section1Data, section2Loaded, section2Loading, section3Loaded, section3Loading, loadSection2, loadSection3])
+
+  // Setup Intersection Observer for sequential loading
+  useEffect(() => {
+    // Clean up existing observer
+    if (observer.current) {
+      observer.current.disconnect();
+    }
+
+    // Setup observer with a delay to ensure DOM is ready
+    const setupObserver = () => {
+      if (!section1Data || !section1EndRef.current) {
+        console.log('Observer setup skipped - missing data or ref:', {
+          hasSection1Data: !!section1Data,
+          hasSection1EndRef: !!section1EndRef.current
+        });
+        return;
+      }
+
+      console.log('🔧 Setting up intersection observer...');
+
+      observer.current = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            const sectionName = entry.target.getAttribute('data-section');
+            console.log('👁️ Intersection callback:', {
+              section: sectionName,
+              isIntersecting: entry.isIntersecting,
+              intersectionRatio: entry.intersectionRatio.toFixed(2),
+              targetTop: entry.boundingClientRect.top.toFixed(0),
+              rootBottom: entry.rootBounds?.bottom.toFixed(0)
+            });
+
+            if (entry.isIntersecting && entry.intersectionRatio > 0) {
+              // Load section 2 when section 1 end is visible
+              if (entry.target === section1EndRef.current && !section2Loaded && !section2Loading) {
+                console.log('✅ Intersection Observer: Triggering section 2 load');
+                loadSection2();
+              }
+
+              // Load section 3 when section 2 end is visible (only if section 2 is loaded)
+              if (entry.target === section2EndRef.current && section2Loaded && !section3Loaded && !section3Loading) {
+                console.log('✅ Intersection Observer: Triggering section 3 load');
+                loadSection3();
+              }
+            }
+          });
+        },
+        {
+          root: null, // Use viewport instead of container
+          rootMargin: '300px 0px', // Load when within 300px of viewport
+          threshold: [0, 0.1, 0.5, 1] // Multiple thresholds for better detection
+        }
+      );
+
+      // Always observe section 1 end when available
+      if (section1EndRef.current) {
+        console.log('👀 Observing section 1 end marker');
+        observer.current.observe(section1EndRef.current);
+      }
+
+      // Observe section 2 end if it exists and section 2 is loaded
+      if (section2EndRef.current && section2Loaded) {
+        console.log('👀 Observing section 2 end marker');
+        observer.current.observe(section2EndRef.current);
+      }
+    };
+
+    // Small delay to ensure DOM is rendered
+    const timeoutId = setTimeout(setupObserver, 200);
+
+    return () => {
+      clearTimeout(timeoutId);
+      console.log('🧹 Cleaning up intersection observer');
+      if (observer.current) {
+        observer.current.disconnect();
+      }
+    };
+  }, [section1Data, section2Loaded, section2Loading, section3Loading, section3Loaded, loadSection2, loadSection3]);
+
+  // Add section 2 end observer when section 2 loads
+  useEffect(() => {
+    if (section2Loaded && section2EndRef.current && observer.current) {
+      console.log('👀 Adding section 2 end marker to observer');
+      observer.current.observe(section2EndRef.current);
+    }
+  }, [section2Loaded]);
+
+  // Debug refs and container
+  useEffect(() => {
+    console.log('🔍 Debug info:', {
+      containerRef: !!containerRef.current,
+      section1EndRef: !!section1EndRef.current,
+      section2EndRef: !!section2EndRef.current,
+      containerScrollHeight: containerRef.current?.scrollHeight,
+      containerClientHeight: containerRef.current?.clientHeight,
+      section1Data: !!section1Data,
+      section2Loaded,
+      section2Loading
+    });
+  }, [section1Data, section2Loaded, section2Loading]);
+
+  // Initial data fetch - only load section 1
+  useEffect(() => {
+    const loadInitialData = async () => {
+      setIsLoading(true);
+      console.log('🚀 Loading initial data (Section 1 only)...');
+
+      await Promise.all([
+        fetchUserData(),
+        fetchSectionData(1).then(data => {
+          console.log('✅ Section 1 loaded:', data);
+          setSection1Data(data);
+        })
+      ]);
+
+      setIsLoading(false);
+      console.log('🏁 Initial loading complete');
+    };
+
+    loadInitialData();
+  }, [fetchUserData, fetchSectionData]);
 
   // Setup back button listener
   useEffect(() => {
@@ -726,186 +552,134 @@ export default function HomePage() {
 
     const setupBackButtonListener = async () => {
       if (Capacitor.isNativePlatform()) {
-        backButtonListener = await App.addListener('backButton', () => {
-          handleBackButton()
-        })
+        backButtonListener = await App.addListener('backButton', handleBackButton)
       }
     }
 
     setupBackButtonListener()
 
     return () => {
-      if (backButtonListener) {
-        backButtonListener.remove()
-      }
-      if (backPressTimer.current) {
-        clearTimeout(backPressTimer.current)
-      }
+      if (backButtonListener) backButtonListener.remove()
+      if (backPressTimer.current) clearTimeout(backPressTimer.current)
     }
   }, [handleBackButton])
 
-  useEffect(() => {
-    fetchHomeData(1, false)
-    fetchUserData()
-  }, [fetchHomeData])
-
+  // Setup touch event listeners for pull to refresh - Fixed
   useEffect(() => {
     const container = containerRef.current
-    if (container) {
-      container.addEventListener('scroll', handleScroll, { passive: true })
-      return () => container.removeEventListener('scroll', handleScroll)
+    if (!container) return
+
+    // Optimized event listener options
+    const touchStartOptions = {
+      passive: true,
+      capture: false
     }
-  }, [handleScroll])
-
-  // Global mouse event listeners (same as original)...
-  useEffect(() => {
-    const handleGlobalMouseMove = (e: MouseEvent) => {
-      if (!isTouchingPullZone.current || isRefreshing) return
-
-      const canStillPullToRefresh = shouldAllowPullToRefresh()
-      if (!canStillPullToRefresh) {
-        resetPullStates()
-        return
-      }
-
-      const deltaX = Math.abs(e.clientX - touchStartPosition.current.x)
-      const deltaY = Math.abs(e.clientY - touchStartPosition.current.y)
-      const totalMovement = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
-
-      if (!hasLongPressed.current && totalMovement > LONG_PRESS_MOVEMENT_THRESHOLD) {
-        if (longPressTimer.current) {
-          clearTimeout(longPressTimer.current)
-          longPressTimer.current = null
-        }
-        resetPullStates()
-        return
-      }
-
-      if (!hasLongPressed.current || !isLongPressActive.current) return
-
-      if (!isDragging.current && hasLongPressed.current) {
-        isDragging.current = true
-        hasStartedPull.current = true
-      }
-
-      currentY.current = e.clientY
-      const diff = currentY.current - startY.current
-
-      if (diff > 0) {
-        const distance = Math.min(diff * 0.5, MAX_PULL)
-        setPullDistance(distance)
-        setIsPulling(distance > 20)
-      } else {
-        resetPullStates()
-      }
+    const touchMoveOptions = {
+      passive: false, // Need to preventDefault for pull-to-refresh
+      capture: false
+    }
+    const touchEndOptions = {
+      passive: true,
+      capture: false
+    }
+    const scrollOptions = {
+      passive: true,
+      capture: false
     }
 
-    const handleGlobalMouseUp = () => {
-      if (longPressTimer.current) {
-        clearTimeout(longPressTimer.current)
-        longPressTimer.current = null
-      }
-
-      if (!isDragging.current || !hasStartedPull.current || !hasLongPressed.current || !isTouchingPullZone.current) {
-        resetPullStates()
-        return
-      }
-
-      const canTriggerRefresh = shouldAllowPullToRefresh()
-      if (pullDistance >= PULL_THRESHOLD && !isRefreshing && canTriggerRefresh && hasStartedPull.current) {
-        handleRefresh()
-      }
-
-      setTimeout(() => {
-        resetPullStates()
-      }, 100)
-    }
-
-    if (isTouchingPullZone.current) {
-      document.addEventListener('mousemove', handleGlobalMouseMove)
-      document.addEventListener('mouseup', handleGlobalMouseUp)
-    }
+    container.addEventListener('touchstart', handleTouchStart, touchStartOptions)
+    container.addEventListener('touchmove', handleTouchMove, touchMoveOptions)
+    container.addEventListener('touchend', handleTouchEnd, touchEndOptions)
+    container.addEventListener('scroll', handleScroll, scrollOptions)
 
     return () => {
-      document.removeEventListener('mousemove', handleGlobalMouseMove)
-      document.removeEventListener('mouseup', handleGlobalMouseUp)
+      container.removeEventListener('touchstart', handleTouchStart)
+      container.removeEventListener('touchmove', handleTouchMove)
+      container.removeEventListener('touchend', handleTouchEnd)
+      container.removeEventListener('scroll', handleScroll)
     }
-  }, [pullDistance, isRefreshing, handleRefresh, resetPullStates, shouldAllowPullToRefresh])
+  }, [handleTouchStart, handleTouchMove, handleTouchEnd, handleScroll])
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (longPressTimer.current) {
-        clearTimeout(longPressTimer.current)
-      }
+  // Render functions
+  const renderSection1Content = () => {
+    if (!section1Data) return null
+
+    const sections: React.ReactElement[] = []
+
+    // Notifications Card
+    sections.push(
+      <NotificationsCard
+        notificationCount={user?.not_count ?? 0}
+        key="notifications"
+      />
+    )
+
+    // Moods Section
+    if (section1Data.homemoods && section1Data.homemoods.length > 0) {
+      sections.push(<MoodsSection moods={section1Data.homemoods} key="moods" />)
     }
-  }, [])
 
-  const renderAllSections = () => {
-    if (!userData) return null;
+    // Recent Suggestions
+    if (section1Data.recentSuggestions && section1Data.recentSuggestions.length > 0) {
+      sections.push(
+        <SuggestionsSection
+          key="recentSuggestions"
+          suggestions={section1Data.recentSuggestions}
+          title="Recent Suggestions"
+        />
+      )
+    }
 
-    const allSections: React.ReactNode[] = [];
-    let mysteryWeekendData: any[] | undefined;
+    // Genres Section
+    if (section1Data.homegenres && section1Data.homegenres.length > 0) {
+      sections.push(<GenresSection genres={section1Data.homegenres} key="genres" />)
+    }
 
-    Object.keys(userData).forEach((key) => {
-      const sectionData = userData[key];
+    return sections
+  }
 
-      if (!Array.isArray(sectionData) || sectionData.length === 0) {
-        return;
-      }
+  const renderSection2Content = () => {
+    if (!section2Data) return null
 
-      if (key === 'mysteryweekendpick') {
-        mysteryWeekendData = sectionData;
-        return;
-      }
+    const sections: React.ReactElement[] = []
+    let rewardSectionAdded = false
 
-      if (key === 'recentSuggestions') {
-        allSections.push(
-          <SuggestionsSection
-            key={key}
-            suggestions={sectionData}
-            title="Recent Suggestions"
-          />
-        );
-      } else if (key === 'popularAmongFriends') {
-        allSections.push(
+    // Process section 2 data
+    Object.keys(section2Data).forEach((key) => {
+      const sectionData = section2Data[key]
+      if (!Array.isArray(sectionData) || sectionData.length === 0) return
+
+      if (key === 'popularAmongFriends') {
+        // Premium image
+        sections.push(
           <div
             key="premium"
             onClick={() => router.push('/premium')}
-            className="w-full h-[200px] relative mb-8">
+            className="w-full h-[200px] relative mb-8 cursor-pointer">
             <Image
               src={premiumImage}
-              alt="Bell"
+              alt="Premium Content"
               width={0}
               height={0}
               sizes="100vw"
               className="w-full h-full object-contain"
             />
           </div>
-        );
+        )
 
-        allSections.push(
+        sections.push(
           <PopularWithFriendsSection
             key={key}
             movies={sectionData}
             title="Popular Among Friends"
           />
-        );
-      } else if (key === 'aiRandomizer') {
-        allSections.push(<ShareSuggestionCard key="share" />);
+        )
+      } else if (key === 'longtimeWatchlist') {
+        // Add the longtimeWatchlist section
+        const title = camelCaseToTitle(key)
+        const sectionType = getSectionType(key)
 
-        allSections.push(
-          <AiRandomizerSection
-            key={key}
-            movies={sectionData}
-            title="AI Recommendations"
-            sectionKey={key} />
-        );
-      } else {
-        const title = camelCaseToTitle(key);
-        const sectionType = getSectionType(key);
-
-        allSections.push(
+        sections.push(
           <DynamicMovieSection
             key={key}
             movies={sectionData}
@@ -913,65 +687,103 @@ export default function HomePage() {
             sectionType={sectionType}
             sectionKey={key}
           />
-        );
+        )
+
+        // Add RewardSection immediately after longtimeWatchlist
+        if (!rewardSectionAdded) {
+          sections.push(
+            <div className="mb-8" key="reward-section">
+              <RewardSection
+                key="rewardsection"
+                coins={user?.coins ?? ""}
+                user={{ payment_status: user?.payment_status }}
+              />
+            </div>
+          )
+          rewardSectionAdded = true
+        }
+      } else {
+        const title = camelCaseToTitle(key)
+        const sectionType = getSectionType(key)
+
+        sections.push(
+          <DynamicMovieSection
+            key={key}
+            movies={sectionData}
+            title={title}
+            sectionType={sectionType}
+            sectionKey={key}
+          />
+        )
       }
-    });
+    })
 
-    const finalSections: React.ReactNode[] = [];
+    return sections
+  }
 
-    finalSections.push(
-      <NotificationsCard
-        notificationCount={user?.not_count ?? 0}
-        key="notifications"
-      />
-    );
+  const renderSection3Content = () => {
+    if (!section3Data) return null
 
-    finalSections.push(<MoodsSection key="moods" />);
+    const sections: React.ReactElement[] = []
+    let mysteryWeekendData: any[] = []
 
-    if (allSections.length > 0) {
-      finalSections.push(allSections[0]);
-    }
+    Object.keys(section3Data).forEach((key) => {
+      const sectionData = section3Data[key]
+      if (!Array.isArray(sectionData) || sectionData.length === 0) return
 
-    finalSections.push(<GenresSection key="genres" />);
-
-    if (allSections.length > 1) {
-      finalSections.push(allSections[1]);
-    }
-
-    finalSections.push(<PollCard key="poll" />);
-
-    if (allSections.length > 2) {
-      for (let i = 2; i < allSections.length - 1; i++) {
-        finalSections.push(allSections[i]);
+      if (key === 'mysteryweekendpick') {
+        mysteryWeekendData = sectionData
+        return
       }
 
-      finalSections.push(<Top10Wall key="top10wall" />);
-      finalSections.push(allSections[allSections.length - 1]);
-    } else {
-      finalSections.push(<Top10Wall key="top10wall" />);
-    }
+      if (key === 'aiRandomizer') {
+        sections.push(<ShareSuggestionCard key="share" />)
+        sections.push(
+          <AiRandomizerSection
+            key={key}
+            movies={sectionData}
+            title="AI Recommendations"
+            sectionKey={key}
+          />
+        )
+      } else {
+        const title = camelCaseToTitle(key)
+        const sectionType = getSectionType(key)
 
-    if (mysteryWeekendData && mysteryWeekendData.length > 0) {
-      const centerIndex = Math.floor(finalSections.length / 2);
-      finalSections.splice(centerIndex, 0,
+        sections.push(
+          <DynamicMovieSection
+            key={key}
+            movies={sectionData}
+            title={title}
+            sectionType={sectionType}
+            sectionKey={key}
+          />
+        )
+      }
+    })
+
+    // Add Poll Card
+    sections.push(<PollCard key="poll" />)
+
+    // Add Top10Wall
+    sections.push(<Top10Wall key="top10wall" />)
+
+    // Add Mystery Weekend Picks if available
+    if (mysteryWeekendData?.length > 0) {
+      sections.push(
         <MysteryWeekendPicks
           key="mysteryweekendpick"
           movies={mysteryWeekendData}
           title="Mystery Weekend Picks"
         />
-      );
+      )
     }
 
-    return finalSections;
-  };
+    return sections
+  }
 
-  // Show loading skeleton until everything is ready
   if (isLoading) {
-    return (
-      <div className="min-h-screen">
-        <LoadingSkeleton />
-      </div>
-    )
+    return <LoadingSkeleton />
   }
 
   return (
@@ -979,54 +791,98 @@ export default function HomePage() {
       <div
         ref={containerRef}
         className="text-white min-h-screen mb-22 overflow-y-auto"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
         style={{
           transform: `translateY(${pullDistance}px)`,
-          touchAction: shouldAllowPullToRefresh() && isDragging.current ? 'none' : 'auto',
-          opacity: isContentReady ? 1 : 0,
-          transition: isDragging.current
-            ? 'none'
-            : isContentReady
-              ? 'transform 0.3s ease-out, opacity 0.3s ease-in-out'
-              : 'transform 0.3s ease-out'
+          transition: isDragging.current ? 'none' : 'transform 0.3s ease-out'
         }}
       >
-        <PullToRefreshIndicator
-          pullDistance={pullDistance}
-          isRefreshing={isRefreshing}
-          isDragging={isDragging.current}
-          pullThreshold={PULL_THRESHOLD}
-        />
+        <div data-tour-target="pull-refresh-zone">
+          <PullToRefreshIndicator
+            pullDistance={pullDistance}
+            isRefreshing={isRefreshing}
+            isDragging={isDragging.current}
+            pullThreshold={PULL_THRESHOLD}
+          />
+        </div>
 
         <div ref={headerRef}>
           <Header />
         </div>
 
         <div ref={movieCarouselRef}>
-          <MovieCarousel />
+          <MovieCarousel banners={section1Data?.activebanners || []} />
         </div>
-        {renderAllSections()}
+
+        {/* Section 1 Content */}
+        {renderSection1Content()}
+
+        {/* Section 1 End Marker */}
+        <div
+          ref={section1EndRef}
+          data-section="section1-end"
+          className="h-0 opacity-0 pointer-events-none"
+          style={{
+            minHeight: '1px',
+            width: '100%',
+            position: 'relative',
+            margin: '20px 0'
+          }}
+        />
+
+        {/* Section 2 Loading Indicator */}
+        {section2Loading && (
+          <div className="text-center p-8">
+          </div>
+        )}
+
+        {/* Section 2 Content */}
+        {section2Loaded && section2Data && (
+          <div>
+            {renderSection2Content()}
+
+            {/* Section 2 End Marker */}
+            <div
+              ref={section2EndRef}
+              data-section="section2-end"
+              className="h-0 opacity-0 pointer-events-none"
+              style={{
+                minHeight: '1px',
+                width: '100%',
+                position: 'relative',
+                margin: '20px 0'
+              }}
+            />
+          </div>
+        )}
+
+        {/* Section 3 Loading Indicator */}
+        {section3Loading && (
+          <div className="text-center p-8">
+          </div>
+        )}
+
+        {/* Section 3 Content */}
+        {section3Loaded && section3Data && (
+          <div>
+            {renderSection3Content()}
+          </div>
+        )}
       </div>
 
-      {/* Exit Confirmation Modal */}
+      {/* Modals */}
       <ExitDialog
         isOpen={showExitConfirmation}
         onCancel={() => handleExitConfirmation(false)}
-        onConfirm={() => handleExitConfirmation(true)} />
+        onConfirm={() => handleExitConfirmation(true)}
+      />
 
       <CoinAnimation
         show={showCoinAnimation}
         coinsEarned={coinsEarned}
-        message="Coins Earned!"
+        message="Coins Earned for daily login!"
         onAnimationEnd={() => setShowCoinAnimation(false)}
         duration={3000}
       />
-
 
       <BottomNavigation currentPath="/home" />
     </>

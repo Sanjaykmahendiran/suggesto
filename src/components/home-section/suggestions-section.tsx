@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { ArrowRight, CheckCircle, Clock, MessageSquare, XCircle } from "lucide-react"
 import Image from "next/image"
-import { Button } from "../ui/button"
+import DefaultMoviePoster from "@/assets/default-movie-poster.jpg"
 
 interface Suggestion {
     movsug_id: number
@@ -31,34 +31,34 @@ interface SuggestionsSectionProps {
 
 // Skeleton Component
 const SuggestionSkeleton = () => (
-  <div className="bg-[#2b2b2b] rounded-lg overflow-hidden animate-pulse p-3 flex">
-    {/* Poster Placeholder */}
-    <div className="w-20 h-28 bg-[#2b2b2b] rounded-lg flex-shrink-0" />
+    <div className="bg-[#2b2b2b] rounded-lg overflow-hidden animate-pulse p-3 flex">
+        {/* Poster Placeholder */}
+        <div className="w-20 h-28 bg-[#2b2b2b] rounded-lg flex-shrink-0" />
 
-    {/* Content Placeholder */}
-    <div className="ml-4 flex flex-col justify-between flex-1 space-y-2">
-      {/* Top row: suggested by + time */}
-      <div className="flex justify-between gap-2">
-        <div className="h-3 bg-[#2b2b2b] rounded w-32" />
-        <div className="h-3 bg-[#2b2b2b] rounded w-16" />
-      </div>
+        {/* Content Placeholder */}
+        <div className="ml-4 flex flex-col justify-between flex-1 space-y-2">
+            {/* Top row: suggested by + time */}
+            <div className="flex justify-between gap-2">
+                <div className="h-3 bg-[#2b2b2b] rounded w-32" />
+                <div className="h-3 bg-[#2b2b2b] rounded w-16" />
+            </div>
 
-      {/* Movie title */}
-      <div className="h-4 bg-[#2b2b2b] rounded w-3/4" />
+            {/* Movie title */}
+            <div className="h-4 bg-[#2b2b2b] rounded w-3/4" />
 
-      {/* Genres */}
-      <div className="h-3 bg-[#2b2b2b] rounded w-1/2" />
+            {/* Genres */}
+            <div className="h-3 bg-[#2b2b2b] rounded w-1/2" />
 
-      {/* Status + Rating */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <div className="h-6 bg-[#2b2b2b] rounded-full w-20" />
-          <div className="h-3 bg-[#2b2b2b] rounded w-16" />
+            {/* Status + Rating */}
+            <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                    <div className="h-6 bg-[#2b2b2b] rounded-full w-20" />
+                    <div className="h-3 bg-[#2b2b2b] rounded w-16" />
+                </div>
+                <div className="h-6 bg-[#2b2b2b] rounded w-8" />
+            </div>
         </div>
-        <div className="h-6 bg-[#2b2b2b] rounded w-8" />
-      </div>
     </div>
-  </div>
 )
 
 export const SuggestionsSection: React.FC<SuggestionsSectionProps> = ({
@@ -77,16 +77,29 @@ export const SuggestionsSection: React.FC<SuggestionsSectionProps> = ({
     }, [suggestions])
 
     const formatDate = (dateString: string) => {
-        const date = new Date(dateString)
+        const [datePart] = dateString.split(" ") // "2025-07-16"
+        const date = new Date(datePart)
         const now = new Date()
-        const diffTime = Math.abs(now.getTime() - date.getTime())
+
+        // Normalize to midnight
+        date.setHours(0, 0, 0, 0)
+        now.setHours(0, 0, 0, 0)
+
+        const diffTime = now.getTime() - date.getTime()
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
 
         if (diffDays === 0) return "Today"
         if (diffDays === 1) return "Yesterday"
         if (diffDays < 7) return `${diffDays} days ago`
-        return date.toLocaleDateString()
+
+        // Return in "16 Jul 25" format
+        return date.toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "short",
+            year: "2-digit",
+        })
     }
+
 
     const getStatusClass = (status: string) => {
         if (status === "pending") return "text-yellow-400"
@@ -119,7 +132,7 @@ export const SuggestionsSection: React.FC<SuggestionsSectionProps> = ({
                     className="p-0"
                     onClick={(e) => {
                         e.stopPropagation()
-                        router.push(`/suggest/suggest-detail-page?movsug_id=${suggestion.movsug_id}`)
+                        router.push(`/suggest/suggest-detail-page?movsug_id=${suggestion.movsug_id}&movie_id=${suggestion.movie_id}`)
                     }}
                 >
                     <ArrowRight className="w-8 h-6 text-primary" />
@@ -153,7 +166,7 @@ export const SuggestionsSection: React.FC<SuggestionsSectionProps> = ({
     }
 
     return (
-        <div className="px-4 mb-6">
+        <div className="px-4 mb-6" data-tour-target="suggestions-section">
             <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-2">
                     <MessageSquare className="w-5 h-5 text-[#b56bbc]" />
@@ -174,7 +187,7 @@ export const SuggestionsSection: React.FC<SuggestionsSectionProps> = ({
                             className="bg-[#2b2b2b] rounded-lg overflow-hidden cursor-pointer"
                             onClick={
                                 suggestion.status === "pending"
-                                    ? () => router.push(`/suggest/suggest-detail-page?movsug_id=${suggestion.movsug_id}`)
+                                    ? () => router.push(`/suggest/suggest-detail-page?movsug_id=${suggestion.movsug_id}&movie_id=${suggestion.movie_id}`)
                                     : undefined
                             }
                         >
@@ -182,11 +195,7 @@ export const SuggestionsSection: React.FC<SuggestionsSectionProps> = ({
                                 {/* Movie Poster */}
                                 <div className="relative w-20 h-28 rounded-lg overflow-hidden flex-shrink-0">
                                     <Image
-                                        src={
-                                            suggestion.poster_path?.startsWith("http")
-                                                ? suggestion.poster_path
-                                                : `https://suggesto.xyz/App/${suggestion.poster_path || ""}`
-                                        }
+                                        src={suggestion.poster_path ? `https://suggesto.xyz/App/${suggestion.poster_path}` : DefaultMoviePoster.src}
                                         alt={suggestion.title || "Poster"}
                                         fill
                                         className="object-cover"
@@ -203,9 +212,14 @@ export const SuggestionsSection: React.FC<SuggestionsSectionProps> = ({
                                         <div className="flex items-center justify-between gap-2 mb-1">
                                             <p className="text-xs text-gray-400">
                                                 Suggested by{" "}
-                                                <span className="font-bold pl-1 text-white">{suggestion.suggested_by_name}</span>
+                                                <span className="font-bold text-white">
+                                                    {suggestion.suggested_by_name.length > 11
+                                                        ? suggestion.suggested_by_name.slice(0, 11) + "..."
+                                                        : suggestion.suggested_by_name}
+                                                </span>
                                             </p>
-                                            <span className="text-xs text-gray-500">• {formatDate(suggestion.added_date)}</span>
+
+                                            <span className="text-xs text-gray-500">{formatDate(suggestion.added_date)}</span>
                                         </div>
 
                                         <h3 className="font-medium text-sm text-white mb-1">
@@ -219,7 +233,7 @@ export const SuggestionsSection: React.FC<SuggestionsSectionProps> = ({
                                         </p>
                                         <div className="flex items-center justify-between gap-3 whitespace-nowrap">
                                             <div className="flex items-center gap-2">
-                                                <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 bg-[#181826] ${getStatusClass(suggestion.status)}`}>
+                                                <span className={`text-xs py-1 rounded-full flex items-center gap-1 bg-[#2b2b2b] ${getStatusClass(suggestion.status)}`}>
                                                     {getStatusIcon(suggestion.status)}
                                                     {getStatusText(suggestion.status)}
                                                 </span>

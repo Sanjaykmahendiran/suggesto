@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@awesome-cordova-plugins/lottie-splash-screen':
+        specifier: ^8.0.2
+        version: 8.0.2(@awesome-cordova-plugins/core@8.0.2(rxjs@7.8.2))(rxjs@7.8.2)
       '@capacitor/android':
         specifier: ^7.2.0
         version: 7.2.0(@capacitor/core@7.4.0)
@@ -27,6 +30,9 @@ importers:
         specifier: ^7.4.0
         version: 7.4.0(@capacitor/core@7.4.0)
       '@capacitor/share':
+        specifier: ^7.0.1
+        version: 7.0.1(@capacitor/core@7.4.0)
+      '@capacitor/splash-screen':
         specifier: ^7.0.1
         version: 7.0.1(@capacitor/core@7.4.0)
       '@capacitor/status-bar':
@@ -110,6 +116,9 @@ importers:
       cmdk:
         specifier: ^1.1.1
         version: 1.1.1(@types/react-dom@19.1.1(@types/react@19.1.0))(@types/react@19.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      cordova-plugin-lottie-splashscreen:
+        specifier: ^0.10.0
+        version: 0.10.0
       framer-motion:
         specifier: ^12.9.6
         version: 12.9.7(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -193,6 +202,17 @@ packages:
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
     engines: {node: '>=10'}
 
+  '@awesome-cordova-plugins/core@8.0.2':
+    resolution: {integrity: sha512-GeNyTai3srbzR2A3XggurRRzFtBKBAnmTFDi8zpgLEFnuLRTeaZwQD4ma+AcgkIX/VrMGaLj+KJNV4wagsWS0w==}
+    peerDependencies:
+      rxjs: ^5.5.0 || ^6.5.0 || ^7.3.0
+
+  '@awesome-cordova-plugins/lottie-splash-screen@8.0.2':
+    resolution: {integrity: sha512-+tH9rM1GSDFXJW3M/lziWieDFsPPyCz+0bChtIXkWsnYUQqCopigayynwf2yIcRVchfdID4EaAY3EU6+he6trA==}
+    peerDependencies:
+      '@awesome-cordova-plugins/core': ^8.0.2
+      rxjs: ^5.5.0 || ^6.5.0 || ^7.3.0
+
   '@babel/code-frame@7.27.1':
     resolution: {integrity: sha512-cjQ7ZlQ0Mv3b47hABuTevyTuYN4i+loJKGeV9flcCgIK37cCXRh+L1bd3iBHlynerhQ7BhCkn2BPbQUL+rGqFg==}
     engines: {node: '>=6.9.0'}
@@ -269,6 +289,11 @@ packages:
 
   '@capacitor/share@7.0.1':
     resolution: {integrity: sha512-7GAtWrb2inEWohC8E7mx38qAX6D9yqPDDnUtJaZ8JRpo15jjFRS40Cx388M8h4NlBWjV5NU3qf1sHXnyOBSJ5g==}
+    peerDependencies:
+      '@capacitor/core': '>=7.0.0'
+
+  '@capacitor/splash-screen@7.0.1':
+    resolution: {integrity: sha512-Nbqw9bEIe7uHj/HOT81mf4jT6uK1YykozpQw/uIKQDueMg6RJYaJK2/TMajIOohLk8fJF4TYIc1i9nGjNLnfGg==}
     peerDependencies:
       '@capacitor/core': '>=7.0.0'
 
@@ -1657,6 +1682,9 @@ packages:
   '@types/canvas-confetti@1.9.0':
     resolution: {integrity: sha512-aBGj/dULrimR1XDZLtG9JwxX1b4HPRF6CX9Yfwh3NvstZEm1ZL7RBnel4keCPSqs1ANRu1u2Aoz9R+VmtjYuTg==}
 
+  '@types/cordova@11.0.3':
+    resolution: {integrity: sha512-kyuRQ40/NWQVhqGIHq78Ehu2Bf9Mlg0LhmSmis6ZFJK7z933FRfYi8tHe/k/0fB+PGfCf95rJC6TO7dopaFvAg==}
+
   '@types/estree@1.0.7':
     resolution: {integrity: sha512-w28IoSUCJpidD/TGviZwwMJckNESJZXFu7NBZ5YJ4mEUnNraUn9Pm8HSZm/jDF1pDWYKspWE7oVphigUPRakIQ==}
 
@@ -2023,6 +2051,10 @@ packages:
 
   convert-source-map@1.9.0:
     resolution: {integrity: sha512-ASFBup0Mz1uyiIjANan1jzLQami9z1PoYSZCiiYW2FczPbenXc45FZdBZLzOT+r6+iciuEModtmCti+hjaAk0A==}
+
+  cordova-plugin-lottie-splashscreen@0.10.0:
+    resolution: {integrity: sha512-qp1pLPSmLxXdFIDTefHAmIPeq/q5QcHsgccmh18RUNbdtZakZyEmqHMDolCTyVo2X8/XB1STJEFinHOwlcRuCA==}
+    engines: {cordovaDependencies: {'>=0.10.0': {apple-ios: '>=11.0.0', cordova: '>= 9.0.0', cordova-android: '>=9.0.0', cordova-ios: '>=5.0.0'}, '>=0.8.0': {apple-ios: '>=9.0.0', cordova: '>= 9.0.0', cordova-android: '>=8.0.0', cordova-ios: '>=5.0.0'}, '>=0.9.0': {apple-ios: '>=9.0.0', cordova: '>= 9.0.0', cordova-android: '>=9.0.0', cordova-ios: '>=5.0.0'}}}
 
   cosmiconfig@7.1.0:
     resolution: {integrity: sha512-AdmX6xUzdNASswsFtmwSt7Vj8po9IuqXm0UXz7QKPuEUmPB4XyjGfaAr2PSuELMwkRMVH1EpIkX5bTZGRB3eCA==}
@@ -3107,6 +3139,9 @@ packages:
   run-parallel@1.2.0:
     resolution: {integrity: sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA==}
 
+  rxjs@7.8.2:
+    resolution: {integrity: sha512-dhKf903U/PQZY6boNNtAGdWbG85WAbjT/1xYoZIC7FAY0yWapOBQVsVrDl58W86//e1VpMNBtRV4MaXfdMySFA==}
+
   safe-array-concat@1.1.3:
     resolution: {integrity: sha512-AURm5f0jYEOydBj7VQlVvDrjeFgthDdEF5H1dP+6mNpoXOMo1quQqJ4wvJDyRZ9+pO3kGWoOdmV08cSv2aJV6Q==}
     engines: {node: '>=0.4'}
@@ -3484,6 +3519,17 @@ snapshots:
 
   '@alloc/quick-lru@5.2.0': {}
 
+  '@awesome-cordova-plugins/core@8.0.2(rxjs@7.8.2)':
+    dependencies:
+      '@types/cordova': 11.0.3
+      rxjs: 7.8.2
+
+  '@awesome-cordova-plugins/lottie-splash-screen@8.0.2(@awesome-cordova-plugins/core@8.0.2(rxjs@7.8.2))(rxjs@7.8.2)':
+    dependencies:
+      '@awesome-cordova-plugins/core': 8.0.2(rxjs@7.8.2)
+      '@types/cordova': 11.0.3
+      rxjs: 7.8.2
+
   '@babel/code-frame@7.27.1':
     dependencies:
       '@babel/helper-validator-identifier': 7.27.1
@@ -3586,6 +3632,10 @@ snapshots:
       '@capacitor/core': 7.4.0
 
   '@capacitor/share@7.0.1(@capacitor/core@7.4.0)':
+    dependencies:
+      '@capacitor/core': 7.4.0
+
+  '@capacitor/splash-screen@7.0.1(@capacitor/core@7.4.0)':
     dependencies:
       '@capacitor/core': 7.4.0
 
@@ -4942,6 +4992,8 @@ snapshots:
 
   '@types/canvas-confetti@1.9.0': {}
 
+  '@types/cordova@11.0.3': {}
+
   '@types/estree@1.0.7': {}
 
   '@types/fs-extra@8.1.5':
@@ -5320,6 +5372,8 @@ snapshots:
   concat-map@0.0.1: {}
 
   convert-source-map@1.9.0: {}
+
+  cordova-plugin-lottie-splashscreen@0.10.0: {}
 
   cosmiconfig@7.1.0:
     dependencies:
@@ -6560,6 +6614,10 @@ snapshots:
   run-parallel@1.2.0:
     dependencies:
       queue-microtask: 1.2.3
+
+  rxjs@7.8.2:
+    dependencies:
+      tslib: 2.8.1
 
   safe-array-concat@1.1.3:
     dependencies:

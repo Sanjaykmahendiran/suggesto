@@ -9,7 +9,7 @@ type NotFoundProps = {
 
 const NotFound = ({ title, description, imageSrc }: NotFoundProps) => {
   return (
-    <div className="flex flex-col items-center justify-center">
+    <div className="flex flex-col items-center justify-center p-4">
       <div className="flex items-center justify-center mb-4 mt-16">
         <Image
           src={imageSrc || searchNotFound}

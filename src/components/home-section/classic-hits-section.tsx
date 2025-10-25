@@ -3,6 +3,7 @@
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
 import { Clock } from "lucide-react"
+import DefaultMoviePoster from "@/assets/default-movie-poster.jpg"
 
 type Movie = {
   movie_id: string | number
@@ -49,11 +50,7 @@ export const ClassicHitsSection = ({ movies, title = "Classic Hits" }: ClassicHi
             onClick={() => router.push(`/movie-detail-page?movie_id=${movie.movie_id}`)}
           >
             <img
-              src={
-                movie.poster_path.startsWith("http")
-                  ? movie.poster_path
-                  : `https://suggesto.xyz/App/${movie.poster_path}`
-              }
+              src={movie.poster_path ? `https://suggesto.xyz/App/${movie.poster_path}` : DefaultMoviePoster.src}
               alt={movie.title}
               className="w-full h-full object-cover"
             />

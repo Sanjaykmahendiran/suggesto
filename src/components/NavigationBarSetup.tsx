@@ -2,25 +2,34 @@
 
 import { useEffect } from 'react'
 import { Capacitor } from '@capacitor/core'
-import { StatusBar, Style } from '@capacitor/status-bar'
 
 const NavigationBarSetup = () => {
   useEffect(() => {
     const setupNavigationBar = async () => {
-      if (Capacitor.isNativePlatform()) {
-        try {
-          // Set navigation bar color (Android only)
-          await StatusBar.setBackgroundColor({
-            color: '#121214'
-          })
-          
-          // Set navigation bar style
-          await StatusBar.setStyle({
-            style: Style.Dark
-          })
-        } catch (error) {
-          console.error('Error setting up navigation bar:', error)
+      // Only run on Android native platform
+      if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
+        return
+      }
+
+      try {
+        // Update theme-color meta tag for Android navigation bar
+        let themeColorMeta = document.querySelector('meta[name="theme-color"]')
+        
+        if (themeColorMeta) {
+          themeColorMeta.setAttribute('content', '#121214')
+        } else {
+          const newMeta = document.createElement('meta') as HTMLMetaElement
+          newMeta.name = 'theme-color'
+          newMeta.content = '#121214'
+          document.head.appendChild(newMeta)
         }
+
+        // Set CSS custom property for safe area (already in your CSS)
+        document.documentElement.style.setProperty('--navigation-bar-height', 'env(safe-area-inset-bottom)')
+
+        console.log('NavigationBar setup completed successfully')
+      } catch (error) {
+        console.error('NavigationBar setup failed:', error)
       }
     }
 

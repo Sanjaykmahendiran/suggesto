@@ -9,6 +9,8 @@ export interface Movie  {
 }
 
 export interface Poll  {
+    user_img: string
+    user_name: any
     poll_id: number
     user_id: number
     question: string

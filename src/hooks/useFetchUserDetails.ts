@@ -12,7 +12,7 @@ export interface UserData {
   email: string;
   imgname: string;
   mobilenumber: string;
-  register_level_status: number;
+  register_level_status: number; 
   dob: string | null;
   status: string;
   otp: string;
@@ -21,6 +21,11 @@ export interface UserData {
   modified_date: string;
   not_count: number;
   coins: string
+  payment_status: number;
+  watchlist_count: number;
+  watchedlist_count: number;
+  suggestedlist_count: number;
+  
 }
 
 interface UseFetchUserDetailsReturn {
@@ -114,7 +119,7 @@ const useFetchUserDetails = (): UseFetchUserDetailsReturn => {
   useEffect(() => {
     const userId = Cookies.get('userID');
 
-    if (!userId) {
+    if (!userId ) {
       // Handle logged out state
       const publicPages = ['/', '/auth/create-account'];
       const pageValid = publicPages.includes(pathname);

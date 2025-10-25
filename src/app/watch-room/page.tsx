@@ -23,6 +23,7 @@ import { WatchRoomAPIResponse, Room, Friend, CreateRoomPayload, FriendsAPIRespon
 import toast from "react-hot-toast"
 import DefaultImage from "@/assets/default-user.webp"
 import CoinAnimation from "@/components/coin-animation"
+import { useTourIntegration } from "@/hooks/useTourIntegration"
 
 // Loading Skeleton Component
 const LoadingSkeleton = () => (
@@ -49,6 +50,16 @@ export default function WatchRoomPage() {
     const [coinsEarned, setCoinsEarned] = useState(0)
 
     const userId = Cookies.get('userID') || ''
+
+    useTourIntegration('watchRoom', [isLoading], !isLoading)
+
+    // Determine if user is paid based on user context
+    const isPaidUser = user?.payment_status === 1 || false;
+
+
+    // Set member limits based on subscription
+    const MAX_MEMBERS = isPaidUser ? 10 : 3 // Including the creator
+    const MAX_FRIENDS_TO_INVITE = MAX_MEMBERS - 1 // Excluding the creator
 
     // Fetch watch rooms list
     const fetchWatchRooms = async () => {
@@ -97,20 +108,6 @@ export default function WatchRoomPage() {
         }
     }
 
-    // Fetch friends list
-    const fetchFriends = async () => {
-        try {
-            const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=friendslist&user_id=${userId}`)
-            if (!response.ok) throw new Error('Failed to fetch friends')
-            const friendsResponse: FriendsAPIResponse = await response.json() // Changed this line
-            setFriends(friendsResponse.data) // Changed this line - use .data property
-        } catch (error) {
-            console.error('Error fetching friends:', error)
-            toast.error('Failed to load friends list')
-        }
-    }
-
-    // Create new watch room
     // Create new watch room
     const createWatchRoom = async (payload: CreateRoomPayload) => {
         try {
@@ -144,6 +141,21 @@ export default function WatchRoomPage() {
         }
     }
 
+    const fetchFriends = async () => {
+        try {
+            const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=friendslist&user_id=${userId}`)
+            if (!response.ok) throw new Error('Failed to fetch friends')
+            const result = await response.json()
+
+            // Extract the data array from the paginated response
+            const friendsData: Friend[] = result.data || []
+            setFriends(friendsData)
+        } catch (error) {
+            console.error('Error fetching friends:', error)
+            toast.error('Failed to load friends list')
+        }
+    }
+
     useEffect(() => {
         const initializeData = async () => {
             if (userId) {
@@ -152,7 +164,7 @@ export default function WatchRoomPage() {
                     // Fetch both rooms and friends concurrently
                     await Promise.all([
                         fetchWatchRooms(),
-                        fetchFriends()
+                        fetchFriends(),
                     ])
                 } catch (error) {
                     console.error('Error initializing data:', error)
@@ -184,8 +196,9 @@ export default function WatchRoomPage() {
             return
         }
 
-        if (selectedFriends.length > 5) {
-            toast.error("You can only invite up to 5 friends")
+        if (selectedFriends.length > MAX_FRIENDS_TO_INVITE) {
+            const memberText = isPaidUser ? "10 members" : "3 members"
+            toast.error(`You can only invite up to ${MAX_FRIENDS_TO_INVITE} friends (${memberText} total including you)`)
             return
         }
 
@@ -215,10 +228,11 @@ export default function WatchRoomPage() {
         if (selectedFriends.some((f) => f.friend_id === friend.friend_id)) {
             setSelectedFriends(selectedFriends.filter((f) => f.friend_id !== friend.friend_id))
         } else {
-            if (selectedFriends.length < 10) {
+            if (selectedFriends.length < MAX_FRIENDS_TO_INVITE) {
                 setSelectedFriends([...selectedFriends, friend])
             } else {
-                toast.error("You can only select up to 10 friends")
+                const memberText = isPaidUser ? "10 members" : "3 members"
+                toast.error(`You can only select up to ${MAX_FRIENDS_TO_INVITE} friends (${memberText} total including you)`)
             }
         }
     }
@@ -239,10 +253,7 @@ export default function WatchRoomPage() {
     }
 
     return (
-
-        // <PageTransitionWrapper>
         <div className="text-white min-h-screen mb-22">
-
             {/* Header */}
             <header className="p-4 flex items-center justify-between pt-8">
                 <div className="flex items-center gap-2">
@@ -283,18 +294,17 @@ export default function WatchRoomPage() {
                             description="You haven't created any watch rooms yet. Start by creating a new room to invite friends and suggest movies."
                         />
                     ) : (
-                        <div className="space-y-4">
+                        <div className="space-y-4" data-tour-target="room-list">
                             {rooms.map((room) => (
                                 <div
                                     key={room.id}
+                                    data-tour-target={room === rooms[0] ? "room-card" : undefined}
                                     className={`rounded-lg p-4 cursor-pointer transition-colors relative ${isRoomOwner(room)
                                         ? "bg-[#2b2b2b]"
                                         : "bg-[#2b2b2b]"
                                         }`}
                                     onClick={() => handleRoomClick(room)}
                                 >
-
-
                                     <div className="flex justify-between items-center mb-3">
                                         <h3 className="font-semibold">
                                             {room.name}
@@ -328,7 +338,7 @@ export default function WatchRoomPage() {
                                                 <span className="text-xs text-gray-400 ml-1">+{room.friends.length - 3} more</span>
                                             )}
                                         </div>
-                                        <div className="flex items-center gap-3 text-xs text-gray-400">
+                                        <div className="flex items-center gap-3 text-xs text-gray-400" data-tour-target="room-stats">
                                             <div className="flex items-center gap-1">
                                                 <Users size={12} />
                                                 <span>{room.member_count || room.friends.length + 1}</span>
@@ -348,6 +358,7 @@ export default function WatchRoomPage() {
 
             {/* Floating Plus Button */}
             <motion.button
+                data-tour-target="create-room-button"
                 className="fixed bottom-24 right-4 w-14 h-14 rounded-full bg-gradient-to-r from-[#15F5FD] to-[#036CDA] flex items-center justify-center shadow-lg z-50"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -359,25 +370,28 @@ export default function WatchRoomPage() {
 
             {/* Create Room Dialog */}
             <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-                <DialogContent className="bg-[#1f1f21] border-[#121212] text-white max-w-md mx-auto">
+                <DialogContent className="bg-[#1f1f21] p-3 py-4 border-[#121212] text-white max-w-md mx-auto">
                     <DialogHeader>
                         <DialogTitle>Create a Watch Room</DialogTitle>
+                        <div className="text-xs text-gray-400">
+                            {isPaidUser ? "Premium: Up to 10 members" : "Free: Up to 3 members"}
+                        </div>
                     </DialogHeader>
                     <div className="space-y-4 mt-2">
                         <div>
                             <label className="text-sm text-gray-400 mb-1 block">Room Name</label>
-                            <Input
+                            <input
                                 value={newRoomName}
                                 onChange={(e) => setNewRoomName(e.target.value)}
                                 placeholder="Enter room name"
-                                className="bg-[#2b2b2b] border-[#3E3E4E]"
+                                className="w-full px-3 py-2 rounded-md bg-[#2b2b2b] border-[#3E3E4E] text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#15F5FD] focus:ring-offset-2 focus:ring-offset-[#1f1f21]"
                                 disabled={isCreatingRoom}
                             />
                         </div>
 
                         <div>
                             <label className="text-sm text-gray-400 mb-1 block">
-                                Invite Friends <span className="text-xs">({selectedFriends.length}/10)</span>
+                                Invite Friends <span className="text-xs">({selectedFriends.length}/{MAX_FRIENDS_TO_INVITE})</span>
                             </label>
 
                             {friends.length === 0 ? (
@@ -387,7 +401,9 @@ export default function WatchRoomPage() {
                                             You need friends to create a watch room
                                         </p>
                                         <Link href="/friends">
-                                            <Button variant="default">
+                                            <Button variant="default"
+                                                className="bg-gradient-to-r from-[#15F5FD] to-[#036CDA] text-white"
+                                            >
                                                 Add Friends First
                                             </Button>
                                         </Link>
@@ -430,11 +446,26 @@ export default function WatchRoomPage() {
                             )}
                         </div>
 
+                        {!isPaidUser && (
+                            <div className="bg-[#2b2b2b] rounded-lg p-3 border border-[#3E3E4E]">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-medium">Upgrade to Premium</p>
+                                        <p className="text-xs text-gray-400">Get up to 10 members per room</p>
+                                    </div>
+                                    <Link href="/premium">
+                                        <Button size="sm" variant="outline" className="bg-gradient-to-r from-[#15F5FD] to-[#036CDA] text-white border-none">
+                                            Upgrade
+                                        </Button>
+                                    </Link>
+                                </div>
+                            </div>
+                        )}
 
                         <Button
                             variant="default"
+                            className="w-full bg-gradient-to-r from-[#15F5FD] to-[#036CDA] text-white"
                             onClick={handleCreateRoom}
-                            className="w-full"
                             disabled={isCreatingRoom || friends.length === 0}
                         >
                             {isCreatingRoom ? "Creating..." : "Create Room"}
@@ -452,10 +483,6 @@ export default function WatchRoomPage() {
                 duration={3000}
             />
             <BottomNavigation currentPath="/watch-room" />
-        </div >
-
-        // {/* </PageTransitionWrapper> */ }
-
-
+        </div>
     )
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Heart, ArrowLeft, Share2, Users, Trash2, X } from "lucide-react"
+import { Heart, ArrowLeft, Share2, Users, Trash2, X, EyeIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -18,6 +18,11 @@ import CastAndCrew from "./_components/CastAndCrew"
 import LoadingSkeleton from "./_components/loadingskeleton"
 import MovieBuddiesSection from "./_components/movie-buddies"
 import CoinAnimation from "@/components/coin-animation"
+import { useTourIntegration } from "@/hooks/useTourIntegration"
+import Bookmark from "@/assets/bookmark.png";
+import Eye from "@/assets/eye.png";
+import { m } from "framer-motion"
+import NotFound from "@/components/notfound"
 
 export default function MovieDetailPage() {
     const router = useRouter()
@@ -44,6 +49,10 @@ export default function MovieDetailPage() {
     const [showCoinAnimation, setShowCoinAnimation] = useState(false)
     const [walletPosition, setWalletPosition] = useState({ x: 0, y: 0 })
     const [coinsEarned, setCoinsEarned] = useState(0)
+    const [showBuddiesPopup, setShowBuddiesPopup] = useState(false)
+    const [activeTab, setActiveTab] = useState('watched')
+
+    useTourIntegration('movieDetail', [loading], !loading)
 
     const triggerCoinAnimation = (buttonElement: HTMLElement, coinsEarned = 5) => {
         const buttonRect = buttonElement.getBoundingClientRect();
@@ -201,9 +210,6 @@ export default function MovieDetailPage() {
             }
 
             toast.success("Added to watchlist successfully")
-            setTimeout(() => {
-                router.push("/watch-list");
-            }, 5000);
 
             // Update the movie state to reflect the new watchlist status
             setMovie((prevMovie) => {
@@ -279,9 +285,6 @@ export default function MovieDetailPage() {
 
             if (data.status === "success" || data.response === "Watchroom Updated!") {
                 toast.success("Added to watchlist again successfully");
-                setTimeout(() => {
-                    router.push("/watch-list");
-                }, 1000);
 
                 // Update the movie state to reflect the new watchlist status
                 setMovie((prevMovie) => {
@@ -361,9 +364,6 @@ export default function MovieDetailPage() {
                 triggerCoinAnimation(buttonElement, coinsEarned);
 
                 toast.success("Marked as watched successfully")
-                setTimeout(() => {
-                    router.back();
-                }, 3000);
             }
 
             // Update the movie state to reflect the new watchlist status
@@ -424,9 +424,6 @@ export default function MovieDetailPage() {
                 triggerCoinAnimation(buttonElement, coinsEarned);
 
                 toast.success("Marked as watched room movie successfully")
-                setTimeout(() => {
-                    router.back();
-                }, 5000);
             } else {
                 throw new Error(data.message || "Failed to mark as watched")
             }
@@ -660,9 +657,6 @@ export default function MovieDetailPage() {
 
                 if (result.response === "Movie removed from Watchroom") {
                     toast.success("Movie removed from Watchroom")
-                    setTimeout(() => {
-                        router.back();
-                    }, 3000);
                 } else {
                     toast.error(result.message || "Failed to delete watchroom movie");
                 }
@@ -698,9 +692,6 @@ export default function MovieDetailPage() {
 
             if (data.response === "Movie removed from Watchlist") {
                 toast.success("Movie removed from watchlist")
-                setTimeout(() => {
-                    router.back();
-                }, 1000);
             } else {
                 toast.error(data.message || "Failed to remove from watchlist");
             }
@@ -787,9 +778,6 @@ export default function MovieDetailPage() {
 
             // Show success and navigate back
             toast.success("Marked as already seen successfully")
-            setTimeout(() => {
-                router.back()
-            }, 1000)
 
         } catch (err) {
             console.error("Error marking as already seen:", err)
@@ -816,6 +804,7 @@ export default function MovieDetailPage() {
     }
 
     const actionButton = getActionButton()
+    const shouldShowSuggestButton = actionButton.text !== "Add to watchlist"
 
     const extractYouTubeVideoId = (url: string) => {
         const regex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/;
@@ -859,6 +848,7 @@ export default function MovieDetailPage() {
                         <button
                             className="p-2 rounded-full bg-[#2b2b2b] flex items-center justify-center"
                             onClick={() => setShowShareCard(true)}
+                            data-tour-target="share-button"
                         >
                             <Share2 className="w-5 h-5" />
                         </button>
@@ -877,6 +867,7 @@ export default function MovieDetailPage() {
                         {movie.video && (
                             <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                                 <button
+                                    data-tour-target="play-button"
                                     onClick={() => setShowVideo(true)}
                                     className="w-12 h-12 bg-white/70 rounded-full flex items-center justify-center hover:bg-red-700 transition-colors shadow-lg"
                                 >
@@ -961,7 +952,7 @@ export default function MovieDetailPage() {
                 </p>
 
                 {overview && (
-                    <p className="text-sm text-gray-300 text-center mb-2 px-4 leading-tight max-w-sm">
+                    <p className="text-sm text-gray-300 text-center mb-2 px-4 leading-tight max-w-sm" data-tour-target="overview-section">
                         {truncateOverview(overview)}{" "}
                         {overview.length > 80 && (
                             <span
@@ -1015,26 +1006,75 @@ export default function MovieDetailPage() {
                 )}
 
 
-                <div className="flex items-center justify-center w-full ">
-                    {/* Watchlist statistics - Only show for non-watchroom types */}
-                    {MovieType !== "watchroom" && actionButton.text === "Add to watchlist" && (
-                        <div className="flex space-x-2 text-sm text-gray-400 mt-4 mb-4">
-                            <div className="bg-[#2b2b2b] px-3 py-1 rounded-full flex items-center space-x-2">
-                                <Users className="w-4 h-4 text-primary" />
-                                <span>{getWatchlistCountLastWeek(movie?.watchlist_data)} Watchlisted last week</span>
-                            </div>
+                {/* Stats Section */}
+                <div className="w-full mt-6">
+                    <h3 className="text-xl font-bold text-white mb-4">Movies Buddies</h3>
+                    <div className="mb-2">
+                        <div className="flex space-x-4 overflow-x-auto no-scrollbar pb-2">
+                            {loading ? (
+                                Array.from({ length: 2 }).map((_, index) => (
+                                    <div key={index} className="min-w-[160px] h-20 bg-[#2b2b2b]/40 animate-pulse rounded-[80px]" />
+                                ))
+                            ) : (
+                                < >
+                                    {/* Watched */}
+                                    <div
+                                        onClick={() => {
+                                            setActiveTab('watched')
+                                            setShowBuddiesPopup(true)
+                                        }}
+                                        className="bg-[#2b2b2b] rounded-[80px] px-2 py-3 gap-3 text-center shadow-lg hover:scale-105 transition-all duration-300 flex items-center justify-center"
+                                    >
+                                        <div className="p-2 rounded-full bg-white w-10 h-10 flex items-center justify-center">
+                                            <Image src={Eye} alt="Watched" width={20} height={20} />
+                                        </div>
+                                        <div className="text-xl font-semibold text-white">
+                                            {(movie?.movie_buddies?.watched.count || 0).toString().padStart(2, "0")}
+                                        </div>
+                                        <div className="text-sm text-white font-medium">Watched</div>
+                                    </div>
+
+                                    {/* Watchlisted */}
+                                    <div
+                                        onClick={() => {
+                                            setActiveTab('planned')
+                                            setShowBuddiesPopup(true)
+                                        }}
+                                        className="bg-[#2b2b2b] rounded-[80px] px-2 py-3 gap-3 text-center shadow-lg hover:scale-105 transition-all duration-300 flex items-center justify-center"
+                                    >
+                                        <div className="p-2 rounded-full bg-white w-10 h-10 flex items-center justify-center">
+                                            <Image src={Bookmark} alt="Bookmark" width={20} height={20} />
+                                        </div>
+                                        <div className="text-xl font-semibold text-white">
+                                            {(movie?.movie_buddies?.planned.count || 0).toString().padStart(2, "0")}
+                                        </div>
+                                        <div className="text-sm text-white font-medium">Watchlisted</div>
+                                    </div>
+                                </>
+                            )}
                         </div>
-                    )}
-                    {actionButton.text === "Add to watchlist" && (
-                        <Button
-                            variant="link"
-                            onClick={handleAlreadySeen}
-                            disabled={addingToWatchlist}
-                        >
-                            <span className="bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text text-transparent">
-                                {addingToWatchlist ? "Processing..." : "Already Seen"}</span>
-                        </Button>
-                    )}
+                    </div>
+                    <div className="flex items-center justify-center w-full ">
+                        {/* Watchlist statistics - Only show for non-watchroom types */}
+                        {MovieType !== "watchroom" && actionButton.text === "Add to watchlist" && (
+                            <div className="flex space-x-2 text-sm text-gray-400 mt-4 mb-4">
+                                <div className="bg-[#2b2b2b] px-3 py-1 rounded-full flex items-center space-x-2">
+                                    <Users className="w-4 h-4 text-primary" />
+                                    <span>{getWatchlistCountLastWeek(movie?.watchlist_data)} Watchlisted last week</span>
+                                </div>
+                            </div>
+                        )}
+                        {actionButton.text === "Add to watchlist" && (
+                            <Button
+                                variant="link"
+                                onClick={handleAlreadySeen}
+                                disabled={addingToWatchlist}
+                            >
+                                <span className="bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text text-transparent">
+                                    {addingToWatchlist ? "Processing..." : "Already Seen"}</span>
+                            </Button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Action buttons */}
@@ -1044,6 +1084,7 @@ export default function MovieDetailPage() {
                         {/* Delete Button - Left */}
 
                         <button
+                            data-tour-target="delete-button"
                             className="absolute w-12 h-12 left-0 p-2 flex items-center justify-center rounded-full bg-[#2b2b2b]"
                             onClick={() => setShowConfirm(true)}
                         >
@@ -1060,6 +1101,7 @@ export default function MovieDetailPage() {
                                 )}
                                 onClick={(e) => actionButton.action && actionButton.action(e)}
                                 disabled={!!addingToWatchlist}
+                                data-tour-target="main-action-button"
                             >
                                 <span className="bg-gradient-to-r from-[#b56bbc] to-[#7a71c4] bg-clip-text text-transparent">
                                     {addingToWatchlist ? "Processing..." : actionButton.text}
@@ -1079,6 +1121,7 @@ export default function MovieDetailPage() {
                                     )}
                                     onClick={handleToggleFavorite}
                                     disabled={addingToWatchlist}
+                                    data-tour-target="favorite-button"
                                 >
                                     <Heart
                                         className={cn(
@@ -1093,10 +1136,15 @@ export default function MovieDetailPage() {
                 </div>
 
 
-                {/* Cast and Crew Section */}
-                <CastAndCrew movieData={movie} actorId={movie.actor_id} />
 
-                <MovieBuddiesSection movies={movie.movie_buddies} />
+                {/* Cast and Crew Section */}
+                <CastAndCrew
+                    movieData={movie}
+                    actorId={movie.actor_id}
+                    movieId={parseInt(movie_id || "0")}
+                    showSuggestButton={shouldShowSuggestButton}
+                />
+                {/* <MovieBuddiesSection movies={movie.movie_buddies} /> */}
 
                 {/* Review Section */}
                 <ReviewSection viewer_id={parseInt(userId)} movie_id={parseInt(movie_id || "")} />
@@ -1160,6 +1208,115 @@ export default function MovieDetailPage() {
                             >
                                 Delete
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Movie Buddies Popup */}
+            {showBuddiesPopup && (
+                <div className="fixed inset-0 z-50 backdrop-blur-sm bg-black/70 flex items-center justify-center transition-all duration-300">
+                    <div className="bg-[#121212] rounded-xl shadow-xl w-[90vw] max-w-lg h-[70vh] overflow-hidden flex flex-col">
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-4 ">
+                            <h3 className="text-lg font-semibold text-white">Movie Buddies</h3>
+                            <button
+                                onClick={() => setShowBuddiesPopup(false)}
+                                className="p-2 rounded-full bg-[#2b2b2b] hover:bg-gray-600 transition-colors"
+                            >
+                                <X className="w-4 h-4 text-white" />
+                            </button>
+                        </div>
+
+                        {/* Tabs */}
+                        <div className="flex border-b border-gray-700">
+                            <button
+                                onClick={() => setActiveTab('watched')}
+                                className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${activeTab === 'watched'
+                                    ? 'text-white border-b-2 border-primary bg-[#2b2b2b]'
+                                    : 'text-gray-400 hover:text-white'
+                                    }`}
+                            >
+                                Watched ({movie?.movie_buddies?.watched.count || 0})
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('planned')}
+                                className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${activeTab === 'planned'
+                                    ? 'text-white border-b-2 border-primary bg-[#2b2b2b]'
+                                    : 'text-gray-400 hover:text-white'
+                                    }`}
+                            >
+                                Watchlisted ({movie?.movie_buddies?.planned.count || 0})
+                            </button>
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-4 overflow-y-auto flex-1">
+                            {activeTab === 'watched' ? (
+                                <div>
+                                    {movie?.movie_buddies?.watched.friends && movie.movie_buddies.watched.friends.length > 0 ? (
+                                        <div className="space-y-3">
+                                            {movie.movie_buddies.watched.friends.map((friend: any) => (
+                                                <div key={friend.user_id} className="flex items-center gap-3 p-3 bg-[#2b2b2b] rounded-lg">
+                                                    <div className="relative w-10 h-10 rounded-full overflow-hidden">
+                                                        <Image
+                                                            src={friend.imgname || '/placeholder-avatar.jpg'}
+                                                            alt={friend.name}
+                                                            fill
+                                                            className="object-cover"
+                                                            onError={(e) => {
+                                                                e.currentTarget.src = '/placeholder-avatar.jpg'
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-white font-medium">{friend.name}</p>
+                                                        <p className="text-xs text-gray-400">Watched this movie</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center">
+                                            <NotFound
+                                                title="No friends have watched this movie yet"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div>
+                                    {movie?.movie_buddies?.planned.friends && movie.movie_buddies.planned.friends.length > 0 ? (
+                                        <div className="space-y-3">
+                                            {movie.movie_buddies.planned.friends.map((friend: any) => (
+                                                <div key={friend.user_id} className="flex items-center gap-3 p-3 bg-[#2b2b2b] rounded-lg">
+                                                    <div className="relative w-10 h-10 rounded-full overflow-hidden">
+                                                        <Image
+                                                            src={friend.imgname || '/placeholder-avatar.jpg'}
+                                                            alt={friend.name}
+                                                            fill
+                                                            className="object-cover"
+                                                            onError={(e) => {
+                                                                e.currentTarget.src = '/placeholder-avatar.jpg'
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-white font-medium">{friend.name}</p>
+                                                        <p className="text-xs text-gray-400">Added to watchlist</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center">
+                                            <NotFound
+                                                title="No friends have added this to watchlist yet"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

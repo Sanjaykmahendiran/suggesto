@@ -118,7 +118,7 @@ export default function LanguagePage() {
 
       const languageIds = selectedLanguages.map(lang => lang.language_id)
       const apiEndpoint = isEditMode ? "edituserlan" : "adduserlan"
-      const redirectPath = isEditMode ? "/profile" : "/home"
+      const redirectPath = isEditMode ? "/profile" : "/friends?type=new_login"
 
       const response = await fetch("https://suggesto.xyz/App/api.php", {
         method: "POST",

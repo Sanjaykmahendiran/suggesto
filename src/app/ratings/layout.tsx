@@ -15,8 +15,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className={`${overpass.className} bg-[#181826]`}>
+    <html lang="en" className="no-scrollbar">
+      <body className={`${overpass.className} `}>
         <Suspense fallback={<div className="text-white"></div>}>
           {children}
         </Suspense>
