@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ArrowLeft, ChevronDown } from "lucide-react"
-import Cookies from "js-cookie"
 import { BottomNavigation } from "@/components/bottom-navigation"
 import {
   Select,
@@ -80,7 +79,7 @@ export default function EditProfile() {
 
   // Load user data when userID and countries are available
   useEffect(() => {
-    const id = Cookies.get("userID")
+    const id = typeof window !== 'undefined' ? localStorage.getItem("userID") : null
     setUserID(id)
 
     if (id && countries.length > 0 && !initialDataLoaded) {

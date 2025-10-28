@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { useRouter, useSearchParams } from "next/navigation"
 import MovieShareCard from "@/app/movie-detail-page/_components/moviesharecard"
 import { Skeleton } from "@/components/ui/skeleton"
-import Cookies from "js-cookie"
 import toast from "react-hot-toast"
 import type { SuggestedMovieDetail } from "../type"
 import Image from "next/image"
@@ -25,7 +24,7 @@ export default function SuggestedMovieDetailPage() {
     const searchParams = useSearchParams()
     const movsug_id = searchParams.get("movsug_id")
     const movie_id = searchParams.get("movie_id")
-    const userId = Cookies.get("userID") || ""
+    const userId = typeof window !== 'undefined' ? localStorage.getItem("userID") || "" : ""
 
     const [showShareCard, setShowShareCard] = useState(false)
     const [movie, setMovie] = useState<SuggestedMovieDetail | null>(null)

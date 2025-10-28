@@ -2,7 +2,6 @@
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useState, useCallback, useRef } from "react";
-import Cookies from 'js-cookie'
 import Link from "next/link";
 import Image from "next/image"
 import { ArrowLeft, Search, Star, TrendingUp, Heart } from "lucide-react";

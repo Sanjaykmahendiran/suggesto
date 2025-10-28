@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useRouter, useSearchParams } from "next/navigation"
 import MovieShareCard from "@/app/movie-detail-page/_components/moviesharecard"
-import Cookies from "js-cookie"
 import ReviewSection from "@/app/movie-detail-page/_components/review-section"
 import { YouMightAlsoLike } from "@/components/you-might-also-like"
 import { Movie, WatchlistData } from "@/app/movie-detail-page/type"
@@ -31,7 +30,7 @@ export default function MovieDetailPage() {
     const movie_id = searchParams.get("movie_id")
     const tmdb_movie_id = searchParams.get("tmdb_movie_id")
     const watromovId = searchParams.get("watromov_id")
-    const userId = Cookies.get("userID") || ""
+    const userId = typeof window !== 'undefined' ? localStorage.getItem("userID") || "" : ""
 
     const [isFavorite, setIsFavorite] = useState(false)
     const [showShareCard, setShowShareCard] = useState(false)

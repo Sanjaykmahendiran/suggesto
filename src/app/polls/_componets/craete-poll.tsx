@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, Film, X, ChevronRight, ChevronLeft, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
-import Cookies from 'js-cookie';
 import CoinAnimation from "@/components/coin-animation";
 
 type Movie = {
@@ -31,7 +30,7 @@ export function CreatePollDialog({ isOpen, onClose }: CreatePollDialogProps) {
     const [initialLoad, setInitialLoad] = useState(true);
     const [totalCount, setTotalCount] = useState(0);
     const observerRef = useRef<HTMLDivElement>(null);
-    const userId = Cookies.get('userID');
+    const userId = typeof window !== 'undefined' ? localStorage.getItem('userID') : null;
     const [showCoinAnimation, setShowCoinAnimation] = useState(false);
     const [coinsEarned, setCoinsEarned] = useState(0);
 

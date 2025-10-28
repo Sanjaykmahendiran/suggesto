@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import namelogo from "@/assets/Premium-crown.png"
 import logo from "@/assets/suggesto-logo.png"
-import Cookies from 'js-cookie'
 import { useRouter } from "next/navigation"
 import { PageTransitionProvider, PageTransitionWrapper } from "@/components/PageTransition"
 import toast from "react-hot-toast"
@@ -135,7 +134,7 @@ export default function Premium() {
     }
 
     const getUserData = async () => {
-        const userId = Cookies.get("userID")
+        const userId = typeof window !== 'undefined' ? localStorage.getItem("userID") : null
         if (!userId) {
             setIsLoading(false)
             return
@@ -202,7 +201,7 @@ export default function Premium() {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    user_id: Cookies.get("userID"),
+                    user_id: localStorage.getItem("userID"),
                     package_id: selectedPackage?.id || selectedPackage?.package_id || selectedPackage?.pid || selectedPackage?.packageId,
                     final_amount: finalAmount, // Send the calculated amount
                     coins_used: coinsUsed, // Send coins used for backend processing
@@ -316,7 +315,7 @@ export default function Premium() {
 
         setIsProcessing(true)
 
-        const userId = Cookies.get("userID")
+        const userId = typeof window !== 'undefined' ? localStorage.getItem("userID") : null
         if (!userId) {
             toast.error("User ID not found.")
             setIsProcessing(false)

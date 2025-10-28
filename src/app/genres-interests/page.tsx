@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import { ArrowLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import Cookies from "js-cookie"
 import { Skeleton } from "@/components/ui/skeleton"
 import toast from "react-hot-toast"
 
@@ -40,7 +39,7 @@ export default function InterestsPage() {
         const data: Genre[] = await response.json()
         setGenres(data)
 
-        const userId = Cookies.get("userID")
+        const userId = typeof window !== 'undefined' ? localStorage.getItem("userID") : null
 
         if (userId) {
           const userInterestsResponse = await fetch(
@@ -133,7 +132,7 @@ export default function InterestsPage() {
   const handleContinue = async () => {
     try {
       setIsSubmitting(true)
-      const userId = Cookies.get("userID") || ""
+      const userId = typeof window !== 'undefined' ? localStorage.getItem("userID") || "" : ""
 
       const endpoint = "https://suggesto.xyz/App/api.php"
       const payload = {

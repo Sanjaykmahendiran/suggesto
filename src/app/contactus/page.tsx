@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import Cookies from "js-cookie"
 import toast from "react-hot-toast"
 import { PageTransitionProvider, PageTransitionWrapper } from "@/components/PageTransition"
 
@@ -30,7 +29,7 @@ export default function ContactPage() {
     e.preventDefault()
     setIsSubmitting(true)
 
-    const userId = Cookies.get("userID")
+    const userId = typeof window !== 'undefined' ? localStorage.getItem("userID") : null
 
     if (!userId) {
       toast.error("User not logged in. Please log in and try again.")

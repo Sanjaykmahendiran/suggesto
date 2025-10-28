@@ -6,7 +6,6 @@ import { Card, CardContent } from "@/components/ui/card"
 import { ArrowLeft, Clock, Zap, Target, Timer, Loader2, Award, RefreshCcw, Share2Icon, ArrowRight, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useEffect, useRef } from "react"
-import Cookies from "js-cookie"
 import BackgroundImage from "@/assets/quiz/movie-quiz-battle-bg.png"
 import BackgroundImageResult from "@/assets/quiz/movie-quiz-result-bg.png"
 import clock from "@/assets/quiz/clock.png"
@@ -30,7 +29,7 @@ export default function QuizPage() {
   const [timeLeft, setTimeLeft] = useState(86400)
   const [isJoining, setIsJoining] = useState(false)
   const [rulesVisible, setRulesVisible] = useState(false)
-  const userId = Cookies.get("userID")
+  const userId = typeof window !== 'undefined' ? localStorage.getItem("userID") : null
   // Quiz states
   const [gameState, setGameState] = useState("waiting")
   const [currentQuestion, setCurrentQuestion] = useState(0)

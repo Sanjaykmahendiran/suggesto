@@ -11,7 +11,6 @@ import { motion, useMotionValue, useSpring, useTransform } from "framer-motion"
 import useFetchUserDetails from "@/hooks/useFetchUserDetails"
 import { App } from "@capacitor/app"
 import type { PluginListenerHandle } from "@capacitor/core"
-import Cookies from "js-cookie"
 import { Skeleton } from "@/components/ui/skeleton"
 import { registerServiceWorker } from "@/lib/serviceWorker"
 import { SplashScreen } from '@capacitor/splash-screen'
@@ -129,7 +128,7 @@ export default function RootPage() {
 
   // Fetch cookie only on client
   useEffect(() => {
-    setUserId(Cookies.get("userID"))
+    setUserId(localStorage.getItem("userID"))
   }, [])
 
   const debounce = (func: Function, wait: number) => {

@@ -1,5 +1,5 @@
 import { useRouter } from "next/navigation";
-import Cookies from "js-cookie";
+// localStorage is used directly
 import { useCallback } from "react";
 
 const useLogout = () => {
@@ -7,10 +7,7 @@ const useLogout = () => {
 
   const logout = useCallback(() => {
     try {
-      // Remove userID from cookies
-      Cookies.remove("userID");
-
-      // Remove userID from local storage
+      // Remove userID from localStorage
       localStorage.removeItem("userID");
 
       // Force a clean navigation

@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Calendar, ArrowRight, Check, Users } from 'lucide-react';
 import NotFound from '@/components/notfound';
 import SuggestNotFound from "@/assets/not-found-suggest.png"
-import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
 import { Request, Responder } from "@/app/suggest-movie/type"
 import { RequestCardSkeleton, MovieCardSkeleton } from "@/app/suggest-movie/_components/loading"
@@ -18,7 +17,7 @@ const SuggestionsSent = () => {
     const [detailLoading, setDetailLoading] = useState(false);
     const [view, setView] = useState<'list' | 'detail'>('list');
     const [responseCounts, setResponseCounts] = useState<{ [key: string]: number }>({});
-    const userId = Cookies.get("userID")
+    const userId = typeof window !== 'undefined' ? localStorage.getItem("userID") : null
 
     // Fetch movie requests on component mount
     useEffect(() => {

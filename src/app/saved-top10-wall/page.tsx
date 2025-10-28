@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback, useRef } from "react"
 import Image from "next/image"
 import { ArrowLeft, Search, ArrowRightIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import Cookies from "js-cookie"
 import { Skeleton } from "@/components/ui/skeleton"
 import DefaultImage from "@/assets/default-user.webp"
 import NotFound from "@/components/notfound"
@@ -72,7 +71,7 @@ export default function SavedTop10WallPage() {
 
     // Fetch saved items with pagination
     const fetchSavedTop10 = useCallback(async (currentOffset: number = 0, isLoadMore: boolean = false) => {
-        const userId = Cookies.get("userID")
+        const userId = typeof window !== 'undefined' ? localStorage.getItem("userID") : null
         if (!userId) {
             setLoading(false)
             return

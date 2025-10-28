@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import Cookies from 'js-cookie';
+// localStorage is used directly
 import { useUser } from "@/contexts/UserContext"
 import toast from 'react-hot-toast';
 
@@ -74,9 +74,9 @@ const useFetchUserDetails = (): UseFetchUserDetailsReturn => {
 
       const userData: UserData = await response.json();
 
-      // Save coins as old_coins in cookies
+      // Save coins as old_coins in localStorage
       if (userData.coins) {
-        Cookies.set('old_coins', userData.coins, { expires: 7 }); // Expires in 7 days
+        localStorage.setItem('old_coins', userData.coins); // Store in localStorage
       }
       setUser(userData);
 
@@ -95,7 +95,7 @@ const useFetchUserDetails = (): UseFetchUserDetailsReturn => {
   useEffect(() => {
     if (hasInitialized) return;
 
-    const userId = Cookies.get('userID');
+    const userId = typeof window !== 'undefined' ? localStorage.getItem('userID') : null;
 
     setLoading(true);
 
@@ -117,7 +117,7 @@ const useFetchUserDetails = (): UseFetchUserDetailsReturn => {
 
   // Handle routing logic after user data is loaded
   useEffect(() => {
-    const userId = Cookies.get('userID');
+    const userId = typeof window !== 'undefined' ? localStorage.getItem('userID') : null;
 
     if (!userId ) {
       // Handle logged out state

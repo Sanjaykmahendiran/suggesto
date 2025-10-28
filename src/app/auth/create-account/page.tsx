@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react"
 import { ArrowLeft, Globe } from "lucide-react"
 import { useRouter } from "next/navigation"
-import Cookies from "js-cookie"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import mobileNumber from "@/assets/mobile-number-2.png"
@@ -287,7 +286,7 @@ export default function Login() {
         toast.success("OTP verified successfully!");
 
         // Set user_id cookie (expires in 7 days)
-        Cookies.set("userID", data.user_id, { expires: 7 });
+        localStorage.setItem("userID", data.user_id);
         setUser(data);
 
         // Debug logging

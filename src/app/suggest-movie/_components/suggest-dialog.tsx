@@ -11,7 +11,6 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
-import Cookies from "js-cookie"
 import DefaultImage from "@/assets/default-user.webp"
 import CoinAnimation from "@/components/coin-animation"
 import { useUser } from "@/contexts/UserContext"
@@ -169,7 +168,7 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
   const fetchSuggestedMovies = async () => {
     setLoadingSuggested(true)
     try {
-      const userId = Cookies.get('userID')
+      const userId = typeof window !== 'undefined' ? localStorage.getItem('userID') : null
       const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=suggestedmovies&user_id=${userId}`)
       if (!response.ok) throw new Error('Failed to fetch suggested movies')
       const data = await response.json()
@@ -194,7 +193,7 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
     }
 
     try {
-      const userId = Cookies.get('userID') || ''
+      const userId = typeof window !== 'undefined' ? localStorage.getItem('userID') : null || ''
       const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=friendslist&user_id=${userId}&limit=10&offset=${currentOffset}`)
       if (!response.ok) throw new Error('Failed to fetch friends')
 
@@ -393,7 +392,7 @@ export function SuggestDialog({ isOpen, onClose, onSuggest }: SuggestDialogProps
       setSubmitting(true)
 
       try {
-        const userId = Cookies.get('userID');
+        const userId = typeof window !== 'undefined' ? localStorage.getItem('userID') : null;
 
         // Prepare arrays of IDs
         const movieIds = selectedMovies.map(movie => movie.movie_id);

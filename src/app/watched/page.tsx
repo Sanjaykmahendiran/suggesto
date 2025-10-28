@@ -2,7 +2,6 @@
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useState, useCallback, useRef } from "react";
-import Cookies from 'js-cookie'
 import Link from "next/link";
 import Image from "next/image"
 import { ArrowLeft, Search, Star } from "lucide-react";
@@ -64,7 +63,7 @@ export default function WatchNow() {
                 setMoviesLoading(true)
             }
 
-            const userId = Cookies.get('userID') || ''
+            const userId = typeof window !== 'undefined' ? localStorage.getItem('userID') || '' : ''
             const response = await fetch(
                 `https://suggesto.xyz/App/api.php?gofor=watchlist&user_id=${userId}&status=watched&limit=10&offset=${currentOffset}`
             )

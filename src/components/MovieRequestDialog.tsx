@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import Cookies from 'js-cookie';
 import {
   Dialog,
   DialogContent,
@@ -24,7 +23,7 @@ export default function MovieRequestDialog({
   const [showSuccess, setShowSuccess] = useState(false);
 
   const handleSubmit = async () => {
-    const userId = Cookies.get('userID');
+    const userId = typeof window !== 'undefined' ? localStorage.getItem('userID') : null;
 
     if (!userId) {
       alert('User ID not found in cookies.');

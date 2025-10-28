@@ -4,7 +4,6 @@ import { Bell, ArrowLeft, Users, Crown, Trophy, ArrowRight, Languages, Drama, Cl
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import Cookies from "js-cookie"
 import { UserData } from "../type"
 import { PageTransitionProvider, PageTransitionWrapper } from "@/components/PageTransition"
 import toast from 'react-hot-toast';
@@ -55,7 +54,7 @@ export default function ProfileDetailPage() {
     // Move fetchUserProfile to component scope so it can be used elsewhere
     const fetchUserProfile = () => {
         const profileId = searchParams.get("profile_id");
-        const userId = Cookies.get("userID");
+        const userId = typeof window !== 'undefined' ? localStorage.getItem("userID") : null;
 
         if (profileId) {
             fetch(`https://suggesto.xyz/App/api.php?gofor=profiledetail&user_id=${userId}&profile_id=${profileId}`)
@@ -88,7 +87,7 @@ export default function ProfileDetailPage() {
 
 
     const handleSendFriendRequest = async () => {
-        const senderId = Cookies.get("userID");
+        const senderId = typeof window !== 'undefined' ? localStorage.getItem("userID") : null;
         const receiverId = userData?.user_id;
 
         if (!senderId || !receiverId) {
@@ -127,7 +126,7 @@ export default function ProfileDetailPage() {
     }
 
     const handleUnfriend = async () => {
-        const senderId = Cookies.get("userID");
+        const senderId = typeof window !== 'undefined' ? localStorage.getItem("userID") : null;
         const receiverId = userData?.user_id;
 
         if (!senderId || !receiverId) {
@@ -173,7 +172,7 @@ export default function ProfileDetailPage() {
     }
 
     const handleAcceptRequest = async (friendId: number) => {
-        const userId = Cookies.get("userID");
+        const userId = typeof window !== 'undefined' ? localStorage.getItem("userID") : null;
         if (!userId) return;
 
         setAcceptLoading(true);
@@ -215,7 +214,7 @@ export default function ProfileDetailPage() {
 
     // Update handleRejectRequest function
     const handleRejectRequest = async (friendId: number) => {
-        const userId = Cookies.get("userID")
+        const userId = typeof window !== 'undefined' ? localStorage.getItem("userID") : null
         if (!userId) return
 
         setRejectLoading(true)
@@ -249,7 +248,7 @@ export default function ProfileDetailPage() {
     }
 
     const handleSendRequestSuggested = async (friendId: number) => {
-        const userId = Cookies.get("userID")
+        const userId = typeof window !== 'undefined' ? localStorage.getItem("userID") : null
         if (!userId) {
             console.error("No user ID found in cookies")
             return

@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Skeleton } from "@/components/ui/skeleton"
 import AvatarImg from "@/assets/avatar.jpg"
-import Cookies from "js-cookie"
 import { PageTransitionProvider, PageTransitionWrapper } from "@/components/PageTransition"
 
 interface Notification {
@@ -23,7 +22,7 @@ export default function NotificationsPage() {
     const router = useRouter()
     const [notificationsList, setNotificationsList] = useState<Notification[]>([])
     const [loading, setLoading] = useState(true)
-    const userId = Cookies.get("userID")
+    const userId = typeof window !== 'undefined' ? localStorage.getItem("userID") : null
 
     useEffect(() => {
         const fetchNotifications = async () => {

@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import { ArrowLeft, MoreVertical, Search, Heart, X, UserPlus, Plus, ArrowRight, EyeIcon, StarIcon, Cake } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
-import Cookies from "js-cookie"
 import { Skeleton } from "@/components/ui/skeleton"
 import DefaultImage from "@/assets/default-user.webp"
 import NotFound from "@/components/notfound"
@@ -35,7 +34,7 @@ export default function FriendsPage() {
     const [allFriends, setAllFriends] = useState<Friend[]>([])
     const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState<Tab>(() => {
-        const savedTab = Cookies.get('friends-active-tab') as Tab;
+        const savedTab = typeof window !== 'undefined' ? localStorage.getItem('friends-active-tab') as Tab : null;
         if (pageType === "new_login") return "contacts";
         return savedTab && ['friends', 'requests', 'suggested', 'starred', 'contacts'].includes(savedTab)
             ? savedTab
@@ -74,7 +73,7 @@ export default function FriendsPage() {
     }
 
     useEffect(() => {
-        Cookies.set('friends-active-tab', activeTab, { expires: 30 });
+        localStorage.setItem('friends-active-tab', activeTab);
     }, [activeTab]);
 
     // Add this function before the return statement
@@ -123,7 +122,7 @@ export default function FriendsPage() {
     }, [activeTab, scrollToActiveTab])
 
     const handleFavoriteClick = async (friendId: number) => {
-        const userId = Cookies.get("userID");
+        const userId = typeof window !== 'undefined' ? localStorage.getItem("userID") : null;
         if (!userId) return;
 
         const selectedFriend = friends.find(f => f.friend_id === friendId);
@@ -168,7 +167,7 @@ export default function FriendsPage() {
         if (isProfileDetailFriends && friendId) {
             userId = friendId;
         } else {
-            userId = Cookies.get("userID");
+            userId = localStorage.getItem("userID");
         }
 
         if (!userId) return

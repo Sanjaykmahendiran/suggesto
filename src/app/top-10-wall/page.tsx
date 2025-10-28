@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { Trophy, Heart, Bookmark, Plus, X, Search, ArrowLeft, Share2, Target, CheckCircle } from "lucide-react"
-import Cookies from "js-cookie"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
@@ -98,7 +97,7 @@ export default function Top10Wall() {
     const [hasAlreadyGuessed, setHasAlreadyGuessed] = useState(false)
 
     const friendId = searchParams.get("friend_id")
-    const userId = Cookies.get('userID') || ''
+    const userId = typeof window !== 'undefined' ? localStorage.getItem('userID') || '' : ''
     const isViewingFriend = Boolean(friendId)
     const previousRealMoviesCount = useRef(0)
     const searchTimeout = useRef<NodeJS.Timeout>()

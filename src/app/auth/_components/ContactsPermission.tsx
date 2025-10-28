@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { useContacts } from '@/hooks/useContacts';
 import { Capacitor } from '@capacitor/core';
 import { Users, Shield, CheckCircle, XCircle } from 'lucide-react';
-import Cookies from 'js-cookie'; 
 import toast from 'react-hot-toast';
 
 interface ContactsPermissionProps {
@@ -69,7 +68,7 @@ const ContactsPermission = ({ onPermissionGranted, onSkip, userRegisterLevel }: 
   };
 
   const handleUploadContacts = async () => {
-    const userId = Cookies.get('userID');
+    const userId = typeof window !== 'undefined' ? localStorage.getItem('userID') : null;
 
     if (!userId) {
       console.error('User ID not found for contacts upload');

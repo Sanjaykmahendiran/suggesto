@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import { Calendar, User, ThumbsUp, ArrowRight, ArrowLeft, Lightbulb, CheckCircle, BarChart3, Eye, Users, Trash2, Plus, X, ChevronDown } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import NotFound from "@/components/notfound"
-import Cookies from "js-cookie"
 import { useRouter } from "next/navigation"
 import toast from "react-hot-toast"
 import { motion } from "framer-motion"
@@ -35,7 +34,7 @@ export default function PollPage() {
     const [initialLoad, setInitialLoad] = useState(true)
     const [totalCount, setTotalCount] = useState(0)
     const observerRef = useRef<HTMLDivElement>(null)
-    const userId = Cookies.get("userID")
+    const userId = typeof window !== 'undefined' ? localStorage.getItem("userID") : null
     const [showCoinAnimation, setShowCoinAnimation] = useState(false)
     const [coinsEarned, setCoinsEarned] = useState(0)
     const [myPollsTab, setMyPollsTab] = useState<"active" | "closed">("active")

@@ -4,7 +4,6 @@ import type React from "react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import Cookies from "js-cookie"
 import toast from "react-hot-toast"
 import confetti from "canvas-confetti"
 import {
@@ -59,7 +58,7 @@ export default function LuckyDrawPage() {
   const router = useRouter()
   const { user, setUser } = useUser()
 
-  const userId = Cookies.get("userID")
+  const userId = typeof window !== 'undefined' ? localStorage.getItem("userID") : null
   const userCoins = Number.parseInt(user?.coins || "0", 10)
 
   const [timeLeft, setTimeLeft] = useState<TimeLeft>(getTimeLeftUntilNextMonth())

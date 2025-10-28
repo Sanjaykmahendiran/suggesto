@@ -1,7 +1,6 @@
 "use client"
 
 import React, { useState, useEffect } from 'react';
-import Cookies from "js-cookie"
 import toast, { Toaster } from 'react-hot-toast';
 import {
     Select,
@@ -33,7 +32,7 @@ const SuggestionRequestPage = () => {
     const [showCoinAnimation, setShowCoinAnimation] = useState(false)
     const [coinsEarned, setCoinsEarned] = useState(0)
 
-    const userId = Cookies.get("userID")
+    const userId = typeof window !== 'undefined' ? localStorage.getItem("userID") : null
 
     useEffect(() => {
         fetchGenres();

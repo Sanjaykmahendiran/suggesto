@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { useRouter, useSearchParams } from "next/navigation"
-import Cookies from "js-cookie"
 import { motion } from "framer-motion"
 import { PageTransitionProvider, PageTransitionWrapper } from "@/components/PageTransition"
 import toast from "react-hot-toast"
@@ -30,7 +29,7 @@ export default function RoomDetailPage() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const roomId = searchParams.get("room_id")
-    const userId = parseInt(Cookies.get('userID') || '')
+    const userId = parseInt(typeof window !== 'undefined' ? localStorage.getItem('userID') || '' : '')
 
     const [room, setRoom] = useState<Room | null>(null)
     const [loading, setLoading] = useState(true)

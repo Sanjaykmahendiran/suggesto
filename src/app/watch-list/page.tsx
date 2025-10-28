@@ -8,7 +8,6 @@ import { Search, SlidersHorizontal, Clock, Star, Plus, Play, X, ArrowLeft, Heart
 import { BottomNavigation } from "@/components/bottom-navigation"
 import WatchNowFilterComponent from "@/components/watchnow-filter"
 import { Skeleton } from "@/components/ui/skeleton"
-import Cookies from 'js-cookie'
 import Link from "next/link"
 import { useUser } from "@/contexts/UserContext"
 import { Movie, FilteredMovie, SuggestedMovie } from "@/app/watch-list/type"
@@ -64,7 +63,7 @@ export default function Watchlist() {
   const [lastSearches, setLastSearches] = useState<string[]>([])
   const { user, setUser } = useUser()
   const [totalCount, setTotalCount] = useState(0)
-  const userId = Cookies.get('userID') || ''
+  const userId = typeof window !== 'undefined' ? localStorage.getItem('userID') || '' : ''
 
   useTourIntegration('watchlist', [loading], !loading)
 
@@ -89,7 +88,7 @@ export default function Watchlist() {
 
   // Fetch watchlist movies with pagination
   const fetchWatchlistMovies = useCallback(async (offset: number = 0, isLoadMore: boolean = false) => {
-    const currentUserId = Cookies.get('userID') || ''
+    const currentUserId = typeof window !== 'undefined' ? localStorage.getItem('userID') || '' : ''
     if (!currentUserId) return
     try {
       if (!isLoadMore) {

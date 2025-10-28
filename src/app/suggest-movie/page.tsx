@@ -8,7 +8,6 @@ import { ArrowLeft, Plus, CheckCircle, Clock, XCircle, ArrowRight, User, Send, F
 import { BottomNavigation } from "@/components/bottom-navigation"
 import { Button } from "@/components/ui/button"
 import { SuggestDialog } from "./_components/suggest-dialog"
-import Cookies from "js-cookie"
 import NotFound from "@/components/notfound"
 import SuggestNotFound from "@/assets/not-found-suggest.png"
 import Link from "next/link"
@@ -128,7 +127,7 @@ export default function SuggestMovie() {
     }
 
     try {
-      const userId = Cookies.get('userID')
+      const userId = typeof window !== 'undefined' ? localStorage.getItem('userID') : null
       const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=suggestedmovies&user_id=${userId}&limit=10&offset=${currentOffset}`)
 
       if (!response.ok) {
@@ -173,7 +172,7 @@ export default function SuggestMovie() {
     setReceivedError(null)
 
     try {
-      const userId = Cookies.get('userID')
+      const userId = typeof window !== 'undefined' ? localStorage.getItem('userID') : null
       const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=receivedmovies&user_id=${userId}&limit=10&offset=${currentOffset}&status=${receivedStatus}`)
 
       if (!response.ok) {

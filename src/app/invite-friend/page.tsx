@@ -9,7 +9,6 @@ import ensure from "@/assets/Ensure.png"
 import yourRewards from "@/assets/your-reward.png"
 import reward from "@/assets/Get-rewards.png"
 import Image from "next/image"
-import Cookies from 'js-cookie'
 import { useRouter } from "next/navigation"
 import { PageTransitionProvider, PageTransitionWrapper } from "@/components/PageTransition"
 import toast from "react-hot-toast"
@@ -50,7 +49,7 @@ export default function InviteFriends() {
   const [invitedFriendsLoading, setInvitedFriendsLoading] = useState(false)
   const router = useRouter()
 
-  const userId = Cookies.get('userID')
+  const userId = typeof window !== 'undefined' ? localStorage.getItem('userID') : null
 
   useEffect(() => {
     if (userId) {

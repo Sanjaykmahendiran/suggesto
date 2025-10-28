@@ -5,7 +5,6 @@ import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { ArrowLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
-import Cookies from "js-cookie"
 import { useUser } from "@/contexts/UserContext"
 import toast from "react-hot-toast"
 import confetti from "canvas-confetti"
@@ -93,7 +92,7 @@ export default function SpinPage() {
   const [recentResults, setRecentResults] = useState<RecentResult[]>([])
   const [loading, setLoading] = useState(true)
   const [currentCoins, setCurrentCoins] = useState<number>(0)
-  const userId = Cookies.get("userID")
+  const userId = typeof window !== 'undefined' ? localStorage.getItem("userID") : null
   const { user, setUser } = useUser()
 
   useEffect(() => {

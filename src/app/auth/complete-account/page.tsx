@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ArrowLeft, ChevronDown, Mars, Venus } from "lucide-react"
-import Cookies from "js-cookie"
 import Image from "next/image"
 import CakeImage from "@/assets/cake.png"
 import { useUser } from "@/contexts/UserContext"
@@ -89,7 +88,7 @@ export default function CompleteAccount() {
   const currentYear = new Date().getFullYear()
   const years = Array.from({ length: 100 }, (_, i) => (currentYear - i).toString())
 
-  const userId = Cookies.get("userID")
+  const userId = typeof window !== 'undefined' ? localStorage.getItem("userID") : null
 
   // Cleanup preview URL when component unmounts or image changes
   useEffect(() => {

@@ -16,7 +16,6 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { BottomNavigation } from "@/components/bottom-navigation"
 import AvatarImg from "@/assets/avatar.jpg"
-import Cookies from "js-cookie"
 import MovieRequestDialog from "@/components/MovieRequestDialog"
 import { motion } from "framer-motion"
 import logo from "@/assets/suggesto-name-logo.png"
@@ -35,7 +34,7 @@ export default function ProfilePage() {
     const { user, setUser } = useUser()
 
     useEffect(() => {
-        const userId = Cookies.get("userID")
+        const userId = typeof window !== 'undefined' ? localStorage.getItem("userID") : null
 
         if (userId) {
             fetch(`https://suggesto.xyz/App/api.php?gofor=userget&user_id=${userId}`)
@@ -67,7 +66,7 @@ export default function ProfilePage() {
     };
 
     const handleLogout = () => {
-        Cookies.remove("userID");
+        localStorage.removeItem("userID");
         router.push("/auth/create-account");
     };
 
@@ -88,7 +87,7 @@ export default function ProfilePage() {
             const result = await response.json();
 
             if (response.ok) {
-                Cookies.remove("userID");
+                localStorage.removeItem("userID");
                 router.push("/");
             } else {
                 toast.error("Failed to delete account. Please try again.");

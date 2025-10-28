@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import { ArrowLeft, Check } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import Cookies from "js-cookie"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useUser } from "@/contexts/UserContext"
 import toast from "react-hot-toast"
@@ -33,7 +32,7 @@ export default function LanguagePage() {
 
   useEffect(() => {
     // Get user ID from cookies
-    const cookieUserId = Cookies.get("userID") || ""
+    const cookieUserId = typeof window !== 'undefined' ? localStorage.getItem("userID") || "" : ""
     setUserId(cookieUserId)
 
     const fetchLanguages = async () => {

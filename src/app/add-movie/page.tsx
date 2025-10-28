@@ -14,12 +14,11 @@ import MovieRequestDialog from "@/components/MovieRequestDialog"
 import { Movie, Genre, Language, OTT, MovieResult, Mood } from "@/app/add-movie/type"
 import { SearchResultsSkeleton, FilteredResultsSkeleton } from "@/app/add-movie/_components/loading"
 import { PageTransitionProvider, PageTransitionWrapper } from "@/components/PageTransition"
-import Cookies from "js-cookie"
 
 const AddMoviePage = () => {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const userId = Cookies.get("userID")
+  const userId = typeof window !== 'undefined' ? localStorage.getItem("userID") : null
   const GenreId = searchParams.get("genre_id");
   const MoodId = searchParams.get("mood_id");
   const keyWord = searchParams.get("keyword");

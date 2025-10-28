@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import Cookies from "js-cookie"
 import Link from "next/link"
 import {
   Bell, ArrowLeft, Settings, Users, Crown, Share2, Edit, ArrowRight, Gem, UserPlus, Languages, Drama,
@@ -40,7 +39,7 @@ export default function ProfilePage() {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const userId = Cookies.get("userID")
+        const userId = typeof window !== 'undefined' ? localStorage.getItem("userID") : null
         if (!userId) {
           toast.error("User ID not found. Please log in again.")
           setLoading(false)

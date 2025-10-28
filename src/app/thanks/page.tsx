@@ -8,7 +8,6 @@ import { Card, CardContent } from "@/components/ui/card"
 import namelogo from "@/assets/suggesto-premium-logo.png"
 // import namelogo from "@/assets/white-bg-logo.png"
 import Crown from "@/assets/Premium-crown.png"
-import Cookies from 'js-cookie'
 import { useRouter } from "next/navigation"
 import confetti from 'canvas-confetti'
 import Link from "next/link"
@@ -71,7 +70,7 @@ export default function Thanks() {
     }
 
     const getUserData = async () => {
-        const userId = Cookies.get("userID")
+        const userId = typeof window !== 'undefined' ? localStorage.getItem("userID") : null
         if (!userId) {
             setIsLoading(false)
             return

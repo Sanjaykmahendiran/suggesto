@@ -10,7 +10,6 @@ import {
     Search,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import Cookies from "js-cookie"
 import toast from 'react-hot-toast';
 import { Button } from "@/components/ui/button";
 import NotFound from "@/components/notfound";
@@ -560,7 +559,7 @@ const ReceviedSuggestion = () => {
     const [loading, setLoading] = useState(true);
     const [selectedRequest, setSelectedRequest] = useState<SuggestionRequestType | null>(null);
 
-    const userId = Cookies.get("userID")
+    const userId = typeof window !== 'undefined' ? localStorage.getItem("userID") : null
 
     useEffect(() => {
         fetchSuggestionRequests();

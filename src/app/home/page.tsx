@@ -8,7 +8,6 @@ import { PopularWithFriendsSection } from "@/components/home-section/popular-fri
 import { AiRandomizerSection } from "@/components/home-section/ai-randomizer-section"
 import { DynamicMovieSection } from "@/components/home-section/dynamic-movie-section"
 import { MysteryWeekendPicks } from "@/components/home-section/mystery-picks"
-import Cookies from "js-cookie"
 import Header from "@/components/header"
 import PullToRefreshIndicator from "@/components/pull-to-refresh"
 import { useUser } from "@/contexts/UserContext"
@@ -117,7 +116,7 @@ export default function HomePage() {
   // Fetch individual section data
   const fetchSectionData = useCallback(async (section: number) => {
     try {
-      const user_id = Cookies.get("userID");
+      const user_id = typeof window !== 'undefined' ? localStorage.getItem("userID") : null;
       const response = await fetch(`https://suggesto.xyz/App/api.php?gofor=homepage&user_id=${user_id}&section=${section}`);
 
       if (!response.ok) {
@@ -135,7 +134,7 @@ export default function HomePage() {
 
   // Fetch user data
   const fetchUserData = useCallback(async () => {
-    const user_id = Cookies.get('userID');
+    const user_id = typeof window !== 'undefined' ? localStorage.getItem('userID') : null;
     if (!user_id) return;
 
     try {
@@ -143,19 +142,19 @@ export default function HomePage() {
       const data = await response.json();
 
       if (data && data.user_id) {
-        const oldCoins = parseInt(Cookies.get('old_coins') || '0', 10);
+        const oldCoins = parseInt(typeof window !== 'undefined' ? localStorage.getItem('old_coins') || '0' : '0', 10);
         const newCoins = parseInt(data.coins || '0', 10);
         const today = new Date().toISOString().split('T')[0];
-        const lastShownDate = Cookies.get('coin_animation_date');
+        const lastShownDate = typeof window !== 'undefined' ? localStorage.getItem('coin_animation_date') : null;
 
         if (newCoins > oldCoins && lastShownDate !== today) {
           const earnedCoins = newCoins - oldCoins;
           setCoinsEarned(earnedCoins);
           setShowCoinAnimation(true);
-          Cookies.set('coin_animation_date', today);
+          localStorage.setItem('coin_animation_date', today);
         }
 
-        Cookies.set('old_coins', newCoins.toString());
+        localStorage.setItem('old_coins', newCoins.toString());
         setUser(data);
       }
     } catch (error) {

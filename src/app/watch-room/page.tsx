@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import Cookies from "js-cookie"
 import { useRouter } from "next/navigation"
 import NotFound from "@/components/notfound"
 import WatchRoomNotFound from "@/assets/not-found-watchroom.png"
@@ -49,7 +48,7 @@ export default function WatchRoomPage() {
     const [showCoinAnimation, setShowCoinAnimation] = useState(false)
     const [coinsEarned, setCoinsEarned] = useState(0)
 
-    const userId = Cookies.get('userID') || ''
+    const userId = typeof window !== 'undefined' ? localStorage.getItem('userID') || '' : ''
 
     useTourIntegration('watchRoom', [isLoading], !isLoading)
 
